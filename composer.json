@@ -1,0 +1,20 @@
+{
+    "name": "yonlj/tiny",
+    "type": "library",
+    "license": "mit",
+    "autoload": {
+        "psr-4": {
+            "Tiny\\": "src/"
+        },
+        "files": ["src/tags.php"]
+    },
+    "authors": [
+        {
+            "name": "YonLJ",
+            "email": "istintin@outlook.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    }
+}
