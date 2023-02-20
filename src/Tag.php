@@ -7,7 +7,7 @@ class Tag
 
     private function __construct($children)
     {
-        $this->vDom['children'] = $this->convert(array_filter($children));
+        $this->vDom['children'] = $this->convert(array_filter($children, function($node) {return $node !== null;}));
     }
 
     public static function __callStatic($tag, $children)
