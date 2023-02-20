@@ -74,12 +74,12 @@ class VDom {
     }
 
     /**
-     * @param Htm $htm
+     * @param Tag $view
      * @return \DOMElement
      */
-    public function h($htm)
+    public function h($view)
     {
-        return $this->render($htm->getVDom());
+        return $this->render($view->getVDom());
     }
 
     /**
