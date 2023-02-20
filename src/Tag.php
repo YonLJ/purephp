@@ -1,7 +1,7 @@
 <?php
 namespace Tiny;
 
-class Htm
+class Tag
 {
     private $vDom = array();
 
@@ -26,7 +26,7 @@ class Htm
 
     /**
      * @param string $tagName
-     * @return Htm
+     * @return Tag
      */
     private function tag($tagName)
     {
@@ -36,7 +36,7 @@ class Htm
 
     /**
      * @param array $children
-     * @return Htm
+     * @return Tag
      */
     private function convert($children)
     {
@@ -49,7 +49,7 @@ class Htm
 
     /**
      * @param array $props
-     * @return Htm
+     * @return Tag
      */
     public function attrs($props)
     {
