@@ -92,6 +92,15 @@ class VDom {
     }
 
     /**
+     * @param \DOMNode $node
+     */
+    public function outputHTML($node = null)
+    {
+        $html = $this->saveHTML($this->h($node));
+        if($html !== false) echo($html);
+    }
+
+    /**
      * @param string $filename
      * @return int|false
      */
@@ -118,5 +127,14 @@ class VDom {
     public function saveXML($node = null, $options = 0)
     {
         return $this->document->saveXML($node, $options);
+    }
+
+    /**
+     * @param \DOMNode $node
+     */
+    public function outputXML($node = null)
+    {
+        $xml = $this->saveXML($this->h($node));
+        if($xml !== false) echo($xml);
     }
 }
