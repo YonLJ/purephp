@@ -18,11 +18,15 @@ class VDom {
      */
     private function appendChildren(&$dom, $children)
     {
-        if(isset($children[0]) && is_array($children[0])) {
-            foreach($children as $child) $dom->appendChild($this->render($child));
+        if(array_key_exists(0, $children)) {
+            foreach($children as $child) {
+                $node = $this->render($child);
+                if(!empty($node)) $dom->appendChild($node);
+            }
             return;
         }
-        $dom->appendChild($this->render($children));
+        $node = $this->render($children);
+        if(!empty($node)) $dom->appendChild($node);
     }
 
     /**
@@ -56,6 +60,7 @@ class VDom {
     {
         if (is_array($vDom) && count($vDom) === 1) $vDom = current($vDom);
         if(!is_array($vDom)) return $this->document->createTextNode((string)$vDom);
+        if(empty($vDom)) return;
 
         $tagName = $vDom['tag'];
         if(empty($tagName)) throw new \Error('vDom must has a tag: '. var_export($vDom, true) . '.');
