@@ -21,12 +21,16 @@ class VDom {
         if(array_key_exists(0, $children)) {
             foreach($children as $child) {
                 $node = $this->render($child);
-                if(!empty($node)) $dom->appendChild($node);
+                if(!empty($node)) {
+                    $dom->appendChild($node);
+                }
             }
             return;
         }
         $node = $this->render($children);
-        if(!empty($node)) $dom->appendChild($node);
+        if(!empty($node)) {
+            $dom->appendChild($node);
+        }
     }
 
     /**
@@ -58,15 +62,26 @@ class VDom {
      */
     private function render($vDom)
     {
-        if(is_array($vDom) && count($vDom) === 1) $vDom = current($vDom);
-        if(!is_array($vDom)) return $this->document->createTextNode((string)$vDom);
-        if(empty($vDom)) return;
+        if(is_array($vDom) && count($vDom) === 1) {
+            $vDom = current($vDom);
+        }
+
+        if(!is_array($vDom)) {
+            return $this->document->createTextNode((string)$vDom);
+        }
+        if(empty($vDom)) {
+            return;
+        }
 
         $tagName = $vDom['tag'];
-        if(empty($tagName)) throw new \Error('vDom must has a tag: '. var_export($vDom, true) . '.');
+        if(empty($tagName)) {
+            throw new \Error('vDom must has a tag: '. var_export($vDom, true) . '.');
+        }
 
         $dom = $this->document->createElement($tagName);
-        if(!$dom) throw new \Error("tag $tagName is invalid.");
+        if(!$dom) {
+            throw new \Error("tag $tagName is invalid.");
+        }
 
         unset($vDom['tag']);
         $this->appendAttr($dom, $vDom);
@@ -95,9 +110,13 @@ class VDom {
      * @param \DOMNode $node
      */
     public function outputHTML($node = null, $withDocType = false)
-    {   if($withDocType) echo '<!DOCTYPE html>';
+    {   if($withDocType) {
+            echo '<!DOCTYPE html>';
+        }
         $html = $this->saveHTML($this->h($node));
-        if($html !== false) echo($html);
+        if($html !== false) {
+            echo $html;
+        }
     }
 
     /**
@@ -134,8 +153,12 @@ class VDom {
      */
     public function outputXML($node = null, $withDocType = false)
     {
-        if($withDocType) echo('<?xml version="1.0" encoding="UTF-8"?>');
+        if($withDocType) {
+            echo '<?xml version="1.0" encoding="UTF-8"?>';
+        }
         $xml = $this->saveXML($this->h($node));
-        if($xml !== false) echo($xml);
+        if($xml !== false) {
+            echo $xml;
+        }
     }
 }

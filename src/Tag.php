@@ -19,7 +19,9 @@ class Tag
     {
         $attr = str_replace('_', '-', $attr);
         $value = current($args);
-        if(array_key_exists($attr, $this->vDom)) $this->vDom[$attr] .= " $value";
+        if(array_key_exists($attr, $this->vDom)) {
+            $this->vDom[$attr] .= " $value";
+        }
         $this->vDom[$attr] = $value;
         return $this;
     }
@@ -53,7 +55,9 @@ class Tag
      */
     public function attrs($props)
     {
-        if(!is_array($props)) throw new \Error("attrs must be array: $props.");
+        if(!is_array($props)) {
+            throw new \Error("attrs must be array: $props.");
+        }
         $this->vDom = array_merge($this->vDom, $props);
         return $this;
     }
