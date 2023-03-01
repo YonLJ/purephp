@@ -58,7 +58,7 @@ class VDom {
      */
     private function render($vDom)
     {
-        if (is_array($vDom) && count($vDom) === 1) $vDom = current($vDom);
+        if(is_array($vDom) && count($vDom) === 1) $vDom = current($vDom);
         if(!is_array($vDom)) return $this->document->createTextNode((string)$vDom);
         if(empty($vDom)) return;
 
@@ -94,8 +94,8 @@ class VDom {
     /**
      * @param \DOMNode $node
      */
-    public function outputHTML($node = null)
-    {
+    public function outputHTML($node = null, $withDocType = false)
+    {   if($withDocType) echo '<!DOCTYPE html>';
         $html = $this->saveHTML($this->h($node));
         if($html !== false) echo($html);
     }
@@ -132,8 +132,9 @@ class VDom {
     /**
      * @param \DOMNode $node
      */
-    public function outputXML($node = null)
+    public function outputXML($node = null, $withDocType = false)
     {
+        if($withDocType) echo('<?xml version="1.0" encoding="UTF-8"?>');
         $xml = $this->saveXML($this->h($node));
         if($xml !== false) echo($xml);
     }

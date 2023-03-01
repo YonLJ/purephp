@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <?php
 require '../../vendor/autoload.php';
 
@@ -126,4 +125,4 @@ $view = (
 );
 
 $vDom = new VDom();
-$vDom->outputHTML($view);
+$vDom->outputHTML($view, true);
