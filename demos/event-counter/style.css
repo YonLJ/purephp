@@ -5,6 +5,7 @@
   margin: 0px;
   font-family: inherit;
 }
+
 html,
 body {
   height: 100vh;
@@ -19,13 +20,15 @@ body {
   justify-content: center;
   background-color: aliceblue;
 }
+
 .counter-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 6px;
-  margin-top: 1rem;
 }
+
 span {
   font-size: 3rem;
   background-color: #00bb00;
@@ -35,9 +38,11 @@ span {
   border-radius: 4px;
   color: #fff;
 }
+
 button {
   font-size: 3rem;
   cursor: pointer;
   background-color: transparent;
   border: 0px;
+  width: 3rem;
 }
