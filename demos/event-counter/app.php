@@ -11,9 +11,9 @@ $view = (
     div(
         h1('JavaScript Counter App'),
         div(
-            button('-')->id('subtract'),
+            button('+')->id('add')->onclick('handleAdd()'),
             span(0)->id('output'),
-            button('+')->id('add')->onclick('handleAdd()')
+            button('-')->id('subtract'),
         )->class('counter-container')
     )
 );
