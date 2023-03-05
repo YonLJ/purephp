@@ -7,9 +7,9 @@ class VDom {
      */
     public $document;
 
-    public function __construct()
+    public function __construct($version = "1.0", $encoding = "")
     {
-        $this->document = new \DOMDocument();
+        $this->document = new \DOMDocument($version, $encoding);
     }
 
     /**
@@ -120,21 +120,27 @@ class VDom {
     }
 
     /**
+     * @param Tag $view
      * @param string $filename
      * @return int|false
      */
-    public function saveHTMLFile($filename)
+    public function saveHTMLFile($view, $filename)
     {
+        $html = $this->h($view);
+        $this->document->appendChild($html);
         return $this->document->saveHTMLFile($filename);
     }
 
     /**
+     * @param Tag $view
      * @param string $filename
      * @param int $options
      * @return int|false
      */
-    public function save($filename, $options = 0)
+    public function save($view, $filename, $options = 0)
     {
+        $xml = $this->h($view);
+        $this->document->appendChild($xml);
         return $this->document->save($filename, $options);
     }
 

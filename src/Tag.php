@@ -7,7 +7,8 @@ class Tag
 
     private function __construct($children)
     {
-        $this->vDom['children'] = $this->convert(array_filter($children, function($node) {return $node !== null;}));
+        $this->vDom['children'] = array();
+        $this->appendChildren($children);
     }
 
     public static function __callStatic($tag, $children)
@@ -40,13 +41,27 @@ class Tag
      * @param array $children
      * @return Tag
      */
-    private function convert($children)
+    private function appendChildren($children)
     {
-        return array_map(function($child) {
-            return $child instanceof self
-                ? $child->vDom
-                : $child;
-        }, $children);
+        for($i = 0, $size = count($children); $i < $size; $i++) {
+            $child = $children[$i];
+
+            if(is_null($child)) {
+                continue;
+            }
+
+            if(is_array($child)) {
+                $this->appendChildren($child);
+                continue;
+            }
+
+            if($child instanceof self) {
+                $this->vDom['children'][] = $child->vDom;
+                continue;
+            }
+
+            $this->vDom['children'][] = $child;
+        }
     }
 
     /**
