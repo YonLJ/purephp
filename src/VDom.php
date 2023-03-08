@@ -107,13 +107,13 @@ class VDom {
     }
 
     /**
-     * @param \DOMNode $node
+     * @param Tag $view
      */
-    public function outputHTML($node = null, $withDocType = false)
+    public function outputHTML($view = null, $withDocType = false)
     {   if($withDocType) {
             echo '<!DOCTYPE html>';
         }
-        $html = $this->saveHTML($this->h($node));
+        $html = $this->saveHTML($this->h($view));
         if($html !== false) {
             echo $html;
         }
@@ -155,14 +155,14 @@ class VDom {
     }
 
     /**
-     * @param \DOMNode $node
+     * @param Tag $view
      */
-    public function outputXML($node = null, $withDocType = false)
+    public function outputXML($view = null, $withDocType = false)
     {
         if($withDocType) {
             echo '<?xml version="1.0" encoding="UTF-8"?>';
         }
-        $xml = $this->saveXML($this->h($node));
+        $xml = $this->saveXML($this->h($view));
         if($xml !== false) {
             echo $xml;
         }
