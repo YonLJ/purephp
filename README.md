@@ -10,7 +10,11 @@ Tiny is a template engine that can output HTML5 strings or files.
 + The `VDom` class is responsible for rendering virtual dom data into real Dom.
 + The `tags` file provides a number of commonly used HTML5 tags, all of which are instances of the Tag class.
 
-it also works on xml.
+It also works on xml.
+
+## Install
+
+`composer require yonlj/tiny`
 
 ## Basic usage
 
@@ -24,7 +28,7 @@ use Tiny\Tag;
 use function Tiny\div;
 
 $view = (
-    div(
+    div( // equal to Tag::div(...)
         'Hello ',
         Tag::a('PHP')->href('https://www.php.net')
     )->class('container')->style('background: #fff;')->data_key('primary')
@@ -51,6 +55,9 @@ You can use Tiny to encapsulate repeated code snippets into a functional compone
 
 use function Tiny\div;
 use function Tiny\h2;
+use function Tiny\h3;
+use function Tiny\a;
+use function Tiny\p;
 
 function Section($props)
 {
@@ -63,8 +70,51 @@ function Section($props)
     );
 }
 
-// function IconColumn($props) {...}
-// function HangingIcon($props) {...}
+
+function IconColumn($props)
+{
+    extract($props);
+    return (
+        div(
+            div(
+                Svg($icon)->class('bi')->width('1em')->height('1em')
+            )->class('feature-icon d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-2 mb-3'),
+            h3($title)->class('fs-2'),
+            p($content),
+            a(
+                $linkText,
+                Svg('chevron-right')->class('bi')->width('1em')->height('1em'),
+            )->href($link)->class('icon-link d-inline-flex align-items-center')
+        )->class('feature col')
+    );
+}
+
+function HangingIcon($props)
+{
+    extract($props);
+    return (
+        div(
+            div(
+                Svg($icon)->class('bi')->width('1em')->height('1em')
+            )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
+            div(
+                h3($title)->class('fs-2'),
+                p($content),
+                a($linkText)->href($link)->class('btn btn-primary')
+            )
+        )->class('col d-flex align-items-start')
+    );
+}
+
+function Svg($icon)
+{
+    extract($props);
+    return(
+        Tag::svg(
+            Tag::use()->href("#$icon")
+        )
+    );
+}
 
 $view =(
     main(
@@ -89,6 +139,3 @@ For more usage examples see [here](https://github.com/YonLJ/Tiny/tree/master/exa
 ## License
 MIT © YonLJ
 
-## Keywords
-
-php templating-engine virtual-dom
