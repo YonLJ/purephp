@@ -11,8 +11,6 @@ require_once './components/MainFeature.php';
 require_once './svgs.php';
 require_once './data.php';
 
-use Tiny\VDom;
-
 use function Tiny\div;
 use function Tiny\h1;
 use function Tiny\main;
@@ -62,6 +60,5 @@ $appView = main(
     ]),
 );
 
-$vDom = new VDom();
-$vDom->outputHTML($svgsView);
-$vDom->outputHTML($appView);
+echo $svgsView->toTDom();
+echo $appView->toTDom();

@@ -5,9 +5,9 @@ Tiny is a Virtual DOM based templating-engine for PHP inspired by ReactJS.
 
 Tiny is a template engine that can output HTML5 strings or files.
 
-+ Tiny mainly consists of 3 parts: `Tag`, `VDom` and `tags`.
++ Tiny mainly consists of 3 parts: `Tag`, `PDom` and `tags`.
 + The `Tag` class is responsible for generating virtual Dom data.
-+ The `VDom` class is responsible for rendering virtual dom data into real Dom.
++ The `PDom/TDom` class is responsible for rendering virtual dom data into html string.
 + The `tags` file provides a number of commonly used HTML5 tags, all of which are instances of the Tag class.
 
 It also works on xml.
@@ -23,7 +23,7 @@ Here is a simple example that will show how to use `Tiny`:
 ```php
 <?php
 
-use Tiny\VDom;
+use Tiny\PDom;
 use Tiny\Tag;
 use function Tiny\div;
 
@@ -34,8 +34,7 @@ $view = (
     )->class('container')->style('background: #fff;')->data_key('primary')
 );
 
-$vDom = new VDom();
-$vDom->outputHTML($view);
+echo $view->TDom();
 ```
 The above code will output:
 
@@ -69,7 +68,6 @@ function Section($props)
         )->class('container px-4 py-5')
     );
 }
-
 
 function IconColumn($props)
 {
@@ -108,7 +106,6 @@ function HangingIcon($props)
 
 function Svg($icon)
 {
-    extract($props);
     return(
         Tag::svg(
             Tag::use()->href("#$icon")
