@@ -3,7 +3,6 @@
 require_once '../../vendor/autoload.php';
 
 use Tiny\Tag;
-use Tiny\VDom;
 
 $data = [
     [
@@ -38,6 +37,9 @@ function Address($props)
     );
 }
 
+/**
+ * @var Tag
+ */
 $xml = (
     Tag::customers(
         Tag::customer(
@@ -48,5 +50,4 @@ $xml = (
 
 );
 
-$vDom = new VDom();
-$vDom->save($xml, './example.xml');
+$xml->save('./example.xml', true);
