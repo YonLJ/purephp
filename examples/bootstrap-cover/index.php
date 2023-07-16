@@ -1,7 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 require '../../vendor/autoload.php';
 
-use Tiny\VDom;
 use function Tiny\a;
 use function Tiny\body;
 use function Tiny\div;
@@ -29,7 +28,7 @@ $view = (
             meta()->name('generator')->content('Hugo 0.108.0'),
             title('Cover Template · Bootstrap v5.3'),
             link()->rel('canonical')->href('https://getbootstrap.com/docs/5.3/examples/cover/'),
-            link()->href('https://getbootstrap.com/docs/5.3/dist/css/bootstrap.min.css')->rel('stylesheet')->integrity('sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD')->crossorigin('anonymous'),
+            link()->href('https://getbootstrap.com/docs/5.3/dist/css/bootstrap.min.css')->rel('stylesheet')->crossorigin('anonymous'),
             link()->rel('apple-touch-icon')->href('https://getbootstrap.com/docs/5.3/assets/img/favicons/apple-touch-icon.png')->sizes('180x180'),
             link()->rel('icon')->href('https://getbootstrap.com/docs/5.3/assets/img/favicons/favicon-32x32.png')->sizes('32x32')->type('image/png'),
             link()->rel('icon')->href('https://getbootstrap.com/docs/5.3/assets/img/favicons/favicon-16x16.png')->sizes('16x16')->type('image/png'),
@@ -124,5 +123,4 @@ $view = (
     )->lang('en')->class('h-100')
 );
 
-$vDom = new VDom();
-$vDom->outputHTML($view, true);
+echo $view->toTDom();

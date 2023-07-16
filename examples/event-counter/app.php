@@ -1,7 +1,6 @@
 <?php
 require '../../vendor/autoload.php';
 
-use Tiny\VDom;
 use function Tiny\button;
 use function Tiny\div;
 use function Tiny\h1;
@@ -18,5 +17,4 @@ $view = (
     )
 );
 
-$vDom = new VDom();
-$vDom->outputHTML($view);
+echo $view->TDom();

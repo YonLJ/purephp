@@ -1,47 +1,61 @@
-<?php
+<?php declare(strict_types=1);
 namespace Tiny;
 
 class Tag
 {
-    private $vDom = array();
+    private string $tagName;
 
-    private function __construct($children)
+    private array $attrs = [];
+
+    private array $children = [];
+
+    private bool $isXML;
+
+    public static function __callStatic(string $tag, array $children): Tag
     {
-        $this->vDom['children'] = array();
+        return new Tag($tag, $children);
+    }
+
+    private function __construct(string $tagName, array $children)
+    {
+        $this->tagName = $tagName;
         $this->appendChildren($children);
     }
 
-    public static function __callStatic($tag, $children)
-    {
-        return (new self($children))->tag($tag);
-    }
-
-    public function __call($attr, $args)
+    public function __call(string $attr, array $args): Tag
     {
         $attr = str_replace('_', '-', $attr);
         $value = current($args);
-        if(array_key_exists($attr, $this->vDom)) {
-            $this->vDom[$attr] .= " $value";
+
+        if(!array_key_exists($attr, $this->attrs)) {
+            $this->attrs[$attr] = [];
         }
-        $this->vDom[$attr] = $value;
+        $this->attrs[$attr][] = $value;
+
         return $this;
     }
 
-    /**
-     * @param string $tagName
-     * @return Tag
-     */
-    private function tag($tagName)
+    public function getTagName(): string
     {
-        $this->vDom['tag'] = $tagName;
-        return $this;
+        return $this->tagName;
     }
 
-    /**
-     * @param array $children
-     * @return Tag
-     */
-    private function appendChildren($children)
+    public function getAttrs(): array
+    {
+        return $this->attrs;
+    }
+
+    public function getChildren(): array
+    {
+        return $this->children;
+    }
+
+    public function getIsXML(): bool
+    {
+        return $this->isXML;
+    }
+
+    private function appendChildren(array $children)
     {
         for($i = 0, $size = count($children); $i < $size; $i++) {
             $child = $children[$i];
@@ -55,33 +69,53 @@ class Tag
                 continue;
             }
 
-            if($child instanceof self) {
-                $this->vDom['children'][] = $child->vDom;
+            if($child instanceof Tag) {
+                $this->children[] = $child;
                 continue;
             }
 
-            $this->vDom['children'][] = $child;
+            $this->children[] = (string)$child;
         }
     }
 
-    /**
-     * @param array $props
-     * @return Tag
-     */
-    public function attrs($props)
+    public function toJSON(): array
     {
-        if(!is_array($props)) {
-            throw new \Error("attrs must be array: $props.");
-        }
-        $this->vDom = array_merge($this->vDom, $props);
-        return $this;
+        return array_merge([
+            'tagName' => $this->tagName,
+            'children' => array_map(
+                fn($child) => $child instanceof Tag
+                    ? $child->toJSON()
+                    : $child,
+                $this->children
+            ),
+        ], $this->attrs);
     }
 
-    /**
-     * @return array
-     */
-    public function getVDom()
+    public function toTDom(bool $isXML = false): TDom
     {
-        return $this->vDom;
+        $this->isXML = $isXML;
+        return new TDom($this);
+    }
+
+    public function toPDom(bool $isXML = false): PDom
+    {
+        $this->isXML = $isXML;
+        return new PDom($this);
+    }
+
+    public function save(string $path, bool $isXML = false): int|false
+    {
+        $handle = fopen($path, 'w');
+        if($handle === false) {
+            return false;
+        }
+
+        $header = $isXML
+            ? '<?xml version="1.0"?>'
+            : '<!DOCTYPE html>';
+
+        $result = fwrite($handle, $header . (string)$this->toTDom());
+        fclose($handle);
+        return $result;
     }
 }
