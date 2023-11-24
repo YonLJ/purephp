@@ -5,9 +5,16 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Tiny\\": "src/"
+            "Tiny\\": "src/",
+            "Tiny\\Core\\": "src/core",
+            "Tiny\\Utils\\": "src/utils",
+            "Tiny\\Html\\": "src/html"
         },
-        "files": ["src/tags.php"]
+        "files": [
+            "src/html/tags.php",
+            "src/utils/clx.php",
+            "src/utils/sty.php"
+        ]
     },
     "authors": [
         {

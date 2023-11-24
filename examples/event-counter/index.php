@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <?php include './app.php'; ?>
+    <?php require_once './app.php'; ?>
     <script src="./script.js"></script>
 </body>
 </html>
