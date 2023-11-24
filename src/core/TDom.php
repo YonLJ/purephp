@@ -63,11 +63,13 @@ class TDom {
     public function __toString(): string
     {
         $attrs = $this->buildAttrsStr();
+        $attrs = empty($attrs) ? '' : " $attrs";
+        
         if ($this->selfClose) {
-            return "<{$this->tagName} {$attrs} />";
+            return "<{$this->tagName}{$attrs} />";
         }
 
         $content = $this->buildChildrenStr();
-        return "<{$this->tagName} {$attrs}>{$content}</{$this->tagName}>";
+        return "<{$this->tagName}{$attrs}>{$content}</{$this->tagName}>";
     }
 }
