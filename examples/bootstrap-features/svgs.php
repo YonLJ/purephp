@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
-use Tiny\Tag;
-use function Tiny\title;
+use Tiny\Core\Tag;
+use function Tiny\Html\title;
 
-function symbol() {return call_user_func_array('\Tiny\Tag::symbol', func_get_args());}
-function path()   {return call_user_func_array('\Tiny\Tag::path', func_get_args());}
+function symbol() {return call_user_func_array('\Tiny\Core\Tag::symbol', func_get_args());}
+function path()   {return call_user_func_array('\Tiny\Core\Tag::path', func_get_args());}
 
 $svgsView = Tag::svg(
     symbol(

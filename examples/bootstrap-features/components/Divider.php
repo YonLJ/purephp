@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-use function Tiny\div;
+use function Tiny\Html\div;
 
 function Divider()
 {

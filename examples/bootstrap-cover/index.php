@@ -1,22 +1,22 @@
 <?php declare(strict_types=1);
 require '../../vendor/autoload.php';
 
-use function Tiny\a;
-use function Tiny\body;
-use function Tiny\div;
-use function Tiny\footer;
-use function Tiny\h1;
-use function Tiny\h3;
-use function Tiny\head;
-use function Tiny\header;
-use function Tiny\html;
-use function Tiny\nav;
-use function Tiny\main;
-use function Tiny\meta;
-use function Tiny\p;
-use function Tiny\title;
-use function Tiny\link;
-use function Tiny\style;
+use function Tiny\Html\a;
+use function Tiny\Html\body;
+use function Tiny\Html\div;
+use function Tiny\Html\footer;
+use function Tiny\Html\h1;
+use function Tiny\Html\h3;
+use function Tiny\Html\head;
+use function Tiny\Html\header;
+use function Tiny\Html\html;
+use function Tiny\Html\nav;
+use function Tiny\Html\main;
+use function Tiny\Html\meta;
+use function Tiny\Html\p;
+use function Tiny\Html\title;
+use function Tiny\Html\link;
+use function Tiny\Html\style;
 
 $view = (
     html(

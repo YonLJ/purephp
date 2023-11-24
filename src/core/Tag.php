@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Tiny;
+namespace Tiny\Core;
 
 class Tag
 {
@@ -27,7 +27,7 @@ class Tag
         $attr = str_replace('_', '-', $attr);
         $value = current($args);
 
-        if(!array_key_exists($attr, $this->attrs)) {
+        if (!array_key_exists($attr, $this->attrs)) {
             $this->attrs[$attr] = [];
         }
         $this->attrs[$attr][] = $value;
@@ -59,23 +59,27 @@ class Tag
     {
         for($i = 0, $size = count($children); $i < $size; $i++) {
             $child = $children[$i];
-
-            if(is_null($child)) {
-                continue;
-            }
-
-            if(is_array($child)) {
-                $this->appendChildren($child);
-                continue;
-            }
-
-            if($child instanceof Tag) {
-                $this->children[] = $child;
-                continue;
-            }
-
-            $this->children[] = (string)$child;
+            $this->appendChild($child);
         }
+    }
+
+    private function appendChild(mixed $child)
+    {
+        if (is_null($child)) {
+            return;
+        }
+
+        if (is_array($child)) {
+            $this->appendChildren($child);
+            return;
+        }
+
+        if ($child instanceof Tag) {
+            $this->children[] = $child;
+            return;
+        }
+
+        $this->children[] = (string)$child;
     }
 
     public function toJSON(): array
@@ -106,7 +110,7 @@ class Tag
     public function save(string $path, bool $isXML = false): int|false
     {
         $handle = fopen($path, 'w');
-        if($handle === false) {
+        if ($handle === false) {
             return false;
         }
 

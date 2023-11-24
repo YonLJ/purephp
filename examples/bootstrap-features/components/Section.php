@@ -1,7 +1,7 @@
-<?php
+<?php declare(strict_types=1);
 
-use function Tiny\div;
-use function Tiny\h2;
+use function Tiny\Html\div;
+use function Tiny\Html\h2;
 
 function Section($props)
 {
