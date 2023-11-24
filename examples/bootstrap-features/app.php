@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 require_once '../../vendor/autoload.php';
 require_once './components/Section.php';
 require_once './components/Divider.php';
@@ -11,9 +11,9 @@ require_once './components/MainFeature.php';
 require_once './svgs.php';
 require_once './data.php';
 
-use function Tiny\div;
-use function Tiny\h1;
-use function Tiny\main;
+use function Tiny\Html\div;
+use function Tiny\Html\h1;
+use function Tiny\Html\main;
 
 $appView = main(
     h1('Features examples')->class('visually-hidden'),

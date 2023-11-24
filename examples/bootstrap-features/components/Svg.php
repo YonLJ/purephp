@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-use Tiny\Tag;
+use Tiny\Core\Tag;
 
 function Svg($icon)
 {

@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Tiny;
+namespace Tiny\Core;
 
 class TDom {
     private string $tagName;
@@ -26,26 +26,32 @@ class TDom {
     {
         $attrs = [];
         foreach ($this->attrs as $key => $value) {
-            if(count($value) === 1) {
-                $v = current($value);
-                if(is_null($v) || $v === false) {
-                    continue;
-                }
-
-                if($v === true) {
-                    $attrs[] = $key;
-                    continue;
-                }
-
-                $v = (string)$v;
-                $attrs[] = "{$key}=\"{$v}\"";
-                continue;
+            $attr = $this->buildAttrStr($key, $value);
+            if (is_string($attr)) {
+                $attrs[] = $attr;
             }
-
-            $attr = join(' ', $value);
-            $attrs[] = "{$key}=\"{$attr}\"";
         }
         return join(' ', $attrs);
+    }
+
+    private function buildAttrStr(string $key, array $value): string|null
+    {
+        if (count($value) === 1) {
+            $v = current($value);
+            if (is_null($v) || $v === false) {
+                return null;
+            }
+
+            if ($v === true) {
+                return $key;
+            }
+
+            $v = (string)$v;
+            return "{$key}=\"{$v}\"";
+        }
+
+        $attr = join(' ', $value);
+        return "{$key}=\"{$attr}\"";
     }
 
     private function buildChildrenStr(): string
@@ -57,7 +63,7 @@ class TDom {
     public function __toString(): string
     {
         $attrs = $this->buildAttrsStr();
-        if($this->selfClose) {
+        if ($this->selfClose) {
             return "<{$this->tagName} {$attrs} />";
         }
 

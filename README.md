@@ -1,4 +1,5 @@
 # Tiny
+
 Tiny is a Virtual DOM based templating-engine for PHP inspired by ReactJS.
 
 ## What is it
@@ -23,9 +24,9 @@ Here is a simple example that will show how to use `Tiny`:
 ```php
 <?php
 
-use Tiny\PDom;
-use Tiny\Tag;
-use function Tiny\div;
+use Tiny\Core\PDom;
+use Tiny\Core\Tag;
+use function Tiny\Html\div;
 
 $view = (
     div( // equal to Tag::div(...)
@@ -36,6 +37,7 @@ $view = (
 
 echo $view->TDom();
 ```
+
 The above code will output:
 
 ```html
@@ -52,11 +54,11 @@ You can use Tiny to encapsulate repeated code snippets into a functional compone
 ```php
 <?php
 
-use function Tiny\div;
-use function Tiny\h2;
-use function Tiny\h3;
-use function Tiny\a;
-use function Tiny\p;
+use function Tiny\Html\div;
+use function Tiny\Html\h2;
+use function Tiny\Html\h3;
+use function Tiny\Html\a;
+use function Tiny\Html\p;
 
 function Section($props)
 {
@@ -134,5 +136,5 @@ $view =(
 For more usage examples see [here](https://github.com/YonLJ/Tiny/tree/master/examples).
 
 ## License
-MIT © YonLJ
 
+MIT © YonLJ

@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 require '../../vendor/autoload.php';
 
-use function Tiny\button;
-use function Tiny\div;
-use function Tiny\h1;
-use function Tiny\span;
+use function Tiny\Html\button;
+use function Tiny\Html\div;
+use function Tiny\Html\h1;
+use function Tiny\Html\span;
 
 $view = (
     div(

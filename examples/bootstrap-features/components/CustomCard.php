@@ -1,11 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
-use function Tiny\div;
-use function Tiny\h3;
-use function Tiny\img;
-use function Tiny\li;
-use function Tiny\small;
-use function Tiny\ul;
+use function Tiny\Html\div;
+use function Tiny\Html\h3;
+use function Tiny\Html\img;
+use function Tiny\Html\li;
+use function Tiny\Html\small;
+use function Tiny\Html\ul;
 
 require_once __DIR__ . '/Svg.php';
 

@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
-use function Tiny\div;
-use function Tiny\h4;
-use function Tiny\p;
+use function Tiny\Html\div;
+use function Tiny\Html\h4;
+use function Tiny\Html\p;
 
 require_once __DIR__ . '/Svg.php';
 
