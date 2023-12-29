@@ -1,14 +1,14 @@
 const handleAdd = () => {
-  let output = document.querySelector("#output");
-  let result = +output.innerText + 1;
+    const output = document.querySelector("#output");
+    const result = +output.innerText + 1;
 
-  output.innerText = result;
+    output.innerText = result;
 };
 
 document.querySelector("#subtract")
-  .addEventListener("click", () => {
-    let output = document.querySelector("#output");
-    let result = +output.innerText - 1;
+    .addEventListener("click", () => {
+        const output = document.querySelector("#output");
+        const result = +output.innerText - 1;
 
-    output.innerText = result;
-  });
+        output.innerText = result;
+    });

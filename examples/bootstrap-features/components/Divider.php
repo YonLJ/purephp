@@ -1,8 +1,10 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
+use Tiny\Core\HTML;
 
-function Divider()
+use function Tiny\Tags\HTML\div;
+
+function Divider(): HTML
 {
     return div()->class('b-example-divider');
 }

@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
-
 require_once '../../vendor/autoload.php';
 
-use Tiny\Core\Tag;
+use Tiny\Core\XML;
 
 $data = [
     [
@@ -24,30 +23,31 @@ $data = [
     ]
 ];
 
-function Address($props)
+function Address(array $props)
 {
     extract($props);
+
     return (
-        Tag::address(
-            empty($street) ? null : Tag::street($street),
-            empty($city)   ? null : Tag::city($city),
-            empty($state)  ? null : Tag::state($state),
-            empty($zip)    ? null : Tag::zip($zip)
+        XML::address(
+            empty($street) ? null : XML::street($street),
+            empty($city)   ? null : XML::city($city),
+            empty($state)  ? null : XML::state($state),
+            empty($zip)    ? null : XML::zip($zip)
         )
     );
 }
 
 /**
- * @var Tag
+ * @var XML
  */
 $xml = (
-    Tag::customers(
-        Tag::customer(
-            Tag::name('Charter Group'),
-            array_map(fn($x) => Address($x), $data)
+    XML::customers(
+        XML::customer(
+            XML::name('Charter Group'),
+            array_map(fn ($x) => Address($x), $data)
         )->id('55000')
     )
 
 );
 
-$xml->save('./example.xml', true);
+$xml->save('./example.xml');

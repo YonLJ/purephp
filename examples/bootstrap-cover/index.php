@@ -1,24 +1,24 @@
 <?php declare(strict_types=1);
-require '../../vendor/autoload.php';
+require_once '../../vendor/autoload.php';
 
-use function Tiny\Html\a;
-use function Tiny\Html\body;
-use function Tiny\Html\div;
-use function Tiny\Html\footer;
-use function Tiny\Html\h1;
-use function Tiny\Html\h3;
-use function Tiny\Html\head;
-use function Tiny\Html\header;
-use function Tiny\Html\html;
-use function Tiny\Html\nav;
-use function Tiny\Html\main;
-use function Tiny\Html\meta;
-use function Tiny\Html\p;
-use function Tiny\Html\title;
-use function Tiny\Html\link;
-use function Tiny\Html\style;
+use function Tiny\Tags\HTML\a;
+use function Tiny\Tags\HTML\body;
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\footer;
+use function Tiny\Tags\HTML\h1;
+use function Tiny\Tags\HTML\h3;
+use function Tiny\Tags\HTML\head;
+use function Tiny\Tags\HTML\header;
+use function Tiny\Tags\HTML\html;
+use function Tiny\Tags\HTML\nav;
+use function Tiny\Tags\HTML\main;
+use function Tiny\Tags\HTML\meta;
+use function Tiny\Tags\HTML\p;
+use function Tiny\Tags\HTML\title;
+use function Tiny\Tags\HTML\link;
+use function Tiny\Tags\HTML\style;
 
-$view = (
+echo (
     html(
         head(
             meta()->charset('utf-8'),
@@ -122,5 +122,3 @@ $view = (
         )->class('d-flex h-100 text-center text-bg-dark')
     )->lang('en')->class('h-100')
 );
-
-echo $view->toTDom();

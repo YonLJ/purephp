@@ -1,17 +1,24 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
-use function Tiny\Html\h3;
-use function Tiny\Html\p;
+use Tiny\Core\HTML;
 
-require_once __DIR__ . '/Svg.php';
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h3;
+use function Tiny\Tags\HTML\p;
 
-function CellIcon($props)
+require_once __DIR__ . '/Icon.php';
+
+function CellIcon(array $props): HTML
 {
-    extract($props);
+    [
+        'icon' => $icon,
+        'title' => $title,
+        'content' => $content
+    ] = $props;
+
     return (
         div(
-            Svg($icon)->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
+            Icon($icon)->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
             div(
                 h3($title)->class('fw-bold mb-0 fs-4'),
                 p($content)
