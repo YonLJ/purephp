@@ -1,13 +1,21 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\a;
-use function Tiny\Html\div;
-use function Tiny\Html\h3;
-use function Tiny\Html\p;
+use Tiny\Core\HTML;
 
-function MainFeature($props)
+use function Tiny\Tags\HTML\a;
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h3;
+use function Tiny\Tags\HTML\p;
+
+function MainFeature(array $props): HTML
 {
-    extract($props);
+    [
+        'title' => $title,
+        'content' => $content,
+        'linkText' => $linkText,
+        'link' => $link
+    ] = $props;
+
     return (
         div(
             h3($title)->class('fw-bold'),

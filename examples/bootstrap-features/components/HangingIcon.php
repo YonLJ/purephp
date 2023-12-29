@@ -1,19 +1,28 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
-use function Tiny\Html\h3;
-use function Tiny\Html\p;
-use function Tiny\Html\a;
+use Tiny\Core\HTML;
 
-require_once __DIR__ . '/Svg.php';
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h3;
+use function Tiny\Tags\HTML\p;
+use function Tiny\Tags\HTML\a;
 
-function HangingIcon($props)
+require_once __DIR__ . '/Icon.php';
+
+function HangingIcon(array $props): HTML
 {
-    extract($props);
+    [
+        'icon' => $icon,
+        'title' => $title,
+        'content' => $content,
+        'linkText' => $linkText,
+        'link' => $link
+    ] = $props;
+
     return (
         div(
             div(
-                Svg($icon)->class('bi')->width('1em')->height('1em')
+                Icon($icon)->class('bi')->width('1em')->height('1em')
             )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
             div(
                 h3($title)->class('fs-2'),

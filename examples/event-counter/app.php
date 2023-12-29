@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
 require '../../vendor/autoload.php';
 
-use function Tiny\Html\button;
-use function Tiny\Html\div;
-use function Tiny\Html\h1;
-use function Tiny\Html\span;
+use function Tiny\Tags\HTML\button;
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h1;
+use function Tiny\Tags\HTML\span;
 
-$view = (
+echo (
     div(
         h1('JavaScript Counter App'),
         div(
@@ -16,5 +16,3 @@ $view = (
         )->class('counter-container')
     )
 );
-
-echo $view->TDom();

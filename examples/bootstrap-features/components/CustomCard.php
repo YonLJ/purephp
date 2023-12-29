@@ -1,17 +1,26 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
-use function Tiny\Html\h3;
-use function Tiny\Html\img;
-use function Tiny\Html\li;
-use function Tiny\Html\small;
-use function Tiny\Html\ul;
+use Tiny\Core\HTML;
 
-require_once __DIR__ . '/Svg.php';
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h3;
+use function Tiny\Tags\HTML\img;
+use function Tiny\Tags\HTML\li;
+use function Tiny\Tags\HTML\small;
+use function Tiny\Tags\HTML\ul;
 
-function CustomCard($props)
+require_once __DIR__ . '/Icon.php';
+
+function CustomCard(array $props): HTML
 {
-    extract($props);
+    [
+        'title' => $title,
+        'icon' => $icon,
+        'location' => $location,
+        'date' => $date,
+        'bgImg' => $bgImg
+    ] = $props;
+
     return (
         div(
             div(
@@ -22,11 +31,11 @@ function CustomCard($props)
                             img()->src($icon)->alt('Bootstrap')->width('32')->height('32')->class('rounded-circle border border-white')
                         )->class('me-auto'),
                         li(
-                            Svg('geo-fill')->class('bi me-2')->width('1em')->height('1em'),
+                            Icon('geo-fill')->class('bi me-2')->width('1em')->height('1em'),
                             small($location)
                         )->class('d-flex align-items-center me-3'),
                         li(
-                            Svg('calendar3')->class('bi me-2')->width('1em')->height('1em'),
+                            Icon('calendar3')->class('bi me-2')->width('1em')->height('1em'),
                             small($date)
                         )->class('d-flex align-items-center'),
                     )->class('d-flex list-unstyled mt-auto')

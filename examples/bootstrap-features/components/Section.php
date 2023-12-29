@@ -1,11 +1,18 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
-use function Tiny\Html\h2;
+use Tiny\Core\HTML;
 
-function Section($props)
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h2;
+
+function Section(array $props): HTML
 {
-    extract($props);
+    [
+        'title' => $title,
+        'contents' => $contents,
+        'classList' => $classList
+    ] = $props;
+
     return (
         div(
             h2($title)->class('pb-2 border-bottom'),

@@ -1,18 +1,25 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Html\div;
-use function Tiny\Html\h4;
-use function Tiny\Html\p;
+use Tiny\Core\HTML;
 
-require_once __DIR__ . '/Svg.php';
+use function Tiny\Tags\HTML\div;
+use function Tiny\Tags\HTML\h4;
+use function Tiny\Tags\HTML\p;
 
-function FeatureTitle($props)
+require_once __DIR__ . '/Icon.php';
+
+function FeatureTitle(array $props): HTML
 {
-    extract($props);
+    [
+        'icon' => $icon,
+        'title' => $title,
+        'content' => $content
+    ] = $props;
+
     return (
         div(
             div(
-                Svg($icon)->class('bi')->width('1em')->height('1em')
+                Icon($icon)->class('bi')->width('1em')->height('1em')
             )->class('feature-icon-small d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-4 rounded-3'),
             h4($title)->class('fw-semibold mb-0'),
             p($content)->class('text-muted')
