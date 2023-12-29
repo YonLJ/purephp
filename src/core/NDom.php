@@ -4,7 +4,7 @@ namespace Pure\Core;
 use DOMElement;
 use DOMDocument;
 
-class PDom extends Dom
+class NDom extends Dom
 {
     private DOMElement $dom;
 
@@ -14,10 +14,10 @@ class PDom extends Dom
 
     private static function document(): DOMDocument
     {
-        if (!isset(PDom::$document)) {
-            PDom::$document = new DOMDocument('1.0');
+        if (!isset(NDom::$document)) {
+            NDom::$document = new DOMDocument('1.0');
         }
-        return PDom::$document;
+        return NDom::$document;
     }
 
     public function __construct(Tag $tag)
@@ -27,7 +27,7 @@ class PDom extends Dom
         $this->attrs = $tag->getAttributes();
         $this->children = array_map(
             fn ($child) => $child instanceof Tag
-                ? new PDom($child)
+                ? new NDom($child)
                 : $child,
             $tag->getChildren()
         );
@@ -38,7 +38,7 @@ class PDom extends Dom
 
     private function createDom(): void
     {
-        $dom = PDom::document()->createElement($this->tagName);
+        $dom = NDom::document()->createElement($this->tagName);
         if (!$dom) {
             throw new \Error("tag {$this->tagName} is invalid.");
         }
@@ -58,20 +58,20 @@ class PDom extends Dom
         }
     }
 
-    private function appendChild(null|string|PDom|Raw $child): void
+    private function appendChild(null|string|NDom|Raw $child): void
     {
         if (is_null($child)) {
             return;
         }
 
         if (is_string($child)) {
-            $textNode = PDom::document()->createTextNode($child);
+            $textNode = NDom::document()->createTextNode($child);
             $this->dom->appendChild($textNode);
             return;
         }
 
         if ($child instanceof Raw) {
-            $fragment = PDom::document()->createDocumentFragment();
+            $fragment = NDom::document()->createDocumentFragment();
             if ($child->type === RawType::HTML) {
                 $fragment->append((string)$child);
             } else {
@@ -80,7 +80,7 @@ class PDom extends Dom
             $this->dom->appendChild($fragment);
         }
 
-        if ($child instanceof PDom) {
+        if ($child instanceof NDom) {
             $this->dom->appendChild($child->toDom());
         }
     }
@@ -94,7 +94,7 @@ class PDom extends Dom
 
     private function appendAttrNode(string $key, string $value): void
     {
-        $attrNode = PDom::document()->createAttribute($key);
+        $attrNode = NDom::document()->createAttribute($key);
         $attrNode->value = $value;
         $this->dom->appendChild($attrNode);
     }
@@ -107,8 +107,8 @@ class PDom extends Dom
     public function __toString(): string
     {
         $html = $this->isXML
-            ? PDom::document()->saveXML($this->dom)
-            : PDom::document()->saveHTML($this->dom);
+            ? NDom::document()->saveXML($this->dom)
+            : NDom::document()->saveHTML($this->dom);
         if ($html === false) {
             return '';
         }

@@ -158,9 +158,9 @@ abstract class Tag
         return new TDom($this);
     }
 
-    public function toPDom(): PDom
+    public function toPDom(): NDom
     {
-        return new PDom($this);
+        return new NDom($this);
     }
 
     public function __toString(): string

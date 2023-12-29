@@ -17,7 +17,7 @@ Here is a simple example that will show how to use `Pure`:
 ```php
 <?php
 
-use Pure\Core\PDom;
+use Pure\Core\NDom;
 use Pure\Core\HTML;
 use function Pure\Tags\HTML\div;
 
