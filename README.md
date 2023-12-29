@@ -28,7 +28,7 @@ $view = (
     )->class('container')->style('background: #fff;')->data_key('primary')
 );
 
-echo $view->TDom();
+echo $view->PDom();
 ```
 
 The above code will output:

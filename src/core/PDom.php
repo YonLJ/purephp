@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 namespace Pure\Core;
 
-class TDom extends Dom
+class PDom extends Dom
 {
     private bool $selfClose = false;
 
@@ -12,7 +12,7 @@ class TDom extends Dom
         $this->attrs = $tag->getAttributes();
         $this->children = array_map(
             fn ($child) => $child instanceof Tag
-                ? new TDom($child)
+                ? new PDom($child)
                 : $child,
             $tag->getChildren()
         );
