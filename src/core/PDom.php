@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Tiny\Core;
+namespace Pure\Core;
 
 use DOMElement;
 use DOMDocument;

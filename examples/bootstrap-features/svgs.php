@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-use function Tiny\Tags\SVG\title;
-use function Tiny\Tags\SVG\path;
-use function Tiny\Tags\SVG\svg;
-use function Tiny\Tags\SVG\symbol;
+use function Pure\Tags\SVG\title;
+use function Pure\Tags\SVG\path;
+use function Pure\Tags\SVG\svg;
+use function Pure\Tags\SVG\symbol;
 
 $svgsView = svg(
     symbol(

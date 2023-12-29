@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-use Tiny\Core\HTML;
+use Pure\Core\HTML;
 
-use function Tiny\Tags\HTML\div;
-use function Tiny\Tags\HTML\h3;
-use function Tiny\Tags\HTML\p;
+use function Pure\Tags\HTML\div;
+use function Pure\Tags\HTML\h3;
+use function Pure\Tags\HTML\p;
 
 require_once __DIR__ . '/Icon.php';
 

@@ -1,22 +1,22 @@
 <?php declare(strict_types=1);
 require_once '../../vendor/autoload.php';
 
-use function Tiny\Tags\HTML\a;
-use function Tiny\Tags\HTML\body;
-use function Tiny\Tags\HTML\div;
-use function Tiny\Tags\HTML\footer;
-use function Tiny\Tags\HTML\h1;
-use function Tiny\Tags\HTML\h3;
-use function Tiny\Tags\HTML\head;
-use function Tiny\Tags\HTML\header;
-use function Tiny\Tags\HTML\html;
-use function Tiny\Tags\HTML\nav;
-use function Tiny\Tags\HTML\main;
-use function Tiny\Tags\HTML\meta;
-use function Tiny\Tags\HTML\p;
-use function Tiny\Tags\HTML\title;
-use function Tiny\Tags\HTML\link;
-use function Tiny\Tags\HTML\style;
+use function Pure\Tags\HTML\a;
+use function Pure\Tags\HTML\body;
+use function Pure\Tags\HTML\div;
+use function Pure\Tags\HTML\footer;
+use function Pure\Tags\HTML\h1;
+use function Pure\Tags\HTML\h3;
+use function Pure\Tags\HTML\head;
+use function Pure\Tags\HTML\header;
+use function Pure\Tags\HTML\html;
+use function Pure\Tags\HTML\nav;
+use function Pure\Tags\HTML\main;
+use function Pure\Tags\HTML\meta;
+use function Pure\Tags\HTML\p;
+use function Pure\Tags\HTML\title;
+use function Pure\Tags\HTML\link;
+use function Pure\Tags\HTML\style;
 
 echo (
     html(

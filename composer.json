@@ -1,14 +1,14 @@
 {
-    "name": "yonlj/tiny",
+    "name": "yonlj/purephp",
     "type": "library",
-    "description": "Tiny is a Virtual DOM based templating-engine for PHP inspired by ReactJS.",
+    "description": "Pure is a Virtual DOM based templating-engine for PHP inspired by ReactJS.",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Tiny\\": "src/",
-            "Tiny\\Core\\": "src/core",
-            "Tiny\\Utils\\": "src/utils",
-            "Tiny\\Tags\\": "src/tags"
+            "Pure\\": "src/",
+            "Pure\\Core\\": "src/core",
+            "Pure\\Utils\\": "src/utils",
+            "Pure\\Tags\\": "src/tags"
         },
         "files": [
             "src/tags/html.php",
