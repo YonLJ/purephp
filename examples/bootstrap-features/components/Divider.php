@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-use Tiny\Core\HTML;
+use Pure\Core\HTML;
 
-use function Tiny\Tags\HTML\div;
+use function Pure\Tags\HTML\div;
 
 function Divider(): HTML
 {

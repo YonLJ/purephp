@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Tiny\Core;
+namespace Pure\Core;
 
 class XML extends Tag {
     public static function __callStatic(string $tag, array $children): XML

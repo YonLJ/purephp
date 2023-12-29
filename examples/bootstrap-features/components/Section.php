@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-use Tiny\Core\HTML;
+use Pure\Core\HTML;
 
-use function Tiny\Tags\HTML\div;
-use function Tiny\Tags\HTML\h2;
+use function Pure\Tags\HTML\div;
+use function Pure\Tags\HTML\h2;
 
 function Section(array $props): HTML
 {

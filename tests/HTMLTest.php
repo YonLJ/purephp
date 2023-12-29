@@ -1,31 +1,31 @@
 <?php declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use Tiny\Core\HTML;
+use Pure\Core\HTML;
 
-use function Tiny\Core\rawHtml;
-use function Tiny\Tags\HTML\a;
-use function Tiny\Tags\HTML\body;
-use function Tiny\Tags\HTML\button;
-use function Tiny\Tags\HTML\div;
-use function Tiny\Tags\HTML\footer;
-use function Tiny\Tags\HTML\form;
-use function Tiny\Tags\HTML\h1;
-use function Tiny\Tags\HTML\h2;
-use function Tiny\Tags\HTML\head;
-use function Tiny\Tags\HTML\html;
-use function Tiny\Tags\HTML\meta;
-use function Tiny\Tags\HTML\title;
-use function Tiny\Tags\HTML\header;
-use function Tiny\Tags\HTML\input;
-use function Tiny\Tags\HTML\label;
-use function Tiny\Tags\HTML\li;
-use function Tiny\Tags\HTML\main;
-use function Tiny\Tags\HTML\nav;
-use function Tiny\Tags\HTML\p;
-use function Tiny\Tags\HTML\section;
-use function Tiny\Tags\HTML\textarea;
-use function Tiny\Tags\HTML\ul;
+use function Pure\Core\rawHtml;
+use function Pure\Tags\HTML\a;
+use function Pure\Tags\HTML\body;
+use function Pure\Tags\HTML\button;
+use function Pure\Tags\HTML\div;
+use function Pure\Tags\HTML\footer;
+use function Pure\Tags\HTML\form;
+use function Pure\Tags\HTML\h1;
+use function Pure\Tags\HTML\h2;
+use function Pure\Tags\HTML\head;
+use function Pure\Tags\HTML\html;
+use function Pure\Tags\HTML\meta;
+use function Pure\Tags\HTML\title;
+use function Pure\Tags\HTML\header;
+use function Pure\Tags\HTML\input;
+use function Pure\Tags\HTML\label;
+use function Pure\Tags\HTML\li;
+use function Pure\Tags\HTML\main;
+use function Pure\Tags\HTML\nav;
+use function Pure\Tags\HTML\p;
+use function Pure\Tags\HTML\section;
+use function Pure\Tags\HTML\textarea;
+use function Pure\Tags\HTML\ul;
 
 class HTMLTest extends TestCase
 {

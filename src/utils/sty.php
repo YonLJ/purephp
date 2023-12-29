@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Tiny\Utils;
+namespace Pure\Utils;
 
 function sty(array|null $list): string|null
 {

@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use function Tiny\Utils\clx;
-use function Tiny\Utils\sty;
+use function Pure\Utils\clx;
+use function Pure\Utils\sty;
 
 class UtilsTest extends TestCase
 {
