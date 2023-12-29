@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Tiny\Core\SVG;
+use Pure\Core\SVG;
 
-use function Tiny\Tags\SVG\svg;
-use function Tiny\Tags\SVG\svgUse;
+use function Pure\Tags\SVG\svg;
+use function Pure\Tags\SVG\svgUse;
 
 function Icon(string $icon): SVG
 {

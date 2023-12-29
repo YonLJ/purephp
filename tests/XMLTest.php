@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
-use Tiny\Core\XML;
+use Pure\Core\XML;
 
 function Address(array $props)
 {

@@ -12,9 +12,9 @@ require_once './components/MainFeature.php';
 require_once './svgs.php';
 require_once './data.php';
 
-use function Tiny\Tags\HTML\div;
-use function Tiny\Tags\HTML\h1;
-use function Tiny\Tags\HTML\main;
+use function Pure\Tags\HTML\div;
+use function Pure\Tags\HTML\h1;
+use function Pure\Tags\HTML\main;
 
 $appView = main(
     h1('Features examples')->class('visually-hidden'),
