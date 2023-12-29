@@ -8,12 +8,14 @@
             "Tiny\\": "src/",
             "Tiny\\Core\\": "src/core",
             "Tiny\\Utils\\": "src/utils",
-            "Tiny\\Html\\": "src/html"
+            "Tiny\\Tags\\": "src/tags"
         },
         "files": [
-            "src/html/tags.php",
+            "src/tags/html.php",
+            "src/tags/svg.php",
             "src/utils/clx.php",
-            "src/utils/sty.php"
+            "src/utils/sty.php",
+            "src/core/Raw.php"
         ]
     },
     "authors": [
@@ -25,6 +27,9 @@
     "require": {
         "php": ">=8.1.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^10"
+    },
     "keywords": [
         "php",
         "templating-engine",
@@ -34,5 +39,11 @@
         "vdom",
         "html5",
         "xml"
-    ]
+    ],
+    "archive": {
+        "exclude": [
+            "tests/",
+            "examples/"
+        ]
+    }
 }
