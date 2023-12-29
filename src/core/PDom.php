@@ -4,20 +4,15 @@ namespace Tiny\Core;
 use DOMElement;
 use DOMDocument;
 
-class PDom {
-    private string $tagName;
-
-    private array $attrs = [];
-
-    private array $children = [];
-
+class PDom extends Dom
+{
     private DOMElement $dom;
 
     private static DOMDocument $document;
 
     private bool $isXML = false;
 
-    private static function getDocument()
+    private static function document(): DOMDocument
     {
         if (!isset(PDom::$document)) {
             PDom::$document = new DOMDocument('1.0');
@@ -27,11 +22,11 @@ class PDom {
 
     public function __construct(Tag $tag)
     {
-        $this->isXML = $tag->getIsXML();
+        $this->isXML = $tag instanceof XML;
         $this->tagName = $tag->getTagName();
-        $this->attrs = $tag->getAttrs();
+        $this->attrs = $tag->getAttributes();
         $this->children = array_map(
-            fn($child) => $child instanceof Tag
+            fn ($child) => $child instanceof Tag
                 ? new PDom($child)
                 : $child,
             $tag->getChildren()
@@ -41,29 +36,48 @@ class PDom {
         $this->appendChildren();
     }
 
-    private function createDom()
+    private function createDom(): void
     {
-        $dom = PDom::getDocument()->createElement($this->tagName);
+        $dom = PDom::document()->createElement($this->tagName);
         if (!$dom) {
             throw new \Error("tag {$this->tagName} is invalid.");
         }
         $this->dom = $dom;
     }
 
-    private function appendChildren()
+    private function appendChildren(): void
     {
-        for ($i = 0, $size = count($this->children); $i < $size; $i++) {
+        if (empty($this->children)) {
+            return;
+        }
+
+        $size = count($this->children);
+        for ($i = 0; $i < $size; $i++) {
             $child = $this->children[$i];
             $this->appendChild($child);
         }
     }
 
-    private function appendChild(string|PDom $child)
+    private function appendChild(null|string|PDom|Raw $child): void
     {
+        if (is_null($child)) {
+            return;
+        }
+
         if (is_string($child)) {
-            $textNode = PDom::getDocument()->createTextNode($child);
+            $textNode = PDom::document()->createTextNode($child);
             $this->dom->appendChild($textNode);
             return;
+        }
+
+        if ($child instanceof Raw) {
+            $fragment = PDom::document()->createDocumentFragment();
+            if ($child->type === RawType::HTML) {
+                $fragment->append((string)$child);
+            } else {
+                $fragment->appendXML((string)$child);
+            }
+            $this->dom->appendChild($fragment);
         }
 
         if ($child instanceof PDom) {
@@ -71,29 +85,17 @@ class PDom {
         }
     }
 
-    private function appendAttrNodes()
+    private function appendAttrNodes(): void
     {
         foreach ($this->attrs as $key => $value) {
             $this->appendAttrNode($key, $value);
         }
     }
 
-    private function appendAttrNode(string $key, array $value)
+    private function appendAttrNode(string $key, string $value): void
     {
-        if (count($value) === 1) {
-            $v = current($value);
-            if (is_null($v) || $v === false) {
-                return;
-            }
-
-            $attrNode = PDom::getDocument()->createAttribute($key);
-            $attrNode->value = $v === true ? $v : (string)$v;
-            $this->dom->appendChild($attrNode);
-            return;
-        }
-
-        $attrNode = PDom::getDocument()->createAttribute($key);
-        $attrNode->value = join(' ', $value);
+        $attrNode = PDom::document()->createAttribute($key);
+        $attrNode->value = $value;
         $this->dom->appendChild($attrNode);
     }
 
@@ -105,8 +107,8 @@ class PDom {
     public function __toString(): string
     {
         $html = $this->isXML
-            ? PDom::getDocument()->saveXML($this->dom)
-            : PDom::getDocument()->saveHTML($this->dom);
+            ? PDom::document()->saveXML($this->dom)
+            : PDom::document()->saveHTML($this->dom);
         if ($html === false) {
             return '';
         }

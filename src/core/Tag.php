@@ -1,38 +1,68 @@
 <?php declare(strict_types=1);
 namespace Tiny\Core;
 
-class Tag
+use ErrorException;
+use Exception;
+
+abstract class Tag
 {
     private string $tagName;
 
+    /**
+     * [string => string]
+     */
     private array $attrs = [];
 
     private array $children = [];
 
-    private bool $isXML;
+    private bool $selfClose = false;
 
-    public static function __callStatic(string $tag, array $children): Tag
-    {
-        return new Tag($tag, $children);
-    }
-
-    private function __construct(string $tagName, array $children)
+    protected function __construct(string $tagName, array $children)
     {
         $this->tagName = $tagName;
         $this->appendChildren($children);
     }
 
-    public function __call(string $attr, array $args): Tag
+    public function _props(array $props): Tag
     {
-        $attr = str_replace('_', '-', $attr);
-        $value = current($args);
-
-        if (!array_key_exists($attr, $this->attrs)) {
-            $this->attrs[$attr] = [];
+        if (empty($props)) {
+            return $this;
         }
-        $this->attrs[$attr][] = $value;
+
+        foreach ($props as $key => $value) {
+            $this->appendAttr($key, $value);
+        }
 
         return $this;
+    }
+
+    public function _selfClose(bool $value): Tag
+    {
+        $this->selfClose = $value;
+        if ($this->selfClose && !empty($this->children)) {
+            throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
+        }
+        return $this;
+    }
+
+    public function __call(string $key, array $args): Tag
+    {
+        if (empty($args)) {
+            throw new ErrorException("'{$key}()' accepts one parameter. '{$this->tagName}()->{$key}() is invalid.'");
+        }
+
+        if (count($args) !== 1) {
+            $argsStr = join(',', $args);
+            throw new Exception("'{$key}()' only accepts one parameter. '{$this->tagName}()->{$key}({$argsStr}) is invalid.'");
+        }
+
+        $this->appendAttr($key, $args[0]);
+        return $this;
+    }
+
+    public function isSelfClose(): bool
+    {
+        return $this->selfClose;
     }
 
     public function getTagName(): string
@@ -40,9 +70,14 @@ class Tag
         return $this->tagName;
     }
 
-    public function getAttrs(): array
+    public function getAttributes(): array
     {
         return $this->attrs;
+    }
+
+    public function getAttribute(string $key): string
+    {
+        return $this->attrs[$key];
     }
 
     public function getChildren(): array
@@ -50,20 +85,43 @@ class Tag
         return $this->children;
     }
 
-    public function getIsXML(): bool
+    private function appendAttr(string|int $key, mixed $value): void
     {
-        return $this->isXML;
+        if (is_null($value)) {
+            return;
+        }
+
+        if (is_numeric($key)) {
+            throw new ErrorException("Element '{$this->tagName}' attribute name cannot be numbers '{$key}'.");
+        }
+        if (empty($key)) {
+            throw new ErrorException("Element '{$this->tagName}' attribute name cannot be empty '{$key}'.");
+        }
+
+        $key = str_replace('_', '-', $key);
+
+        if (is_bool($value)) {
+            if ($value === false) {
+                return;
+            }
+            $value = $key;
+        }
+
+        $this->attrs[$key] = (string)$value;
     }
 
-    private function appendChildren(array $children)
+    private function appendChildren(array $children): void
     {
-        for($i = 0, $size = count($children); $i < $size; $i++) {
-            $child = $children[$i];
-            $this->appendChild($child);
+        if (empty($children)) {
+            return;
+        }
+
+        for ($i = 0, $size = count($children); $i < $size; $i++) {
+            $this->appendChild($children[$i]);
         }
     }
 
-    private function appendChild(mixed $child)
+    private function appendChild(mixed $child): void
     {
         if (is_null($child)) {
             return;
@@ -74,7 +132,7 @@ class Tag
             return;
         }
 
-        if ($child instanceof Tag) {
+        if (is_string($child) || $child instanceof Raw || $child instanceof Tag) {
             $this->children[] = $child;
             return;
         }
@@ -87,7 +145,7 @@ class Tag
         return array_merge([
             'tagName' => $this->tagName,
             'children' => array_map(
-                fn($child) => $child instanceof Tag
+                fn ($child) => $child instanceof Tag || $child instanceof Raw
                     ? $child->toJSON()
                     : $child,
                 $this->children
@@ -95,31 +153,20 @@ class Tag
         ], $this->attrs);
     }
 
-    public function toTDom(bool $isXML = false): TDom
+    public function toTDom(): TDom
     {
-        $this->isXML = $isXML;
         return new TDom($this);
     }
 
-    public function toPDom(bool $isXML = false): PDom
+    public function toPDom(): PDom
     {
-        $this->isXML = $isXML;
         return new PDom($this);
     }
 
-    public function save(string $path, bool $isXML = false): int|false
+    public function __toString(): string
     {
-        $handle = fopen($path, 'w');
-        if ($handle === false) {
-            return false;
-        }
-
-        $header = $isXML
-            ? '<?xml version="1.0"?>'
-            : '<!DOCTYPE html>';
-
-        $result = fwrite($handle, $header . (string)$this->toTDom());
-        fclose($handle);
-        return $result;
+        return (string)$this->toTDom();
     }
+
+    abstract public function save(string $path): int|false;
 }
