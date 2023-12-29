@@ -1,33 +1,42 @@
-<?php
+<?php declare(strict_types=1);
 namespace Tiny\Utils;
 
-function clx(...$args): string
+function clx(array|string|null ...$args): string|null
 {
+    if (empty($args)) {
+        return null;
+    }
+
     $classList = [];
     foreach ($args as $className) {
-        if (is_string($className)) {
+        if (is_string($className) && !empty($className)) {
             $classList[] = $className;
             continue;
         }
 
-        if (is_array($className) || is_object($className)) {
-            filterClassList($className);
+        if (is_array($className)) {
+            $classList = array_merge($classList, filterClassList($className));
         }
     }
 
+    if (empty($classList)) {
+        return null;
+    }
     return join(' ', $classList);
 }
 
 function filterClassList(array $classList)
 {
+    $classes = [];
     foreach ($classList as $key => $val) {
-        if (is_int($key) && is_string($val)) {
-            $classList[] = $val;
+        if (is_int($key) && is_string($val) && !empty($val)) {
+            $classes[] = $val;
             continue;
         }
 
-        if (is_string($key) && is_bool($val)) {
-            $classList[] = $key;
+        if (is_string($key) && !empty($key) && $val === true) {
+            $classes[] = $key;
         }
     }
+    return $classes;
 }

@@ -1,11 +1,19 @@
 <?php declare(strict_types=1);
 namespace Tiny\Utils;
 
-function sty(array $list)
+function sty(array|null $list): string|null
 {
+    if (empty($list)) {
+        return null;
+    }
+
     $styleList = [];
     foreach ($list as $key => $val) {
         $styleList[] = "$key: $val";
     }
-    return join(';', $styleList) . ';';
+
+    if (empty($styleList)) {
+        return null;
+    }
+    return join('; ', $styleList) . ';';
 }
