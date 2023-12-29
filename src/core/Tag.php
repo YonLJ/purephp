@@ -153,19 +153,19 @@ abstract class Tag
         ], $this->attrs);
     }
 
-    public function toTDom(): TDom
+    public function toPDom(): PDom
     {
-        return new TDom($this);
+        return new PDom($this);
     }
 
-    public function toPDom(): NDom
+    public function toNDom(): NDom
     {
         return new NDom($this);
     }
 
     public function __toString(): string
     {
-        return (string)$this->toTDom();
+        return (string)$this->toPDom();
     }
 
     abstract public function save(string $path): int|false;

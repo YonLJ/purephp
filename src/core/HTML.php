@@ -39,7 +39,7 @@ class HTML extends Tag
             return false;
         }
 
-        $result = fwrite($handle, $header . (string)$this->toTDom());
+        $result = fwrite($handle, $header . (string)$this->toPDom());
         fclose($handle);
         return $result;
     }
