@@ -18,12 +18,12 @@ class Raw {
         $this->content = $content;
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return $this->content;
     }
 
-    public function toJSON()
+    public function toJSON(): array
     {
         $type = $this->type === RawType::HTML ? 'HTML' : 'XML';
         return [
@@ -33,12 +33,12 @@ class Raw {
     }
 }
 
-function rawHtml(string $content)
+function rawHtml(string $content): Raw
 {
     return new Raw(RawType::HTML, $content);
 }
 
-function rawXml(string $content)
+function rawXml(string $content): Raw
 {
     return new Raw(RawType::XML, $content);
 }

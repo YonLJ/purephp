@@ -23,29 +23,12 @@ abstract class Tag
         $this->appendChildren($children);
     }
 
-    public function _props(array $props): Tag
+    public function __toString(): string
     {
-        if (empty($props)) {
-            return $this;
-        }
-
-        foreach ($props as $key => $value) {
-            $this->appendAttr($key, $value);
-        }
-
-        return $this;
+        return (string)$this->toPDom();
     }
 
-    public function _selfClose(bool $value): Tag
-    {
-        $this->selfClose = $value;
-        if ($this->selfClose && !empty($this->children)) {
-            throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
-        }
-        return $this;
-    }
-
-    public function __call(string $key, array $args): Tag
+    public function __call(string $key, array $args): self
     {
         if (empty($args)) {
             throw new ErrorException("'{$key}()' accepts one parameter. '{$this->tagName}()->{$key}() is invalid.'");
@@ -60,9 +43,37 @@ abstract class Tag
         return $this;
     }
 
-    public function isSelfClose(): bool
+    public function className($value): self
+    {
+        $this->appendAttr('class', $value);
+        return $this;
+    }
+
+    public function setProps(array $props): self
+    {
+        if (empty($props)) {
+            return $this;
+        }
+
+        foreach ($props as $key => $value) {
+            $this->appendAttr($key, $value);
+        }
+
+        return $this;
+    }
+
+    public function getSelfClose(): bool
     {
         return $this->selfClose;
+    }
+
+    public function setSelfClose(bool $value): self
+    {
+        $this->selfClose = $value;
+        if ($this->selfClose && !empty($this->children)) {
+            throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
+        }
+        return $this;
     }
 
     public function getTagName(): string
@@ -161,11 +172,6 @@ abstract class Tag
     public function toNDom(): NDom
     {
         return new NDom($this);
-    }
-
-    public function __toString(): string
-    {
-        return (string)$this->toPDom();
     }
 
     abstract public function save(string $path): int|false;
