@@ -8,7 +8,7 @@ class PDom extends Dom
     public function __construct(Tag $tag)
     {
         $this->tagName = $tag->getTagName();
-        $this->selfClose = $tag->isSelfClose();
+        $this->selfClose = $tag->getSelfClose();
         $this->attrs = $tag->getAttributes();
         $this->children = array_map(
             fn ($child) => $child instanceof Tag
@@ -16,6 +16,19 @@ class PDom extends Dom
                 : $child,
             $tag->getChildren()
         );
+    }
+
+    public function __toString(): string
+    {
+        $attrs = $this->buildAttrsStr();
+        $attrs = empty($attrs) ? '' : " $attrs";
+
+        if ($this->selfClose) {
+            return "<{$this->tagName}{$attrs} />";
+        }
+
+        $content = $this->buildChildrenStr();
+        return "<{$this->tagName}{$attrs}>{$content}</{$this->tagName}>";
     }
 
     private function buildAttrsStr(): string
@@ -36,18 +49,5 @@ class PDom extends Dom
     {
         $children = array_map(fn ($child) => (string)$child, $this->children);
         return join($children);
-    }
-
-    public function __toString(): string
-    {
-        $attrs = $this->buildAttrsStr();
-        $attrs = empty($attrs) ? '' : " $attrs";
-
-        if ($this->selfClose) {
-            return "<{$this->tagName}{$attrs} />";
-        }
-
-        $content = $this->buildChildrenStr();
-        return "<{$this->tagName}{$attrs}>{$content}</{$this->tagName}>";
     }
 }

@@ -23,7 +23,7 @@ class HTML extends Tag
     {
         parent::__construct($tagName, $children);
         if (in_array(strtolower($tagName), SELF_CLOSE_HTML_TAGS)) {
-            $this->_selfClose(true);
+            $this->setSelfClose(true);
         }
     }
 

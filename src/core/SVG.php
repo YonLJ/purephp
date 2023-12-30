@@ -28,7 +28,7 @@ class SVG extends XML {
     {
         parent::__construct($tagName, $children);
         if (in_array(strtolower($tagName), SELF_CLOSE_SVG_TAGS)) {
-            $this->_selfClose(true);
+            $this->setSelfClose(true);
         }
     }
 
