@@ -36,6 +36,18 @@ class NDom extends Dom
         $this->appendChildren();
     }
 
+    public function __toString(): string
+    {
+        $html = $this->isXML
+            ? NDom::document()->saveXML($this->dom)
+            : NDom::document()->saveHTML($this->dom);
+        if ($html === false) {
+            return '';
+        }
+
+        return $html;
+    }
+
     private function createDom(): void
     {
         $dom = NDom::document()->createElement($this->tagName);
@@ -102,17 +114,5 @@ class NDom extends Dom
     public function toDom(): DOMElement
     {
         return $this->dom;
-    }
-
-    public function __toString(): string
-    {
-        $html = $this->isXML
-            ? NDom::document()->saveXML($this->dom)
-            : NDom::document()->saveHTML($this->dom);
-        if ($html === false) {
-            return '';
-        }
-
-        return $html;
     }
 }
