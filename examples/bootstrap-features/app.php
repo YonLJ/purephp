@@ -16,7 +16,7 @@ use function Pure\Tags\HTML\div;
 use function Pure\Tags\HTML\h1;
 use function Pure\Tags\HTML\main;
 
-$appView = main(
+main(
     h1('Features examples')->class('visually-hidden'),
     Section([
         'title' => 'Columns with icons',
@@ -59,7 +59,4 @@ $appView = main(
         ],
         'classList' => 'row row-cols-1 row-cols-md-2 align-items-md-center g-5 py-5'
     ]),
-);
-
-echo $svgsView;
-echo $appView;
+)->toPrint();
