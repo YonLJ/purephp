@@ -174,5 +174,10 @@ abstract class Tag
         return new NDom($this);
     }
 
+    public function toPrint(): void
+    {
+        echo $this->__toString();
+    }
+
     abstract public function save(string $path): int|false;
 }
