@@ -2,9 +2,16 @@
 
 Purephp is a Virtual DOM based templating-engine for PHP inspired by ReactJS.
 
-## What is it
+## Why use Purephp?
 
-Purephp is a template engine that can output HTML5 strings or files. It also works on xml and svg.
+To enjoy pure PHP programming.
+
+In traditional approaches, mixing HTML code, PHP code, and other template syntax in the view layer can be frustrating for developers.
+
+However, with Purephp:
++ Everything is 100% native PHP code.
++ Encapsulate components to eliminate repetitive HTML code.
++ The syntax closely resembles HTML.
 
 ## Install
 
@@ -12,23 +19,20 @@ Purephp is a template engine that can output HTML5 strings or files. It also wor
 
 ## Basic usage
 
-Here is a simple example that will show how to use `Pure`:
+Here is a simple example that will show how to use `Purephp`:
 
 ```php
 <?php
 
 use Pure\Core\NDom;
 use Pure\Core\HTML;
+use function Pure\Tags\HTML\a;
 use function Pure\Tags\HTML\div;
 
-$view = (
-    div( // equal to HTML::div(...)
-        'Hello ',
-        HTML::a('PHP')->href('https://www.php.net')
-    )->class('container')->style('background: #fff;')->data_key('primary')
-);
-
-echo $view->PDom();
+div(
+    'Hello ',
+    a('PHP')->href('https://www.php.net')
+)->class('container')->style('background: #fff;')->data_key('primary')->toPrint();
 ```
 
 The above code will output:
@@ -52,9 +56,9 @@ use function Pure\Tags\HTML\p;
 use function Pure\Tags\SVG\svg;
 use function Pure\Tags\SVG\svgUse;
 
-function Section($props)
+// use named arguments
+function Section($title, $contents, $classList)
 {
-    extract($props);
     return (
         div(
             h2($title)->class('pb-2 border-bottom'),
@@ -63,9 +67,9 @@ function Section($props)
     );
 }
 
+// use array destructuring assignments
 function IconColumn($props)
 {
-    extract($props);
     [
         'icon' => $icon,
         'title' => $title,
@@ -73,6 +77,7 @@ function IconColumn($props)
         'linkText' => $linkText,
         'link' => $link
     ] = $props;
+
     return (
         div(
             div(
@@ -88,9 +93,11 @@ function IconColumn($props)
     );
 }
 
+// use extract()
 function HangingIcon($props)
 {
     extract($props);
+
     return (
         div(
             div(
@@ -114,25 +121,23 @@ function Icon($icon)
     );
 }
 
-$view =(
-    main(
-        Section([
-            'title' => 'Columns with icons',
-            'contents' => array_map(fn($data) => IconColumn($data), $columnsData),
-            'classList' => 'row g-4 py-5 row-cols-1 row-cols-lg-3'
-        ]),
-        Section([
-            'title' => 'Hanging icons',
-            'contents' => array_map(fn($data) => HangingIcon($data), $hangingData),
-            'classList' => 'row g-4 py-5 row-cols-1 row-cols-lg-3'
-        ]),
-    )
-)
+main(
+    Section(
+        title: 'Columns with icons',
+        contents: array_map(fn ($data) => IconColumn($data), $columnsData),
+        classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
+    ),
+    Section(
+        title: 'Hanging icons',
+        contents: array_map(fn ($data) => HangingIcon($data), $hangingData),
+        classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
+    ),
+)->toPrint();
 ```
 
 ## Examples
 
-For more usage examples see [here](https://github.com/YonLJ/Pure/tree/master/examples).
+For more usage examples see [here](https://github.com/YonLJ/purephp/tree/master/examples).
 
 ## License
 
