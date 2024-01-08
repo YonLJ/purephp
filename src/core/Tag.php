@@ -179,5 +179,5 @@ abstract class Tag
         echo $this->__toString();
     }
 
-    abstract public function save(string $path): int|false;
+    abstract public function toSave(string $path): int|false;
 }
