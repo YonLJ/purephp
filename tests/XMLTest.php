@@ -45,12 +45,12 @@ class XMLTest extends TestCase
     {
         parent::__construct($name);
 
-        $this->createInstance();
+        $this->xml = $this->createInstance();
     }
 
     private function createInstance()
     {
-        $this->xml = (
+        return (
             XML::customers(
                 XML::customer(
                     XML::name('Charter Group'),
@@ -68,7 +68,7 @@ class XMLTest extends TestCase
 
     public function testSave()
     {
-        $outputPath = './output.html';
+        $outputPath = './output.xml';
 
         $result = $this->xml->save($outputPath);
         $this->assertNotFalse($result);
