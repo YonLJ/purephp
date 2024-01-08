@@ -34,7 +34,7 @@ function filterClassList(array $classList)
             continue;
         }
 
-        if (is_string($key) && !empty($key) && $val === true) {
+        if (is_string($key) && !empty($key) && !empty($val)) {
             $classes[] = $key;
         }
     }

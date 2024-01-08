@@ -35,12 +35,12 @@ class HTMLTest extends TestCase
     {
         parent::__construct($name);
 
-        $this->createInstance();
+        $this->html = $this->createInstance();
     }
 
     public function createInstance()
     {
-        $this->html = (
+        return (
             html(
                 head(
                     meta()->charset('UTF-8'),
@@ -414,7 +414,7 @@ class HTMLTest extends TestCase
         $this->assertFileExists($outputPath);
 
         $savedContent = file_get_contents($outputPath);
-        $this->assertStringContainsString('<div>Hello, World!</div>', $savedContent);
+        $this->assertSame('<!DOCTYPE html><div>Hello, World!</div>', $savedContent);
 
         unlink($outputPath);
     }
