@@ -54,7 +54,7 @@ class XMLTest extends TestCase
             XML::customers(
                 XML::customer(
                     XML::name('Charter Group'),
-                    array_map(fn ($x) => Address($x), $this->testData)
+                    array_map(fn($x) => Address($x), $this->testData)
                 )->id('55000')
             )
         );

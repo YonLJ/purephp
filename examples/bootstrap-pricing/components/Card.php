@@ -30,7 +30,7 @@ function Card($props): HTML
                 small('/ mo')->class('text-muted')
             )->class('card-title pricing-card-title'),
             ul(
-                array_map(fn ($feature) => li($feature), $features)
+                array_map(fn($feature) => li($feature), $features)
             )->class('list-unstyled mt-3 mb-4'),
             button($button['text'])->type('button')->class("btn btn-lg btn-block {$button['class']}")
         )->class('card-body')

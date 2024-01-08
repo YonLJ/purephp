@@ -20,7 +20,7 @@ function ColLinks(array $props): HTML
     return div(
         h5($title),
         ul(
-            array_map(fn ($link) => li(a($link['text'])->class('text-muted')->href($link['href'])), $links)
+            array_map(fn($link) => li(a($link['text'])->class('text-muted')->href($link['href'])), $links)
         )->class('list-unstyled text-small')
     )->class('col-6 col-md');
 }

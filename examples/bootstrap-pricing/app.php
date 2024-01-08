@@ -85,7 +85,7 @@ body(
                 ],
                 'text' => '© 2017-2018'
             ]),
-            array_map(fn ($data) => ColLinks($data), [
+            array_map(fn($data) => ColLinks($data), [
                 [
                     'title' => 'Features',
                     'links' => [
