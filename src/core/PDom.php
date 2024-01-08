@@ -11,7 +11,7 @@ class PDom extends Dom
         $this->selfClose = $tag->getSelfClose();
         $this->attrs = $tag->getAttributes();
         $this->children = array_map(
-            fn ($child) => $child instanceof Tag
+            fn($child) => $child instanceof Tag
                 ? new PDom($child)
                 : $child,
             $tag->getChildren()
@@ -47,7 +47,7 @@ class PDom extends Dom
 
     private function buildChildrenStr(): string
     {
-        $children = array_map(fn ($child) => (string)$child, $this->children);
+        $children = array_map(fn($child) => (string)$child, $this->children);
         return join($children);
     }
 }

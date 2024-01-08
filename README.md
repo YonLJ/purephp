@@ -124,12 +124,12 @@ function Icon($icon)
 main(
     Section(
         title: 'Columns with icons',
-        contents: array_map(fn ($data) => IconColumn($data), $columnsData),
+        contents: array_map(fn($data) => IconColumn($data), $columnsData),
         classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
     ),
     Section(
         title: 'Hanging icons',
-        contents: array_map(fn ($data) => HangingIcon($data), $hangingData),
+        contents: array_map(fn($data) => HangingIcon($data), $hangingData),
         classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
     ),
 )->toPrint();

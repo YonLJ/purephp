@@ -156,7 +156,7 @@ abstract class Tag
         return array_merge([
             'tagName' => $this->tagName,
             'children' => array_map(
-                fn ($child) => $child instanceof Tag || $child instanceof Raw
+                fn($child) => $child instanceof Tag || $child instanceof Raw
                     ? $child->toJSON()
                     : $child,
                 $this->children
