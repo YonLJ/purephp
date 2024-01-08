@@ -50,4 +50,4 @@ $xml = (
 
 );
 
-$xml->save('./example.xml');
+$xml->toSave('./example.xml');
