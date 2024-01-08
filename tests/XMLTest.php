@@ -70,7 +70,7 @@ class XMLTest extends TestCase
     {
         $outputPath = './output.xml';
 
-        $result = $this->xml->save($outputPath);
+        $result = $this->xml->toSave($outputPath);
         $this->assertNotFalse($result);
         $this->assertFileExists($outputPath);
 

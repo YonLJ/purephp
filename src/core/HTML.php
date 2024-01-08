@@ -32,7 +32,7 @@ class HTML extends Tag
         return new HTML($tag, $children);
     }
 
-    public function save(string $path, string $header = '<!DOCTYPE html>'): int|false
+    public function toSave(string $path, string $header = '<!DOCTYPE html>'): int|false
     {
         $handle = fopen($path, 'w');
         if ($handle === false) {

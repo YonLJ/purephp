@@ -7,7 +7,7 @@ class XML extends Tag {
         return new XML($tag, $children);
     }
 
-    public function save(string $path, string $header = '<?xml version="1.0"?>'): int|false
+    public function toSave(string $path, string $header = '<?xml version="1.0"?>'): int|false
     {
         $handle = fopen($path, 'w');
         if ($handle === false) {
