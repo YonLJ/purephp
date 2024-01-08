@@ -26,7 +26,7 @@ class NDom extends Dom
         $this->tagName = $tag->getTagName();
         $this->attrs = $tag->getAttributes();
         $this->children = array_map(
-            fn ($child) => $child instanceof Tag
+            fn($child) => $child instanceof Tag
                 ? new NDom($child)
                 : $child,
             $tag->getChildren()

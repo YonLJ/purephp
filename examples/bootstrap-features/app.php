@@ -20,25 +20,25 @@ main(
     h1('Features examples')->class('visually-hidden'),
     Section([
         'title' => 'Columns with icons',
-        'contents' => array_map(fn ($data) => IconColumn($data), $columnsData),
+        'contents' => array_map(fn($data) => IconColumn($data), $columnsData),
         'classList' => 'row g-4 py-5 row-cols-1 row-cols-lg-3'
     ]),
     Divider(),
     Section([
         'title' => 'Hanging icons',
-        'contents' => array_map(fn ($data) => HangingIcon($data), $hangingData),
+        'contents' => array_map(fn($data) => HangingIcon($data), $hangingData),
         'classList' => 'row g-4 py-5 row-cols-1 row-cols-lg-3'
     ]),
     Divider(),
     Section([
         'title' => 'Custom cards',
-        'contents' => array_map(fn ($data) => CustomCard($data), $cardsData),
+        'contents' => array_map(fn($data) => CustomCard($data), $cardsData),
         'classList' => 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'
     ]),
     Divider(),
     Section([
         'title' => 'Icon grid',
-        'contents' => array_map(fn ($data) => CellIcon($data), $gridData),
+        'contents' => array_map(fn($data) => CellIcon($data), $gridData),
         'classList' => 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'
     ]),
     Divider(),
@@ -53,7 +53,7 @@ main(
             ]),
             div(
                 div(
-                    ...array_map(fn ($data) => FeatureTitle($data), $featuresData)
+                    ...array_map(fn($data) => FeatureTitle($data), $featuresData)
                 )->class('row row-cols-1 row-cols-sm-2 g-4')
             )->class('col')
         ],

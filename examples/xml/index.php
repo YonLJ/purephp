@@ -44,7 +44,7 @@ $xml = (
     XML::customers(
         XML::customer(
             XML::name('Charter Group'),
-            array_map(fn ($x) => Address($x), $data)
+            array_map(fn($x) => Address($x), $data)
         )->id('55000')
     )
 
