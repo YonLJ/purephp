@@ -32,13 +32,3 @@ class Raw {
         ];
     }
 }
-
-function rawHtml(string $content): Raw
-{
-    return new Raw(RawType::HTML, $content);
-}
-
-function rawXml(string $content): Raw
-{
-    return new Raw(RawType::XML, $content);
-}

@@ -15,7 +15,7 @@
             "src/tags/svg.php",
             "src/utils/clx.php",
             "src/utils/sty.php",
-            "src/core/Raw.php"
+            "src/utils/raw.php"
         ]
     },
     "authors": [
