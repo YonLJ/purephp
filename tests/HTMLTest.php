@@ -3,7 +3,7 @@
 use PHPUnit\Framework\TestCase;
 use Pure\Core\HTML;
 
-use function Pure\Core\rawHtml;
+use function Pure\Utils\rawHtml;
 use function Pure\Tags\HTML\a;
 use function Pure\Tags\HTML\body;
 use function Pure\Tags\HTML\button;
