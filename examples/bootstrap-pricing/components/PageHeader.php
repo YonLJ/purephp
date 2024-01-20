@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Pure\Core\HTML;
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h5;
-use function Pure\Tags\HTML\nav;
-use function Pure\Tags\HTML\a;
+use function Pure\HTML\div;
+use function Pure\HTML\h5;
+use function Pure\HTML\nav;
+use function Pure\HTML\a;
 
 function PageHeader($props): HTML
 {

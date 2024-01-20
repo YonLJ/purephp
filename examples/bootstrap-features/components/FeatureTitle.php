@@ -2,9 +2,9 @@
 
 use Pure\Core\HTML;
 
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h4;
-use function Pure\Tags\HTML\p;
+use function Pure\HTML\div;
+use function Pure\HTML\h4;
+use function Pure\HTML\p;
 
 require_once __DIR__ . '/Icon.php';
 

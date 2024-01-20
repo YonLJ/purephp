@@ -26,8 +26,8 @@ Here is a simple example that will show how to use `Purephp`:
 
 use Pure\Core\NDom;
 use Pure\Core\HTML;
-use function Pure\Tags\HTML\a;
-use function Pure\Tags\HTML\div;
+use function Pure\HTML\a;
+use function Pure\HTML\div;
 
 div(
     'Hello ',
@@ -48,13 +48,13 @@ You can use Pure to encapsulate repeated code snippets into a functional compone
 ```php
 <?php
 
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h2;
-use function Pure\Tags\HTML\h3;
-use function Pure\Tags\HTML\a;
-use function Pure\Tags\HTML\p;
-use function Pure\Tags\SVG\svg;
-use function Pure\Tags\SVG\svgUse;
+use function Pure\HTML\div;
+use function Pure\HTML\h2;
+use function Pure\HTML\h3;
+use function Pure\HTML\a;
+use function Pure\HTML\p;
+use function Pure\SVG\svg;
+use function Pure\SVG\svgUse;
 
 // use named arguments
 function Section($title, $contents, $classList)

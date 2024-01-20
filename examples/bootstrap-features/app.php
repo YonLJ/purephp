@@ -12,9 +12,9 @@ require_once './components/MainFeature.php';
 require_once './svgs.php';
 require_once './data.php';
 
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h1;
-use function Pure\Tags\HTML\main;
+use function Pure\HTML\div;
+use function Pure\HTML\h1;
+use function Pure\HTML\main;
 
 main(
     h1('Features examples')->class('visually-hidden'),

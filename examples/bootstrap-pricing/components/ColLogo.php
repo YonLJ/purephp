@@ -2,9 +2,9 @@
 
 use Pure\Core\HTML;
 
-use function Pure\Tags\HTML\img;
-use function Pure\Tags\HTML\small;
-use function Pure\Tags\HTML\div;
+use function Pure\HTML\img;
+use function Pure\HTML\small;
+use function Pure\HTML\div;
 
 function ColLogo(array $props): HTML
 {

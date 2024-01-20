@@ -9,7 +9,7 @@ require_once './components/ColLogo.php';
 require_once './components/ColLinks.php';
 require_once './components/Container.php';
 
-use function Pure\Tags\HTML\body;
+use function Pure\HTML\body;
 
 body(
     PageHeader([
