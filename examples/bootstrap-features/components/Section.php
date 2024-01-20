@@ -2,8 +2,8 @@
 
 use Pure\Core\HTML;
 
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h2;
+use function Pure\HTML\div;
+use function Pure\HTML\h2;
 
 function Section(array $props): HTML
 {

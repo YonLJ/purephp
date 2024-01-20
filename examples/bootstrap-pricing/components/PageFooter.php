@@ -2,8 +2,8 @@
 
 use Pure\Core\HTML;
 
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\footer;
+use function Pure\HTML\div;
+use function Pure\HTML\footer;
 
 function PageFooter(...$children): HTML
 {

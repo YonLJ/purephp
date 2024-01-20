@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 
 use Pure\Core\HTML;
-use function Pure\Tags\HTML\button;
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h1;
-use function Pure\Tags\HTML\h4;
-use function Pure\Tags\HTML\li;
-use function Pure\Tags\HTML\small;
-use function Pure\Tags\HTML\ul;
+use function Pure\HTML\button;
+use function Pure\HTML\div;
+use function Pure\HTML\h1;
+use function Pure\HTML\h4;
+use function Pure\HTML\li;
+use function Pure\HTML\small;
+use function Pure\HTML\ul;
 
 function Card($props): HTML
 {

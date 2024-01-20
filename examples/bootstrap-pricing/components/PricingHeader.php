@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
 use Pure\Core\HTML;
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h1;
-use function Pure\Tags\HTML\p;
+use function Pure\HTML\div;
+use function Pure\HTML\h1;
+use function Pure\HTML\p;
 
 function PricingHeader($props): HTML
 {

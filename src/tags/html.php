@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Pure\Tags\HTML;
+namespace Pure\HTML;
 
 use Pure\Core\HTML;
 

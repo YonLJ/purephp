@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-use function Pure\Tags\SVG\title;
-use function Pure\Tags\SVG\path;
-use function Pure\Tags\SVG\svg;
-use function Pure\Tags\SVG\symbol;
+use function Pure\SVG\title;
+use function Pure\SVG\path;
+use function Pure\SVG\svg;
+use function Pure\SVG\symbol;
 
 svg(
     symbol(

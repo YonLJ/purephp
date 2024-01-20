@@ -2,7 +2,7 @@
 
 use Pure\Core\HTML;
 
-use function Pure\Tags\HTML\div;
+use function Pure\HTML\div;
 
 function Divider(): HTML
 {
