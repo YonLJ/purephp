@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Card.php';
 
 use Pure\Core\HTML;
-use function Pure\Tags\HTML\div;
+use function Pure\HTML\div;
 
 function CardDeck($cards): HTML
 {

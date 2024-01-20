@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Pure\Core\SVG;
 
-use function Pure\Tags\SVG\svg;
-use function Pure\Tags\SVG\svgUse;
+use function Pure\SVG\svg;
+use function Pure\SVG\svgUse;
 
 function Icon(string $icon): SVG
 {

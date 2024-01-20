@@ -6,9 +6,7 @@
     "autoload": {
         "psr-4": {
             "Pure\\": "src/",
-            "Pure\\Core\\": "src/core",
-            "Pure\\Utils\\": "src/utils",
-            "Pure\\Tags\\": "src/tags"
+            "Pure\\Core\\": "src/core"
         },
         "files": [
             "src/tags/html.php",

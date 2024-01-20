@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 require '../../vendor/autoload.php';
 
-use function Pure\Tags\HTML\button;
-use function Pure\Tags\HTML\div;
-use function Pure\Tags\HTML\h1;
-use function Pure\Tags\HTML\span;
+use function Pure\HTML\button;
+use function Pure\HTML\div;
+use function Pure\HTML\h1;
+use function Pure\HTML\span;
 
 div(
     h1('JavaScript Counter App'),

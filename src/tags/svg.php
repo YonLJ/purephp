@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-namespace Pure\Tags\SVG;
+namespace Pure\SVG;
 
 use Pure\Core\SVG;
 
