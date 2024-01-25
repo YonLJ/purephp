@@ -39,26 +39,13 @@ abstract class Tag
             throw new Exception("'{$key}()' only accepts one parameter. '{$this->tagName}()->{$key}({$argsStr}) is invalid.'");
         }
 
-        $this->appendAttr($key, $args[0]);
+        $this->setAttr($key, $args[0]);
         return $this;
     }
 
     public function className($value): self
     {
-        $this->appendAttr('class', $value);
-        return $this;
-    }
-
-    public function setProps(array $props): self
-    {
-        if (empty($props)) {
-            return $this;
-        }
-
-        foreach ($props as $key => $value) {
-            $this->appendAttr($key, $value);
-        }
-
+        $this->setAttr('class', $value);
         return $this;
     }
 
@@ -81,12 +68,12 @@ abstract class Tag
         return $this->tagName;
     }
 
-    public function getAttributes(): array
+    public function getAttrs(): array
     {
         return $this->attrs;
     }
 
-    public function getAttribute(string $key): string
+    public function getAttr(string $key): string
     {
         return $this->attrs[$key];
     }
@@ -96,7 +83,31 @@ abstract class Tag
         return $this->children;
     }
 
-    private function appendAttr(string|int $key, mixed $value): void
+    public function setAttrs(array $attrs): self
+    {
+        if (empty($attrs)) {
+            return $this;
+        }
+
+        foreach ($attrs as $key => $value) {
+            $this->setAttr($key, $value);
+        }
+
+        return $this;
+    }
+
+    public function setAttrByCb(string $key, callable $callback): self
+    {
+        $value = $callback($this->attrs[$key]);
+        if (is_null($value)) {
+            unset($this->attrs[$key]);
+        } else {
+            $this->attrs[$key] = (string)$value;
+        }
+        return $this;
+    }
+
+    private function setAttr(string|int $key, mixed $value): void
     {
         if (is_null($value)) {
             return;
