@@ -9,7 +9,7 @@ class PDom extends Dom
     {
         $this->tagName = $tag->getTagName();
         $this->selfClose = $tag->getSelfClose();
-        $this->attrs = $tag->getAttributes();
+        $this->attrs = $tag->getAttrs();
         $this->children = array_map(
             fn($child) => $child instanceof Tag
                 ? new PDom($child)

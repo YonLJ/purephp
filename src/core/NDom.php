@@ -24,7 +24,7 @@ class NDom extends Dom
     {
         $this->isXML = $tag instanceof XML;
         $this->tagName = $tag->getTagName();
-        $this->attrs = $tag->getAttributes();
+        $this->attrs = $tag->getAttrs();
         $this->children = array_map(
             fn($child) => $child instanceof Tag
                 ? new NDom($child)

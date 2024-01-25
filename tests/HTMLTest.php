@@ -119,15 +119,15 @@ class HTMLTest extends TestCase
             ->disabled(false)
             ->readonly(null)
             ->required(true);
-        $attributes = $tag->getAttributes();
+        $attrs = $tag->getAttrs();
 
-        $this->assertCount(4, $attributes);
-        $this->assertArrayNotHasKey('disabled', $attributes);
-        $this->assertArrayNotHasKey('readonly', $attributes);
-        $this->assertSame('text', $tag->getAttribute('type'));
-        $this->assertSame('my-input', $tag->getAttribute('id'));
-        $this->assertSame('0', $tag->getAttribute('value'));
-        $this->assertSame('required', $tag->getAttribute('required'));
+        $this->assertCount(4, $attrs);
+        $this->assertArrayNotHasKey('disabled', $attrs);
+        $this->assertArrayNotHasKey('readonly', $attrs);
+        $this->assertSame('text', $tag->getAttr('type'));
+        $this->assertSame('my-input', $tag->getAttr('id'));
+        $this->assertSame('0', $tag->getAttr('value'));
+        $this->assertSame('required', $tag->getAttr('required'));
     }
 
     public function testChildren()

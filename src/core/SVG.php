@@ -36,5 +36,4 @@ class SVG extends XML {
     {
         return new SVG($tag, $children);
     }
-
 }
