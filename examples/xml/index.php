@@ -29,10 +29,7 @@ function Address(array $props)
 
     return (
         XML::address(
-            empty($street) ? null : XML::street($street),
-            empty($city)   ? null : XML::city($city),
-            empty($state)  ? null : XML::state($state),
-            empty($zip)    ? null : XML::zip($zip)
+            array_map(fn($x) => call_user_func("\Pure\Core\XML::$x", $props[$x]), array_keys($props))
         )
     );
 }
@@ -47,7 +44,6 @@ $xml = (
             array_map(fn($x) => Address($x), $data)
         )->id('55000')
     )
-
 );
 
 $xml->toSave('./example.xml');
