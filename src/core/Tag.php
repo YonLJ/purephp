@@ -154,7 +154,12 @@ abstract class Tag
             return;
         }
 
-        if (is_string($child) || $child instanceof Raw || $child instanceof Tag) {
+        if (is_string($child)) {
+            $this->children[] = strip_tags($child);
+            return;
+        }
+
+        if ($child instanceof Raw || $child instanceof Tag) {
             $this->children[] = $child;
             return;
         }
