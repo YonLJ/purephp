@@ -24,8 +24,6 @@ Here is a simple example that will show how to use `Purephp`:
 ```php
 <?php
 
-use Pure\Core\NDom;
-use Pure\Core\HTML;
 use function Pure\HTML\a;
 use function Pure\HTML\div;
 
