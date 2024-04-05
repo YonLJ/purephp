@@ -9,7 +9,9 @@ function sty(array|null $list): string|null
 
     $styleList = [];
     foreach ($list as $key => $val) {
-        $styleList[] = "$key: $val";
+        if (is_string($key) && (is_string($val) || is_numeric($val))) {
+            $styleList[] = "$key: $val";
+        }
     }
 
     if (empty($styleList)) {

@@ -36,7 +36,9 @@ class UtilsTest extends TestCase
         $this->assertEquals('background-color: red; height: 36px; border: 1px solid #fff;', sty([
             'background-color' => 'red',
             'height' => '36px',
-            'border' => '1px solid #fff'
+            'border' => '1px solid #fff',
+            'line-height' => false,
+            'color' => null,
         ]));
     }
 }
