@@ -4,6 +4,9 @@ namespace Pure\Core;
 use ErrorException;
 use Exception;
 
+use function Pure\Utils\clx;
+use function Pure\Utils\sty;
+
 abstract class Tag
 {
     private string $tagName;
@@ -43,10 +46,26 @@ abstract class Tag
         return $this;
     }
 
-    public function className($value): self
+    public function className(string|array|null ...$args): self
     {
-        $this->setAttr('class', $value);
-        return $this;
+        return $this->class(...$args);
+    }
+
+    public function class(string|array|null ...$args): self
+    {
+        $value = count($args) === 1 && is_string($args[0])
+            ? $args[0]
+            : clx(...$args);
+
+        return $this->setAttr('class', $value);
+    }
+
+    public function style(string|array|null $value): self
+    {
+        if (!is_string($value)) {
+            $value = sty($value);
+        }
+        return $this->setAttr('style', $value);
     }
 
     public function getSelfClose(): bool
@@ -75,6 +94,9 @@ abstract class Tag
 
     public function getAttr(string $key): string
     {
+        if ($key === 'className') {
+            $key = 'class';
+        }
         return $this->attrs[$key];
     }
 
@@ -107,10 +129,10 @@ abstract class Tag
         return $this;
     }
 
-    private function setAttr(string|int $key, mixed $value): void
+    private function setAttr(string|int $key, mixed $value): self
     {
         if (is_null($value)) {
-            return;
+            return $this;
         }
 
         if (is_numeric($key)) {
@@ -124,12 +146,13 @@ abstract class Tag
 
         if (is_bool($value)) {
             if ($value === false) {
-                return;
+                return $this;
             }
             $value = $key;
         }
 
         $this->attrs[$key] = (string)$value;
+        return $this;
     }
 
     private function appendChildren(array $children): void

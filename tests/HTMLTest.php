@@ -109,6 +109,43 @@ class HTMLTest extends TestCase
         $this->assertSame('div', $tag->getTagName());
     }
 
+    public function testClassName()
+    {
+        /** @var HTML */
+        $tag = HTML::div()
+            ->className(
+                'class-a class-b',
+                'class-c',
+                [
+                    'class-d',
+                    'class-e' => true,
+                    'class-f' => false,
+                    'class-g' => null,
+                    'class-h' => 0,
+                    'class-i' => '',
+                    'class-j' => 'not empty string',
+                    null,
+                    ''
+                ]
+            );
+
+        $this->assertSame('class-a class-b class-c class-d class-e class-j', $tag->getAttr('class'));
+    }
+
+    public function testStyle()
+    {
+        /** @var HTML */
+        $tag = HTML::div()
+            ->style([
+                'color' => false,
+                'background-color' => '#fff',
+                'line-height' => 1.5,
+                'font-size' => '20px',
+                'position' => null,
+            ]);
+        $this->assertSame('background-color: #fff; line-height: 1.5; font-size: 20px;', $tag->getAttr('style'));
+    }
+
     public function testAttributes()
     {
         /** @var HTML */
@@ -118,16 +155,20 @@ class HTMLTest extends TestCase
             ->value(0)
             ->disabled(false)
             ->readonly(null)
-            ->required(true);
+            ->required(true)
+            ->class('class-a class-b class-c')
+            ->style('display: inline-block; color: #eee; margin-left: 10px;');
         $attrs = $tag->getAttrs();
 
-        $this->assertCount(4, $attrs);
+        $this->assertCount(6, $attrs);
         $this->assertArrayNotHasKey('disabled', $attrs);
         $this->assertArrayNotHasKey('readonly', $attrs);
         $this->assertSame('text', $tag->getAttr('type'));
         $this->assertSame('my-input', $tag->getAttr('id'));
         $this->assertSame('0', $tag->getAttr('value'));
         $this->assertSame('required', $tag->getAttr('required'));
+        $this->assertSame('class-a class-b class-c', $tag->getAttr('class'));
+        $this->assertSame('display: inline-block; color: #eee; margin-left: 10px;', $tag->getAttr('style'));
     }
 
     public function testChildren()
