@@ -1,7 +1,7 @@
 {
     "name": "yonlj/purephp",
     "type": "library",
-    "description": "Pure is a Virtual DOM based templating-engine for PHP inspired by ReactJS.",
+    "description": "Pure is a PHP template engine inspired by ReactJS.",
     "license": "MIT",
     "autoload": {
         "psr-4": {
@@ -15,6 +15,9 @@
             "src/utils/sty.php",
             "src/utils/raw.php"
         ]
+    },
+    "scripts": {
+        "test": "phpunit tests/"
     },
     "authors": [
         {

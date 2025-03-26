@@ -1,2 +1,4 @@
 tests/ export-ignore
 examples/ export-ignore
+.github/ export-ignore
+site/ export-ignore
