@@ -1,2 +1,4 @@
 /vendor
 *.lock
+node_modules/
+docs/.vitepress/cache

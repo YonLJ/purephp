@@ -1,2 +1,4 @@
 tests/ export-ignore
 examples/ export-ignore
+node_modules/ export-ignore
+docs/ export-ignore
