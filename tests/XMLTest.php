@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Core\XML;
@@ -10,9 +12,9 @@ function Address(array $props)
     return (
         XML::address(
             empty($street) ? null : XML::street($street),
-            empty($city)   ? null : XML::city($city),
-            empty($state)  ? null : XML::state($state),
-            empty($zip)    ? null : XML::zip($zip)
+            empty($city) ? null : XML::city($city),
+            empty($state) ? null : XML::state($state),
+            empty($zip) ? null : XML::zip($zip)
         )
     );
 }
@@ -22,21 +24,21 @@ class XMLTest extends TestCase
     private array $testData = [
         [
             'street' => '100 Main',
-            'city'   => 'Framingham',
-            'state'  => 'MA',
-            'zip'    => '01701'
+            'city' => 'Framingham',
+            'state' => 'MA',
+            'zip' => '01701',
         ],
         [
             'street' => '720 Prospect',
-            'city'   => 'Framingham',
-            'state'  => 'MA',
-            'zip'    => '01701'
+            'city' => 'Framingham',
+            'state' => 'MA',
+            'zip' => '01701',
         ],
         [
             'street' => '120 Ridge',
-            'state'  => 'MA',
-            'zip'    => '01760'
-        ]
+            'state' => 'MA',
+            'zip' => '01760',
+        ],
     ];
 
     private XML $xml;
@@ -54,7 +56,7 @@ class XMLTest extends TestCase
             XML::customers(
                 XML::customer(
                     XML::name('Charter Group'),
-                    array_map(fn($x) => Address($x), $this->testData)
+                    array_map(fn ($x) => Address($x), $this->testData)
                 )->id('55000')
             )
         );

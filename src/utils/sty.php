@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Utils;
 
 function sty(array|null $list): string|null
@@ -17,5 +20,6 @@ function sty(array|null $list): string|null
     if (empty($styleList)) {
         return null;
     }
+
     return join('; ', $styleList) . ';';
 }

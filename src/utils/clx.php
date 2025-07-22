@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Utils;
 
 function clx(array|string|null ...$args): string|null
@@ -11,6 +14,7 @@ function clx(array|string|null ...$args): string|null
     foreach ($args as $className) {
         if (is_string($className) && !empty($className)) {
             $classList[] = $className;
+
             continue;
         }
 
@@ -22,6 +26,7 @@ function clx(array|string|null ...$args): string|null
     if (empty($classList)) {
         return null;
     }
+
     return join(' ', $classList);
 }
 
@@ -31,6 +36,7 @@ function filterClassList(array $classList)
     foreach ($classList as $key => $val) {
         if (is_int($key) && is_string($val) && !empty($val)) {
             $classes[] = $val;
+
             continue;
         }
 
@@ -38,5 +44,6 @@ function filterClassList(array $classList)
             $classes[] = $key;
         }
     }
+
     return $classes;
 }

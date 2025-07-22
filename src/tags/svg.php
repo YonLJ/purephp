@@ -1,68 +1,260 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\SVG;
 
 use Pure\Core\SVG;
 
-function a(): SVG                      {return SVG::a(...func_get_args());}
-function animate(): SVG                {return SVG::animate(...func_get_args());}
-function animateMotion(): SVG          {return SVG::animateMotion(...func_get_args());}
-function animateTransform(): SVG       {return SVG::animateTransform(...func_get_args());}
-function circle(): SVG                 {return SVG::circle(...func_get_args());}
-function clipPath(): SVG               {return SVG::clipPath(...func_get_args());}
-function defs(): SVG                   {return SVG::defs(...func_get_args());}
-function desc(): SVG                   {return SVG::desc(...func_get_args());}
-function ellipse(): SVG                {return SVG::ellipse(...func_get_args());}
-function feBlend(): SVG                {return SVG::feBlend(...func_get_args());}
-function feColorMatrix(): SVG          {return SVG::feColorMatrix(...func_get_args());}
-function feComponentTransfer(): SVG    {return SVG::feComponentTransfer(...func_get_args());}
-function feComposite(): SVG            {return SVG::feComposite(...func_get_args());}
-function feConvolveMatrix(): SVG       {return SVG::feConvolveMatrix(...func_get_args());}
-function feDiffuseLighting(): SVG      {return SVG::feDiffuseLighting(...func_get_args());}
-function feDisplacementMap(): SVG      {return SVG::feDisplacementMap(...func_get_args());}
-function feDistantLight(): SVG         {return SVG::feDistantLight(...func_get_args());}
-function feDropShadow(): SVG           {return SVG::feDropShadow(...func_get_args());}
-function feFlood(): SVG                {return SVG::feFlood(...func_get_args());}
-function feFuncA(): SVG                {return SVG::feFuncA(...func_get_args());}
-function feFuncB(): SVG                {return SVG::feFuncB(...func_get_args());}
-function feFuncG(): SVG                {return SVG::feFuncG(...func_get_args());}
-function feFuncR(): SVG                {return SVG::feFuncR(...func_get_args());}
-function feGaussianBlur(): SVG         {return SVG::feGaussianBlur(...func_get_args());}
-function feImage(): SVG                {return SVG::feImage(...func_get_args());}
-function feMerge(): SVG                {return SVG::feMerge(...func_get_args());}
-function feMergeNode(): SVG            {return SVG::feMergeNode(...func_get_args());}
-function feMorphology(): SVG           {return SVG::feMorphology(...func_get_args());}
-function feOffset(): SVG               {return SVG::feOffset(...func_get_args());}
-function fePointLight(): SVG           {return SVG::fePointLight(...func_get_args());}
-function feSpecularLighting(): SVG     {return SVG::feSpecularLighting(...func_get_args());}
-function feSpotLight(): SVG            {return SVG::feSpotLight(...func_get_args());}
-function feTile(): SVG                 {return SVG::feTile(...func_get_args());}
-function feTurbulence(): SVG           {return SVG::feTurbulence(...func_get_args());}
-function filter(): SVG                 {return SVG::filter(...func_get_args());}
-function foreignObject(): SVG          {return SVG::foreignObject(...func_get_args());}
-function g(): SVG                      {return SVG::g(...func_get_args());}
-function image(): SVG                  {return SVG::image(...func_get_args());}
-function line(): SVG                   {return SVG::line(...func_get_args());}
-function linearGradient(): SVG         {return SVG::linearGradient(...func_get_args());}
-function marker(): SVG                 {return SVG::marker(...func_get_args());}
-function mask(): SVG                   {return SVG::mask(...func_get_args());}
-function metadata(): SVG               {return SVG::metadata(...func_get_args());}
-function mpath(): SVG                  {return SVG::mpath(...func_get_args());}
-function path(): SVG                   {return SVG::path(...func_get_args());}
-function pattern(): SVG                {return SVG::pattern(...func_get_args());}
-function polygon(): SVG                {return SVG::polygon(...func_get_args());}
-function polyline(): SVG               {return SVG::polyline(...func_get_args());}
-function radialGradient(): SVG         {return SVG::radialGradient(...func_get_args());}
-function rect(): SVG                   {return SVG::rect(...func_get_args());}
-function script(): SVG                 {return SVG::script(...func_get_args());}
-function set(): SVG                    {return SVG::set(...func_get_args());}
-function stop(): SVG                   {return SVG::stop(...func_get_args());}
-function style(): SVG                  {return SVG::style(...func_get_args());}
-function svg(): SVG                    {return SVG::svg(...func_get_args());}
-function svgSwitch(): SVG              {return SVG::switch(...func_get_args());}
-function symbol(): SVG                 {return SVG::symbol(...func_get_args());}
-function text(): SVG                   {return SVG::text(...func_get_args());}
-function textPath(): SVG               {return SVG::textPath(...func_get_args());}
-function title(): SVG                  {return SVG::title(...func_get_args());}
-function tspan(): SVG                  {return SVG::tspan(...func_get_args());}
-function svgUse(): SVG                 {return SVG::use(...func_get_args());}
-function view(): SVG                   {return SVG::view(...func_get_args());}
+function a(): SVG
+{
+    return SVG::a(...func_get_args());
+}
+function animate(): SVG
+{
+    return SVG::animate(...func_get_args());
+}
+function animateMotion(): SVG
+{
+    return SVG::animateMotion(...func_get_args());
+}
+function animateTransform(): SVG
+{
+    return SVG::animateTransform(...func_get_args());
+}
+function circle(): SVG
+{
+    return SVG::circle(...func_get_args());
+}
+function clipPath(): SVG
+{
+    return SVG::clipPath(...func_get_args());
+}
+function defs(): SVG
+{
+    return SVG::defs(...func_get_args());
+}
+function desc(): SVG
+{
+    return SVG::desc(...func_get_args());
+}
+function ellipse(): SVG
+{
+    return SVG::ellipse(...func_get_args());
+}
+function feBlend(): SVG
+{
+    return SVG::feBlend(...func_get_args());
+}
+function feColorMatrix(): SVG
+{
+    return SVG::feColorMatrix(...func_get_args());
+}
+function feComponentTransfer(): SVG
+{
+    return SVG::feComponentTransfer(...func_get_args());
+}
+function feComposite(): SVG
+{
+    return SVG::feComposite(...func_get_args());
+}
+function feConvolveMatrix(): SVG
+{
+    return SVG::feConvolveMatrix(...func_get_args());
+}
+function feDiffuseLighting(): SVG
+{
+    return SVG::feDiffuseLighting(...func_get_args());
+}
+function feDisplacementMap(): SVG
+{
+    return SVG::feDisplacementMap(...func_get_args());
+}
+function feDistantLight(): SVG
+{
+    return SVG::feDistantLight(...func_get_args());
+}
+function feDropShadow(): SVG
+{
+    return SVG::feDropShadow(...func_get_args());
+}
+function feFlood(): SVG
+{
+    return SVG::feFlood(...func_get_args());
+}
+function feFuncA(): SVG
+{
+    return SVG::feFuncA(...func_get_args());
+}
+function feFuncB(): SVG
+{
+    return SVG::feFuncB(...func_get_args());
+}
+function feFuncG(): SVG
+{
+    return SVG::feFuncG(...func_get_args());
+}
+function feFuncR(): SVG
+{
+    return SVG::feFuncR(...func_get_args());
+}
+function feGaussianBlur(): SVG
+{
+    return SVG::feGaussianBlur(...func_get_args());
+}
+function feImage(): SVG
+{
+    return SVG::feImage(...func_get_args());
+}
+function feMerge(): SVG
+{
+    return SVG::feMerge(...func_get_args());
+}
+function feMergeNode(): SVG
+{
+    return SVG::feMergeNode(...func_get_args());
+}
+function feMorphology(): SVG
+{
+    return SVG::feMorphology(...func_get_args());
+}
+function feOffset(): SVG
+{
+    return SVG::feOffset(...func_get_args());
+}
+function fePointLight(): SVG
+{
+    return SVG::fePointLight(...func_get_args());
+}
+function feSpecularLighting(): SVG
+{
+    return SVG::feSpecularLighting(...func_get_args());
+}
+function feSpotLight(): SVG
+{
+    return SVG::feSpotLight(...func_get_args());
+}
+function feTile(): SVG
+{
+    return SVG::feTile(...func_get_args());
+}
+function feTurbulence(): SVG
+{
+    return SVG::feTurbulence(...func_get_args());
+}
+function filter(): SVG
+{
+    return SVG::filter(...func_get_args());
+}
+function foreignObject(): SVG
+{
+    return SVG::foreignObject(...func_get_args());
+}
+function g(): SVG
+{
+    return SVG::g(...func_get_args());
+}
+function image(): SVG
+{
+    return SVG::image(...func_get_args());
+}
+function line(): SVG
+{
+    return SVG::line(...func_get_args());
+}
+function linearGradient(): SVG
+{
+    return SVG::linearGradient(...func_get_args());
+}
+function marker(): SVG
+{
+    return SVG::marker(...func_get_args());
+}
+function mask(): SVG
+{
+    return SVG::mask(...func_get_args());
+}
+function metadata(): SVG
+{
+    return SVG::metadata(...func_get_args());
+}
+function mpath(): SVG
+{
+    return SVG::mpath(...func_get_args());
+}
+function path(): SVG
+{
+    return SVG::path(...func_get_args());
+}
+function pattern(): SVG
+{
+    return SVG::pattern(...func_get_args());
+}
+function polygon(): SVG
+{
+    return SVG::polygon(...func_get_args());
+}
+function polyline(): SVG
+{
+    return SVG::polyline(...func_get_args());
+}
+function radialGradient(): SVG
+{
+    return SVG::radialGradient(...func_get_args());
+}
+function rect(): SVG
+{
+    return SVG::rect(...func_get_args());
+}
+function script(): SVG
+{
+    return SVG::script(...func_get_args());
+}
+function set(): SVG
+{
+    return SVG::set(...func_get_args());
+}
+function stop(): SVG
+{
+    return SVG::stop(...func_get_args());
+}
+function style(): SVG
+{
+    return SVG::style(...func_get_args());
+}
+function svg(): SVG
+{
+    return SVG::svg(...func_get_args());
+}
+function svgSwitch(): SVG
+{
+    return SVG::switch(...func_get_args());
+}
+function symbol(): SVG
+{
+    return SVG::symbol(...func_get_args());
+}
+function text(): SVG
+{
+    return SVG::text(...func_get_args());
+}
+function textPath(): SVG
+{
+    return SVG::textPath(...func_get_args());
+}
+function title(): SVG
+{
+    return SVG::title(...func_get_args());
+}
+function tspan(): SVG
+{
+    return SVG::tspan(...func_get_args());
+}
+function svgUse(): SVG
+{
+    return SVG::use(...func_get_args());
+}
+function view(): SVG
+{
+    return SVG::view(...func_get_args());
+}

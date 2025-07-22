@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
 enum RawType
@@ -7,7 +10,8 @@ enum RawType
     case XML;
 }
 
-class Raw {
+class Raw
+{
     public readonly RawType $type;
 
     private string $content;
@@ -26,9 +30,10 @@ class Raw {
     public function toJSON(): array
     {
         $type = $this->type === RawType::HTML ? 'HTML' : 'XML';
+
         return [
             'type' => $type,
-            'content' => $this->content
+            'content' => $this->content,
         ];
     }
 }
