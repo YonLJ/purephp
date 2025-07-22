@@ -14,15 +14,15 @@ abstract class Tag
 {
     private string $tagName;
 
-    /**
-     * [string => string]
-     */
+    /** @var array<string, string> */
     private array $attrs = [];
 
+    /** @var array<int, mixed> */
     private array $children = [];
 
     private bool $selfClose = false;
 
+    /** @param array<int, mixed> $children */
     protected function __construct(string $tagName, array $children)
     {
         $this->tagName = $tagName;
@@ -34,6 +34,7 @@ abstract class Tag
         return (string)$this->toPDom();
     }
 
+    /** @param array<int, mixed> $args */
     public function __call(string $key, array $args): self
     {
         if (empty($args)) {
@@ -51,11 +52,13 @@ abstract class Tag
         return $this;
     }
 
+    /** @param array<int, string|array<int|string, mixed>|null> $args */
     public function className(string|array|null ...$args): self
     {
         return $this->class(...$args);
     }
 
+    /** @param array<int, string|array<int|string, mixed>|null> $args */
     public function class(string|array|null ...$args): self
     {
         $value = count($args) === 1 && is_string($args[0])
@@ -65,6 +68,7 @@ abstract class Tag
         return $this->setAttr('class', $value);
     }
 
+    /** @param string|array<string, mixed>|null $value */
     public function style(string|array|null $value): self
     {
         if (!is_string($value)) {
@@ -94,6 +98,7 @@ abstract class Tag
         return $this->tagName;
     }
 
+    /** @return array<string, string> */
     public function getAttrs(): array
     {
         return $this->attrs;
@@ -108,11 +113,13 @@ abstract class Tag
         return $this->attrs[$key];
     }
 
+    /** @return array<int, mixed> */
     public function getChildren(): array
     {
         return $this->children;
     }
 
+    /** @param array<string, mixed> $attrs */
     public function setAttrs(array $attrs): self
     {
         if (empty($attrs)) {
@@ -160,11 +167,12 @@ abstract class Tag
             $value = $key;
         }
 
-        $this->attrs[$key] = (string)$value;
+        $this->attrs[$key] = strval($value);
 
         return $this;
     }
 
+    /** @param array<int, mixed> $children */
     private function appendChildren(array $children): void
     {
         if (empty($children)) {
@@ -183,6 +191,7 @@ abstract class Tag
         }
 
         if (is_array($child)) {
+            /** @var array<int, mixed> $child */
             $this->appendChildren($child);
 
             return;
@@ -203,6 +212,7 @@ abstract class Tag
         $this->children[] = (string)$child;
     }
 
+    /** @return array<string, mixed> */
     public function toJSON(): array
     {
         return array_merge([

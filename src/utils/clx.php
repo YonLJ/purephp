@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Utils;
 
+/** @param array<int|string, mixed>|string|null ...$args */
 function clx(array|string|null ...$args): string|null
 {
     if (empty($args)) {
@@ -30,8 +31,13 @@ function clx(array|string|null ...$args): string|null
     return join(' ', $classList);
 }
 
-function filterClassList(array $classList)
+/**
+ * @param array<int|string, mixed> $classList
+ * @return string[]
+ */
+function filterClassList(array $classList): array
 {
+    /** @var string[] */
     $classes = [];
     foreach ($classList as $key => $val) {
         if (is_int($key) && is_string($val) && !empty($val)) {

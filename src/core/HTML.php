@@ -22,6 +22,7 @@ const SELF_CLOSE_HTML_TAGS = [
 
 class HTML extends Tag
 {
+    /** @param array<int, mixed> $children */
     protected function __construct(string $tagName, array $children)
     {
         parent::__construct($tagName, $children);
@@ -30,6 +31,7 @@ class HTML extends Tag
         }
     }
 
+    /** @param array<int, mixed> $children */
     public static function __callStatic(string $tag, array $children): HTML
     {
         return new HTML($tag, $children);
