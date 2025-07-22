@@ -1,147 +1,249 @@
 # Components
 
-This guide explains how to create and use components in PurePHP.
+Components are the building blocks of user interfaces in PurePHP. This guide explains how to create and use components.
 
-## Basic Components
+## Function Components
 
-Components are functions that return Virtual DOM nodes.
+PurePHP uses function components to build user interfaces. Function components are simple PHP functions that accept props and return HTML elements:
 
 ```php
 <?php
 
-use function Pure\HTML\{div, h1, p};
+use function Pure\HTML\{div, h2, p, img};
 
 function Card($props) {
     [
         'title' => $title,
-        'content' => $content
+        'content' => $content,
+        'image' => $image = null
     ] = $props;
 
     return div(
-        h1($title),
-        p($content)
+        $image ? img()->src($image)->class('card-img-top') : null,
+        div(
+            h2($title)->class('card-title'),
+            p($content)->class('card-text')
+        )->class('card-body')
     )->class('card');
 }
 
 // Use the component
 Card([
-    'title' => 'My Card',
-    'content' => 'This is a card component.'
-])->toPrint();
-```
-
-
-
-## Component Composition
-
-Components can be composed together to create complex UIs.
-
-```php
-<?php
-
-use function Pure\HTML\{div, nav, a};
-
-function Navigation() {
-    return nav(
-        a('Home')->href('/'),
-        a('About')->href('/about'),
-        a('Contact')->href('/contact')
-    )->class('nav');
-}
-
-function Layout($props) {
-    [
-        'content' => $content
-    ] = $props;
-
-    return div(
-        Navigation(),
-        div($content)->class('main')
-    )->class('layout');
-}
-
-// Use the composed components
-Layout([
-    'content' => Card([
-        'title' => 'Welcome',
-        'content' => 'This is a composed layout.'
-    ])
+    'title' => 'Card Title',
+    'content' => 'Card Content',
+    'image' => 'image.jpg'
 ])->toPrint();
 ```
 
 ## Component Props
 
-Props can be validated and transformed.
+### 1. Basic Props
 
 ```php
 <?php
 
-use function Pure\HTML\{div, button};
+use function Pure\HTML\div;
 
-function Button($props) {
+function Box($props) {
     [
-        'text' => $text,
-        'onClick' => $onClick,
-        'disabled' => $disabled = false,
-        'type' => $type = 'button'
+        'width' => $width = '100%',
+        'height' => $height = '100px',
+        'color' => $color = '#000'
     ] = $props;
 
-    // Validate props
-    if (!is_string($text)) {
-        throw new \InvalidArgumentException('Text must be a string');
-    }
-
-    if (!is_callable($onClick)) {
-        throw new \InvalidArgumentException('onClick must be callable');
-    }
-
-    return button($text)
-        ->type($type)
-        ->onclick($onClick)
-        ->disabled($disabled)
-        ->class('btn');
+    return div()
+        ->style("width: {$width}; height: {$height}; background: {$color};");
 }
 
-// Use the component with validated props
-Button([
-    'text' => 'Click me',
-    'onClick' => 'handleClick()',
-    'disabled' => false,
-    'type' => 'submit'
+// Use the component
+Box([
+    'width' => '200px',
+    'height' => '150px',
+    'color' => '#ff0000'
 ])->toPrint();
 ```
 
-## Component Events
-
-Components can handle events and communicate with parent components.
+### 2. Event Props
 
 ```php
 <?php
 
-use function Pure\HTML\{div, input};
+use function Pure\HTML\button;
 
-function SearchInput($props) {
+function ActionButton($props) {
     [
-        'onSearch' => $onSearch,
-        'placeholder' => $placeholder = 'Search...'
+        'text' => $text,
+        'onClick' => $onClick,
+        'disabled' => $disabled = false
+    ] = $props;
+
+    return button($text)
+        ->onclick($onClick)
+        ->disabled($disabled)
+        ->class('action-button');
+}
+
+// Use the component
+ActionButton([
+    'text' => 'Submit',
+    'onClick' => 'handleSubmit()',
+    'disabled' => false
+])->toPrint();
+```
+
+### 3. Child Components
+
+```php
+<?php
+
+use function Pure\HTML\{div, h1};
+
+function Layout($props) {
+    [
+        'header' => $header,
+        'content' => $content,
+        'footer' => $footer
     ] = $props;
 
     return div(
-        input()
-            ->type('text')
-            ->placeholder($placeholder)
-            ->oninput($onSearch)
-            ->class('search-input'),
-        button('Search')
-            ->onclick('handleSearch()')
-            ->class('search-button')
-    )->class('search-container');
+        div($header)->class('header'),
+        div($content)->class('content'),
+        div($footer)->class('footer')
+    )->class('layout');
 }
 
-// Use the component with event handlers
-SearchInput([
-    'onSearch' => 'handleSearch(event)',
-    'placeholder' => 'Enter search term...'
+// Use the component
+Layout([
+    'header' => h1('Title'),
+    'content' => 'Main content',
+    'footer' => 'Footer'
+])->toPrint();
+```
+
+## Component Communication
+
+### 1. Props Passing
+
+```php
+<?php
+
+use function Pure\HTML\{div, button, p};
+
+function ParentComponent() {
+    return div(
+        ChildComponent([
+            'message' => 'Message from parent component',
+            'onAction' => 'handleChildAction'
+        ])
+    );
+}
+
+function ChildComponent($props) {
+    [
+        'message' => $message,
+        'onAction' => $onAction
+    ] = $props;
+
+    return div(
+        p($message),
+        button('Trigger Action')
+            ->onclick($onAction)
+    );
+}
+```
+
+### 2. Event Handling
+
+```php
+<?php
+
+use function Pure\HTML\button;
+
+function EventButton($props) {
+    [
+        'text' => $text,
+        'onClick' => $onClick
+    ] = $props;
+
+    return button($text)->onclick($onClick);
+}
+
+// Use event component
+EventButton([
+    'text' => 'Click Me',
+    'onClick' => 'alert("Button clicked!")'
+])->toPrint();
+```
+
+## Component Reusability
+
+### 1. Higher-Order Components
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function withLoading($Component) {
+    return function($props) use ($Component) {
+        [
+            'loading' => $loading = false,
+            'error' => $error = null,
+            ...$rest
+        ] = $props;
+
+        if ($loading) {
+            return div('Loading...')->class('loading');
+        }
+
+        if ($error) {
+            return div($error)->class('error');
+        }
+
+        return $Component($rest);
+    };
+}
+
+// Use higher-order component
+$LoadingCard = withLoading('Card');
+$LoadingCard([
+    'loading' => true,
+    'title' => 'Title',
+    'content' => 'Content'
+])->toPrint();
+```
+
+### 2. Component Composition
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function Page($props) {
+    [
+        'header' => $header,
+        'sidebar' => $sidebar,
+        'content' => $content,
+        'footer' => $footer
+    ] = $props;
+
+    return div(
+        Header($header),
+        div(
+            Sidebar($sidebar),
+            MainContent($content)
+        )->class('main-container'),
+        Footer($footer)
+    )->class('page');
+}
+
+// Use composed components
+Page([
+    'header' => ['title' => 'Page Title'],
+    'sidebar' => ['items' => ['Menu Item 1', 'Menu Item 2']],
+    'content' => ['title' => 'Main Content'],
+    'footer' => ['copyright' => '© 2024']
 ])->toPrint();
 ```
 

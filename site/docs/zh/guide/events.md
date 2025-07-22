@@ -1,342 +1,339 @@
-# 事件处理
+# 事件
 
-PurePHP 提供了灵活的事件处理系统，用于处理用户交互和组件通信。
+本指南解释如何在 PurePHP 组件中处理事件。
 
-## 基本事件
+## 基本事件处理
 
-### 1. 鼠标事件
-
-```php
-<?php
-
-use function Pure\HTML\{button};
-
-button('点击我')
-    ->onclick('handleClick()')
-    ->onmouseover('handleMouseOver()')
-    ->onmouseout('handleMouseOut()')
-    ->onmousedown('handleMouseDown()')
-    ->onmouseup('handleMouseUp()')
-    ->toPrint();
-```
-
-### 2. 键盘事件
+PurePHP 通过属性方法支持所有标准 HTML 事件。事件处理程序通常是作为字符串传递的 JavaScript 函数：
 
 ```php
 <?php
 
-use function Pure\HTML\{input};
+use function Pure\HTML\{div, button, input};
 
-input()
-    ->type('text')
-    ->onkeydown('handleKeyDown(event)')
-    ->onkeyup('handleKeyUp(event)')
-    ->onkeypress('handleKeyPress(event)')
-    ->toPrint();
-```
-
-### 3. 表单事件
-
-```php
-<?php
-
-use function Pure\HTML\{form, input};
-
-form()
-    ->onsubmit('handleSubmit(event)')
-    ->onreset('handleReset(event)')
-    ->children(
+function BasicEvents() {
+    return div(
+        button('点击我')
+            ->onclick('handleClick()')
+            ->class('btn'),
         input()
             ->type('text')
-            ->onchange('handleChange(event)')
             ->oninput('handleInput(event)')
-    )
-    ->toPrint();
+            ->placeholder('输入一些内容...')
+            ->class('input')
+    )->class('events-container');
+}
+
+// 使用组件
+BasicEvents()->toPrint();
 ```
 
-## 事件对象
+## 鼠标事件
 
-### 1. 事件参数
+处理各种鼠标交互：
 
 ```php
 <?php
 
-use function Pure\HTML\{button};
+use function Pure\HTML\div;
 
-button('点击我')
-    ->onclick('handleClick(event)')
-    ->toPrint();
+function MouseEvents() {
+    return div('悬停并点击我！')
+        ->onclick('console.log("点击了！")')
+        ->onmouseover('this.style.backgroundColor = "#f0f0f0"')
+        ->onmouseout('this.style.backgroundColor = ""')
+        ->onmousedown('this.style.transform = "scale(0.95)"')
+        ->onmouseup('this.style.transform = "scale(1)"')
+        ->style('padding: 20px; border: 1px solid #ccc; cursor: pointer; transition: all 0.2s;')
+        ->class('mouse-events');
+}
 
-// JavaScript 处理函数
+// 使用组件
+MouseEvents()->toPrint();
+```
+
+## 键盘事件
+
+处理键盘输入：
+
+```php
+<?php
+
+use function Pure\HTML\{div, input, p};
+
+function KeyboardEvents() {
+    return div(
+        p('在下面的输入框中输入：'),
+        input()
+            ->type('text')
+            ->onkeydown('handleKeyDown(event)')
+            ->onkeyup('handleKeyUp(event)')
+            ->oninput('handleInput(event)')
+            ->placeholder('按键...')
+            ->class('keyboard-input'),
+        p()->id('key-display')->style('margin-top: 10px; font-family: monospace;')
+    )->class('keyboard-events');
+}
+
+// 使用带 JavaScript 的组件
+echo KeyboardEvents();
 ?>
 <script>
-function handleClick(event) {
-    // 阻止默认行为
-    event.preventDefault();
+function handleKeyDown(event) {
+    document.getElementById('key-display').textContent =
+        `按下的键: ${event.key} (代码: ${event.code})`;
+}
 
-    // 阻止事件冒泡
-    event.stopPropagation();
+function handleKeyUp(event) {
+    console.log('释放的键:', event.key);
+}
 
-    // 获取事件目标
-    const target = event.target;
-
-    // 获取鼠标坐标
-    const x = event.clientX;
-    const y = event.clientY;
+function handleInput(event) {
+    console.log('输入值:', event.target.value);
 }
 </script>
 ```
 
-### 2. 自定义事件数据
+## 表单事件
+
+处理表单交互：
 
 ```php
 <?php
 
-use function Pure\HTML\{button};
+use function Pure\HTML\{form, div, label, input, button, p};
 
-button('点击我')
-    ->onclick('handleClick(event, "custom data")')
-    ->data_id('123')
-    ->data_type('action')
-    ->toPrint();
+function FormEvents() {
+    return div(
+        form(
+            div(
+                label('用户名:')->for('username'),
+                input()
+                    ->type('text')
+                    ->id('username')
+                    ->name('username')
+                    ->onchange('handleChange(event)')
+                    ->required()
+            )->class('form-group'),
+            div(
+                label('邮箱:')->for('email'),
+                input()
+                    ->type('email')
+                    ->id('email')
+                    ->name('email')
+                    ->onchange('handleChange(event)')
+                    ->required()
+            )->class('form-group'),
+            button('提交')
+                ->type('submit')
+                ->class('submit-btn')
+        )
+        ->onsubmit('handleFormSubmit(event)')
+        ->class('event-form'),
+        p()->id('form-status')->style('margin-top: 10px; color: #666;')
+    )->class('form-events');
+}
 
-// JavaScript 处理函数
+// 使用带 JavaScript 的组件
+echo FormEvents();
 ?>
 <script>
-function handleClick(event, data) {
-    // 获取自定义数据
-    const id = event.target.dataset.id;
-    const type = event.target.dataset.type;
+function handleChange(event) {
+    console.log(`${event.target.name} 改变为: ${event.target.value}`);
+}
 
-    console.log('事件数据:', {
-        customData: data,
-        id: id,
-        type: type
-    });
+function handleFormSubmit(event) {
+    event.preventDefault(); // 阻止实际表单提交
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData);
+
+    document.getElementById('form-status').textContent =
+        `表单提交数据: ${JSON.stringify(data)}`;
+
+    console.log('表单数据:', data);
 }
 </script>
 ```
 
 ## 事件委托
 
-### 1. 列表事件
+使用事件委托高效处理事件：
 
 ```php
 <?php
 
-use function Pure\HTML\{ul, li};
+use function Pure\HTML\{div, button};
 
-function TodoList($props) {
-    [
-        'items' => $items = []
-    ] = $props;
+function EventDelegation() {
+    $buttons = [];
+    for ($i = 1; $i <= 5; $i++) {
+        $buttons[] = button("按钮 {$i}")
+            ->data_id($i)
+            ->class('delegated-btn');
+    }
 
-    return ul(
-        ...array_map(fn($item) => li($item), $items)
+    return div(
+        div('点击任意按钮:')->style('margin-bottom: 10px;'),
+        div(...$buttons)->class('button-group'),
+        div()->id('delegation-output')->style('margin-top: 10px; color: #666;')
     )
-    ->class('todo-list')
-    ->onclick('handleTodoClick(event)');
+    ->onclick('handleDelegatedClick(event)')
+    ->class('delegation-container');
 }
 
-// JavaScript 处理函数
+// 使用带 JavaScript 的组件
+echo EventDelegation();
 ?>
 <script>
-function handleTodoClick(event) {
-    // 检查点击的是否是列表项
-    if (event.target.tagName === 'LI') {
-        const index = Array.from(event.target.parentNode.children)
-            .indexOf(event.target);
-
-        console.log('点击的项目索引:', index);
+function handleDelegatedClick(event) {
+    if (event.target.classList.contains('delegated-btn')) {
+        const buttonId = event.target.dataset.id;
+        document.getElementById('delegation-output').textContent =
+            `点击了按钮 ${buttonId}`;
+        console.log('点击的按钮:', buttonId);
     }
 }
 </script>
 ```
 
-### 2. 动态内容事件
+## 组件事件通信
+
+在组件之间传递事件处理程序：
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\{div, button, p};
 
-function DynamicContent($props) {
+function ParentComponent() {
+    return div(
+        p('父组件'),
+        ChildComponent([
+            'onButtonClick' => 'handleChildClick',
+            'message' => '从子组件点击我！'
+        ]),
+        p()->id('parent-output')->style('margin-top: 10px; color: #666;')
+    )->class('parent-component');
+}
+
+function ChildComponent($props) {
     [
-        'content' => $content
+        'onButtonClick' => $onButtonClick,
+        'message' => $message
     ] = $props;
 
-    return div($content)
-        ->class('dynamic-content')
-        ->onclick('handleDynamicClick(event)');
+    return div(
+        p('子组件'),
+        button($message)
+            ->onclick("{$onButtonClick}('来自子组件的问候！')")
+            ->class('child-btn')
+    )->class('child-component')->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;');
 }
 
-// JavaScript 处理函数
+// 使用带 JavaScript 的组件
+echo ParentComponent();
 ?>
 <script>
-function handleDynamicClick(event) {
-    // 使用事件委托处理动态内容
-    const target = event.target;
-
-    // 处理按钮点击
-    if (target.matches('.btn')) {
-        handleButtonClick(target);
-    }
-
-    // 处理链接点击
-    if (target.matches('a')) {
-        handleLinkClick(target);
-    }
+function handleChildClick(message) {
+    document.getElementById('parent-output').textContent =
+        `从子组件接收到: ${message}`;
+    console.log('子组件事件:', message);
 }
 </script>
 ```
 
-## 事件处理组件
+## 自定义事件属性
 
-### 1. 基础事件组件
+处理任何 HTML 事件属性：
 
 ```php
 <?php
 
-use Pure\Core\HTML;
+use function Pure\HTML\{div, img};
 
-class EventComponent extends HTML {
-    protected $eventHandlers = [];
+function CustomEventAttributes() {
+    return div(
+        div('带加载事件的图片:'),
+        img()
+            ->src('https://via.placeholder.com/200x100')
+            ->alt('占位符图片')
+            ->onload('console.log("图片已加载！")')
+            ->onerror('console.log("图片加载失败")')
+            ->style('display: block; margin: 10px 0;'),
 
-    public function on($event, $handler) {
-        $this->eventHandlers[$event] = $handler;
-        return $this;
-    }
-
-    public function render() {
-        $props = $this->props;
-
-        // 添加事件处理器
-        foreach ($this->eventHandlers as $event => $handler) {
-            $props["on{$event}"] = $handler;
-        }
-
-        return new HTML('div', $props, $this->children);
-    }
+        div('带焦点事件的 Div:'),
+        div('点击获得焦点，然后按 Tab')
+            ->tabindex('0')
+            ->onfocus('this.style.outline = "2px solid blue"')
+            ->onblur('this.style.outline = "none"')
+            ->style('padding: 10px; border: 1px solid #ccc; margin: 10px 0;')
+    )->class('custom-events');
 }
 
 // 使用组件
-$component = new EventComponent();
-$component
-    ->on('click', 'handleClick')
-    ->on('mouseover', 'handleMouseOver')
-    ->children('内容')
-    ->toPrint();
+CustomEventAttributes()->toPrint();
 ```
 
-### 2. 事件总线组件
+## 事件处理最佳实践
+
+### 1. 内联 vs 外部处理程序
 
 ```php
 <?php
 
-use Pure\Core\HTML;
+use function Pure\HTML\{div, button};
 
-class EventBus extends HTML {
-    private static $listeners = [];
+// 内联处理程序（适合简单操作）
+$inlineButton = button('内联处理程序')
+    ->onclick('alert("来自内联的问候！")')
+    ->class('btn');
 
-    public static function on($event, $callback) {
-        if (!isset(self::$listeners[$event])) {
-            self::$listeners[$event] = [];
-        }
-        self::$listeners[$event][] = $callback;
-    }
+// 外部处理程序（适合复杂逻辑）
+$externalButton = button('外部处理程序')
+    ->onclick('handleComplexAction()')
+    ->class('btn');
 
-    public static function emit($event, $data) {
-        if (isset(self::$listeners[$event])) {
-            foreach (self::$listeners[$event] as $callback) {
-                $callback($data);
-            }
-        }
-    }
-
-    public function render() {
-        return new HTML('div', [
-            'class' => 'event-bus',
-            'data-events' => json_encode(array_keys(self::$listeners))
-        ], $this->children);
-    }
-}
-
-// 使用事件总线
-$bus = new EventBus();
-$bus->children('事件总线内容')->toPrint();
-
-// JavaScript 事件处理
+div(
+    $inlineButton,
+    $externalButton
+)->toPrint();
 ?>
 <script>
-// 监听事件
-EventBus.on('userAction', (data) => {
-    console.log('用户操作:', data);
-});
-
-// 触发事件
-EventBus.emit('userAction', { type: 'click', target: 'button' });
-</script>
-```
-
-## 事件优化
-
-### 1. 事件节流
-
-```php
-<?php
-
-use function Pure\HTML\{input};
-
-input()
-    ->type('text')
-    ->oninput('throttle(handleInput, 300)(event)')
-    ->toPrint();
-
-// JavaScript 节流函数
-?>
-<script>
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    }
-}
-
-function handleInput(event) {
-    console.log('输入值:', event.target.value);
+function handleComplexAction() {
+    // 复杂逻辑在这里
+    console.log('执行复杂操作');
+    // ... 更多代码
 }
 </script>
 ```
 
-### 2. 事件防抖
+### 2. 事件对象使用
 
 ```php
 <?php
 
-use function Pure\HTML\{input};
+use function Pure\HTML\{div, button};
 
-input()
-    ->type('text')
-    ->oninput('debounce(handleInput, 300)(event)')
-    ->toPrint();
-
-// JavaScript 防抖函数
-?>
-<script>
-function debounce(func, wait) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    }
+function EventObjectExample() {
+    return div(
+        button('获取事件信息')
+            ->onclick('showEventInfo(event)')
+            ->class('btn'),
+        div()->id('event-info')->style('margin-top: 10px; font-family: monospace;')
+    )->class('event-object-example');
 }
 
-function handleInput(event) {
-    console.log('输入值:', event.target.value);
+echo EventObjectExample();
+?>
+<script>
+function showEventInfo(event) {
+    const info = `
+        事件类型: ${event.type}
+        目标: ${event.target.tagName}
+        时间戳: ${event.timeStamp}
+        坐标: (${event.clientX}, ${event.clientY})
+    `;
+    document.getElementById('event-info').textContent = info;
 }
 </script>
 ```

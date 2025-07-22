@@ -8,8 +8,8 @@ Purephp is a PHP templating engine inspired by ReactJS functional components.
 
 ## 📖 Documentation
 
-- **English**: [https://yonld.github.io/purephp/en/](https://yonld.github.io/purephp/en/)
-- **中文**: [https://yonld.github.io/purephp/](https://yonld.github.io/purephp/)
+- **English**: [https://yonld.github.io/purephp/](https://yonld.github.io/purephp/)
+- **中文**: [https://yonld.github.io/purephp/zh/](https://yonld.github.io/purephp/zh/)
 
 ## Why use Purephp?
 
