@@ -1,2 +1,25 @@
+# Dependencies
 /vendor
-*.lock
+site/node_modules
+
+# VitePress
+site/docs/.vitepress/cache
+site/docs/.vitepress/dist
+
+# Testing
+.phpunit.cache
+coverage/
+coverage.xml
+
+# Code Quality Tools
+.php-cs-fixer.cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

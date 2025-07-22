@@ -1,0 +1,14 @@
+parameters:
+    level: 6
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - vendor
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    ignoreErrors:
+        # Allow dynamic calls in Tag class for HTML attributes
+        - '#Call to an undefined method Pure\\Core\\Tag::[a-zA-Z_]+\(\)#'
+        # Allow magic methods in HTML/SVG/XML classes
+        - '#Call to an undefined static method Pure\\Core\\(HTML|SVG|XML)::[a-zA-Z_]+\(\)#'
