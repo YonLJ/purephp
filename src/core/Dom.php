@@ -1,7 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
-abstract class Dom {
+abstract class Dom
+{
     protected string $tagName;
 
     protected array $attrs = [];
@@ -10,4 +14,3 @@ abstract class Dom {
 
     abstract public function __toString(): string;
 }
-

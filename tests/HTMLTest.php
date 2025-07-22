@@ -1,9 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Core\HTML;
 
-use function Pure\Utils\rawHtml;
 use function Pure\HTML\a;
 use function Pure\HTML\body;
 use function Pure\HTML\button;
@@ -13,19 +14,20 @@ use function Pure\HTML\form;
 use function Pure\HTML\h1;
 use function Pure\HTML\h2;
 use function Pure\HTML\head;
-use function Pure\HTML\html;
-use function Pure\HTML\meta;
-use function Pure\HTML\title;
 use function Pure\HTML\header;
+use function Pure\HTML\html;
 use function Pure\HTML\input;
 use function Pure\HTML\label;
 use function Pure\HTML\li;
 use function Pure\HTML\main;
+use function Pure\HTML\meta;
 use function Pure\HTML\nav;
 use function Pure\HTML\p;
 use function Pure\HTML\section;
 use function Pure\HTML\textarea;
+use function Pure\HTML\title;
 use function Pure\HTML\ul;
+use function Pure\Utils\rawHtml;
 
 class HTMLTest extends TestCase
 {
@@ -125,7 +127,7 @@ class HTMLTest extends TestCase
                     'class-i' => '',
                     'class-j' => 'not empty string',
                     null,
-                    ''
+                    '',
                 ]
             );
 
@@ -198,15 +200,15 @@ class HTMLTest extends TestCase
                         [
                             'tagName' => 'meta',
                             'children' => [],
-                            'charset' => 'UTF-8'
+                            'charset' => 'UTF-8',
                         ],
                         [
                             'tagName' => 'title',
                             'children' => [
-                                'Complex HTML Code Example'
-                            ]
-                        ]
-                    ]
+                                'Complex HTML Code Example',
+                            ],
+                        ],
+                    ],
                 ],
                 [
                     'tagName' => 'body',
@@ -220,8 +222,8 @@ class HTMLTest extends TestCase
                                         [
                                             'tagName' => 'h1',
                                             'children' => [
-                                                'Welcome to My Website'
-                                            ]
+                                                'Welcome to My Website',
+                                            ],
                                         ],
                                         [
                                             'tagName' => 'nav',
@@ -235,11 +237,11 @@ class HTMLTest extends TestCase
                                                                 [
                                                                     'tagName' => 'a',
                                                                     'children' => [
-                                                                        'Home'
+                                                                        'Home',
                                                                     ],
-                                                                    'href' => '#'
-                                                                ]
-                                                            ]
+                                                                    'href' => '#',
+                                                                ],
+                                                            ],
                                                         ],
                                                         [
                                                             'tagName' => 'li',
@@ -247,11 +249,11 @@ class HTMLTest extends TestCase
                                                                 [
                                                                     'tagName' => 'a',
                                                                     'children' => [
-                                                                        'About'
+                                                                        'About',
                                                                     ],
-                                                                    'href' => '#'
-                                                                ]
-                                                            ]
+                                                                    'href' => '#',
+                                                                ],
+                                                            ],
                                                         ],
                                                         [
                                                             'tagName' => 'li',
@@ -259,23 +261,23 @@ class HTMLTest extends TestCase
                                                                 [
                                                                     'tagName' => 'a',
                                                                     'children' => [
-                                                                        'Services'
+                                                                        'Services',
                                                                     ],
-                                                                    'href' => '#'
-                                                                ]
-                                                            ]
+                                                                    'href' => '#',
+                                                                ],
+                                                            ],
                                                         ],
                                                         [
                                                             'type' => 'HTML',
-                                                            'content' => '<li><a href="#">Contact</a></li>'
-                                                        ]
-                                                    ]
-                                                ]
+                                                            'content' => '<li><a href="#">Contact</a></li>',
+                                                        ],
+                                                    ],
+                                                ],
                                             ],
-                                            'class' => 'nav'
-                                        ]
+                                            'class' => 'nav',
+                                        ],
                                     ],
-                                    'class' => 'header'
+                                    'class' => 'header',
                                 ],
                                 [
                                     'tagName' => 'main',
@@ -286,25 +288,25 @@ class HTMLTest extends TestCase
                                                 [
                                                     'tagName' => 'h2',
                                                     'children' => [
-                                                        'About Us'
-                                                    ]
+                                                        'About Us',
+                                                    ],
                                                 ],
                                                 [
                                                     'tagName' => 'p',
                                                     'children' => [
-                                                        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam ultrices urna eget sapien ullamcorper, vel efficitur massa semper.'
-                                                    ]
+                                                        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam ultrices urna eget sapien ullamcorper, vel efficitur massa semper.',
+                                                    ],
                                                 ],
                                                 [
                                                     'tagName' => 'a',
                                                     'children' => [
-                                                        'Learn More'
+                                                        'Learn More',
                                                     ],
                                                     'href' => '#',
-                                                    'class' => 'button'
-                                                ]
+                                                    'class' => 'button',
+                                                ],
                                             ],
-                                            'class' => 'section'
+                                            'class' => 'section',
                                         ],
                                         [
                                             'tagName' => 'section',
@@ -312,8 +314,8 @@ class HTMLTest extends TestCase
                                                 [
                                                     'tagName' => 'h2',
                                                     'children' => [
-                                                        'Our Services'
-                                                    ]
+                                                        'Our Services',
+                                                    ],
                                                 ],
                                                 [
                                                     'tagName' => 'ul',
@@ -321,25 +323,25 @@ class HTMLTest extends TestCase
                                                         [
                                                             'tagName' => 'li',
                                                             'children' => [
-                                                                'Service 1'
-                                                            ]
+                                                                'Service 1',
+                                                            ],
                                                         ],
                                                         [
                                                             'tagName' => 'li',
                                                             'children' => [
-                                                                'Service 2'
-                                                            ]
+                                                                'Service 2',
+                                                            ],
                                                         ],
                                                         [
                                                             'tagName' => 'li',
                                                             'children' => [
-                                                                'Service 3'
-                                                            ]
-                                                        ]
-                                                    ]
-                                                ]
+                                                                'Service 3',
+                                                            ],
+                                                        ],
+                                                    ],
+                                                ],
                                             ],
-                                            'class' => 'section'
+                                            'class' => 'section',
                                         ],
                                         [
                                             'tagName' => 'section',
@@ -347,8 +349,8 @@ class HTMLTest extends TestCase
                                                 [
                                                     'tagName' => 'h2',
                                                     'children' => [
-                                                        'Contact Us'
-                                                    ]
+                                                        'Contact Us',
+                                                    ],
                                                 ],
                                                 [
                                                     'tagName' => 'form',
@@ -356,10 +358,10 @@ class HTMLTest extends TestCase
                                                         [
                                                             'tagName' => 'label',
                                                             'children' => [
-                                                                'Name:'
+                                                                'Name:',
                                                             ],
                                                             'class' => 'form-label',
-                                                            'for' => 'name'
+                                                            'for' => 'name',
                                                         ],
                                                         [
                                                             'tagName' => 'input',
@@ -367,15 +369,15 @@ class HTMLTest extends TestCase
                                                             'type' => 'text',
                                                             'id' => 'name',
                                                             'name' => 'name',
-                                                            'class' => 'form-input'
+                                                            'class' => 'form-input',
                                                         ],
                                                         [
                                                             'tagName' => 'label',
                                                             'children' => [
-                                                                'Email:'
+                                                                'Email:',
                                                             ],
                                                             'class' => 'form-label',
-                                                            'for' => 'email'
+                                                            'for' => 'email',
                                                         ],
                                                         [
                                                             'tagName' => 'input',
@@ -383,36 +385,36 @@ class HTMLTest extends TestCase
                                                             'type' => 'email',
                                                             'id' => 'email',
                                                             'name' => 'email',
-                                                            'class' => 'form-input'
+                                                            'class' => 'form-input',
                                                         ],
                                                         [
                                                             'tagName' => 'label',
                                                             'children' => [
-                                                                'Message:'
+                                                                'Message:',
                                                             ],
                                                             'class' => 'form-label',
-                                                            'for' => 'message'
+                                                            'for' => 'message',
                                                         ],
                                                         [
                                                             'tagName' => 'textarea',
                                                             'children' => [],
                                                             'id' => 'message',
                                                             'name' => 'message',
-                                                            'class' => 'form-input'
+                                                            'class' => 'form-input',
                                                         ],
                                                         [
                                                             'tagName' => 'button',
                                                             'children' => [
-                                                                'Submit'
+                                                                'Submit',
                                                             ],
                                                             'type' => 'submit',
-                                                            'class' => 'button'
-                                                        ]
-                                                    ]
-                                                ]
+                                                            'class' => 'button',
+                                                        ],
+                                                    ],
+                                                ],
                                             ],
-                                            'class' => 'section'
-                                        ]
+                                            'class' => 'section',
+                                        ],
                                     ],
                                 ],
                                 [
@@ -421,19 +423,19 @@ class HTMLTest extends TestCase
                                         [
                                             'tagName' => 'p',
                                             'children' => [
-                                                '&copy; 2023 My Website. All rights reserved.'
-                                            ]
-                                        ]
+                                                '&copy; 2023 My Website. All rights reserved.',
+                                            ],
+                                        ],
                                     ],
-                                    'class' => 'footer'
-                                ]
+                                    'class' => 'footer',
+                                ],
                             ],
-                            'class' => 'container'
-                        ]
-                    ]
-                ]
+                            'class' => 'container',
+                        ],
+                    ],
+                ],
             ],
-            'lang' => 'en'
+            'lang' => 'en',
         ];
 
         $this->assertSame($expected, $this->html->toJSON());

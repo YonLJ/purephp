@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
 const SELF_CLOSE_HTML_TAGS = [
@@ -14,7 +17,7 @@ const SELF_CLOSE_HTML_TAGS = [
     'meta',
     'source',
     'track',
-    'wbr'
+    'wbr',
 ];
 
 class HTML extends Tag
@@ -41,6 +44,7 @@ class HTML extends Tag
 
         $result = fwrite($handle, $header . (string)$this->toPDom());
         fclose($handle);
+
         return $result;
     }
 }

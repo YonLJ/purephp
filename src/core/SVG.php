@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
 const SELF_CLOSE_SVG_TAGS = [
@@ -20,10 +23,11 @@ const SELF_CLOSE_SVG_TAGS = [
     'polyline',
     'rect',
     'stop',
-    'use'
+    'use',
 ];
 
-class SVG extends XML {
+class SVG extends XML
+{
     private function __construct(string $tagName, array $children)
     {
         parent::__construct($tagName, $children);
