@@ -1,6 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+
 use function Pure\Utils\clx;
 use function Pure\Utils\sty;
 
@@ -14,7 +17,7 @@ class UtilsTest extends TestCase
             [
                 'class-c',
                 'class-d' => true,
-                'class-e' => false
+                'class-e' => false,
             ]
         ));
         $this->assertEquals('class-a class-b class-c', clx(
@@ -22,11 +25,11 @@ class UtilsTest extends TestCase
             '',
             [
                 'class-a',
-                'class-b'
+                'class-b',
             ],
             [
                 'class-c' => true,
-                null
+                null,
             ]
         ));
     }

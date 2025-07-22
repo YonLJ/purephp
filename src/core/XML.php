@@ -1,7 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
-class XML extends Tag {
+class XML extends Tag
+{
     public static function __callStatic(string $tag, array $children): XML
     {
         return new XML($tag, $children);
@@ -16,6 +20,7 @@ class XML extends Tag {
 
         $result = fwrite($handle, $header . (string)$this->toPDom());
         fclose($handle);
+
         return $result;
     }
 }

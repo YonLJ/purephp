@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
 class PDom extends Dom
@@ -11,7 +14,7 @@ class PDom extends Dom
         $this->selfClose = $tag->getSelfClose();
         $this->attrs = $tag->getAttrs();
         $this->children = array_map(
-            fn($child) => $child instanceof Tag
+            fn ($child) => $child instanceof Tag
                 ? new PDom($child)
                 : $child,
             $tag->getChildren()
@@ -28,6 +31,7 @@ class PDom extends Dom
         }
 
         $content = $this->buildChildrenStr();
+
         return "<{$this->tagName}{$attrs}>{$content}</{$this->tagName}>";
     }
 
@@ -37,6 +41,7 @@ class PDom extends Dom
         foreach ($this->attrs as $key => $value) {
             $attrs[] = $this->buildAttrStr($key, $value);
         }
+
         return join(' ', $attrs);
     }
 
@@ -47,7 +52,8 @@ class PDom extends Dom
 
     private function buildChildrenStr(): string
     {
-        $children = array_map(fn($child) => (string)$child, $this->children);
+        $children = array_map(fn ($child) => (string)$child, $this->children);
+
         return join($children);
     }
 }

@@ -1,8 +1,11 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
-use DOMElement;
 use DOMDocument;
+use DOMElement;
 
 class NDom extends Dom
 {
@@ -17,6 +20,7 @@ class NDom extends Dom
         if (!isset(NDom::$document)) {
             NDom::$document = new DOMDocument('1.0');
         }
+
         return NDom::$document;
     }
 
@@ -26,7 +30,7 @@ class NDom extends Dom
         $this->tagName = $tag->getTagName();
         $this->attrs = $tag->getAttrs();
         $this->children = array_map(
-            fn($child) => $child instanceof Tag
+            fn ($child) => $child instanceof Tag
                 ? new NDom($child)
                 : $child,
             $tag->getChildren()
@@ -79,6 +83,7 @@ class NDom extends Dom
         if (is_string($child)) {
             $textNode = NDom::document()->createTextNode($child);
             $this->dom->appendChild($textNode);
+
             return;
         }
 

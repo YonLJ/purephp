@@ -1,4 +1,7 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
+
 namespace Pure\Core;
 
 use ErrorException;
@@ -39,10 +42,12 @@ abstract class Tag
 
         if (count($args) !== 1) {
             $argsStr = join(',', $args);
+
             throw new Exception("'{$key}()' only accepts one parameter. '{$this->tagName}()->{$key}({$argsStr}) is invalid.'");
         }
 
         $this->setAttr($key, $args[0]);
+
         return $this;
     }
 
@@ -65,6 +70,7 @@ abstract class Tag
         if (!is_string($value)) {
             $value = sty($value);
         }
+
         return $this->setAttr('style', $value);
     }
 
@@ -79,6 +85,7 @@ abstract class Tag
         if ($this->selfClose && !empty($this->children)) {
             throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
         }
+
         return $this;
     }
 
@@ -97,6 +104,7 @@ abstract class Tag
         if ($key === 'className') {
             $key = 'class';
         }
+
         return $this->attrs[$key];
     }
 
@@ -126,6 +134,7 @@ abstract class Tag
         } else {
             $this->attrs[$key] = (string)$value;
         }
+
         return $this;
     }
 
@@ -152,6 +161,7 @@ abstract class Tag
         }
 
         $this->attrs[$key] = (string)$value;
+
         return $this;
     }
 
@@ -174,16 +184,19 @@ abstract class Tag
 
         if (is_array($child)) {
             $this->appendChildren($child);
+
             return;
         }
 
         if (is_string($child)) {
             $this->children[] = strip_tags($child);
+
             return;
         }
 
         if ($child instanceof Raw || $child instanceof Tag) {
             $this->children[] = $child;
+
             return;
         }
 
@@ -195,7 +208,7 @@ abstract class Tag
         return array_merge([
             'tagName' => $this->tagName,
             'children' => array_map(
-                fn($child) => $child instanceof Tag || $child instanceof Raw
+                fn ($child) => $child instanceof Tag || $child instanceof Raw
                     ? $child->toJSON()
                     : $child,
                 $this->children
