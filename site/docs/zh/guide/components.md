@@ -9,7 +9,7 @@ PurePHP 使用函数组件来构建用户界面。函数组件是简单的 PHP �
 ```php
 <?php
 
-use function Pure\HTML\{div, h2, p};
+use function Pure\HTML\{div, h2, p, img};
 
 function Card($props) {
     [
@@ -44,7 +44,7 @@ Card([
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\div;
 
 function Box($props) {
     [
@@ -70,7 +70,7 @@ Box([
 ```php
 <?php
 
-use function Pure\HTML\{button};
+use function Pure\HTML\button;
 
 function ActionButton($props) {
     [
@@ -131,7 +131,7 @@ Layout([
 ```php
 <?php
 
-use function Pure\HTML\{div, button};
+use function Pure\HTML\{div, button, p};
 
 function ParentComponent() {
     return div(
@@ -161,7 +161,7 @@ function ChildComponent($props) {
 ```php
 <?php
 
-use function Pure\HTML\{div, button};
+use function Pure\HTML\button;
 
 function EventButton($props) {
     [
@@ -185,6 +185,8 @@ EventButton([
 
 ```php
 <?php
+
+use function Pure\HTML\div;
 
 function withLoading($Component) {
     return function($props) use ($Component) {
@@ -219,6 +221,8 @@ $LoadingCard([
 
 ```php
 <?php
+
+use function Pure\HTML\div;
 
 function Page($props) {
     [

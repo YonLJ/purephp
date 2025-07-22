@@ -6,6 +6,10 @@ This guide introduces the core concepts and basic usage of PurePHP.
 
 ### 1. Creating HTML Elements
 
+PurePHP provides multiple ways to create HTML elements:
+
+#### Function Approach (Recommended for predefined tags)
+
 PurePHP uses function calls to create HTML elements:
 
 ```php
@@ -25,6 +29,41 @@ div(
 )->class('container')->toPrint();
 ```
 
+#### Magic Static Methods (For custom tags)
+
+```php
+<?php
+
+use Pure\Core\HTML;
+
+// Create custom HTML elements using magic methods
+HTML::customTag('Custom content')->class('custom')->toPrint();
+
+// Perfect for web components or non-standard tags
+HTML::myComponent(
+    HTML::header('Component Header'),
+    HTML::content('Component Body')
+)->data_component('my-component')->toPrint();
+```
+
+#### Constructor Method (For performance-critical code)
+
+```php
+<?php
+
+use Pure\Core\HTML;
+
+// Direct constructor approach
+(new HTML('div', ['Hello World']))->class('container')->toPrint();
+
+// Better performance for large documents
+$elements = [];
+for ($i = 0; $i < 1000; $i++) {
+    $elements[] = new HTML('item', ["Item $i"]);
+}
+(new HTML('list', $elements))->class('large-list')->toPrint();
+```
+
 ### 2. Setting Attributes
 
 Use method chaining to set element attributes:
@@ -42,9 +81,74 @@ div('Content')
     ->toPrint();
 ```
 
+## Choosing the Right Approach
+
+### When to Use Each Method
+
+#### Use Functions (Recommended for most cases)
+- **Best for**: Standard HTML tags, everyday development
+- **Advantages**: Clean syntax, good performance, excellent readability
+- **Example**: `div()`, `p()`, `span()`, etc.
+
+#### Use Magic Static Methods
+- **Best for**: Custom tags, web components, dynamic tag names
+- **Advantages**: Works with any tag name, elegant syntax
+- **Example**: `HTML::customElement()`, `HTML::webComponent()`
+
+#### Use Constructor
+- **Best for**: Performance-critical code, libraries, large documents
+- **Advantages**: Maximum performance, explicit type checking
+- **Example**: `new HTML('tag')` for thousands of elements
+
+```php
+<?php
+
+use function Pure\HTML\div;
+use Pure\Core\HTML;
+
+// Function approach - recommended for standard tags
+$standard = div('Standard content')->class('container');
+
+// Magic method - perfect for custom tags
+$custom = HTML::myCustomTag('Custom content')->data_component('special');
+
+// Constructor - best for performance
+$performant = new HTML('div', ['Performance content']);
+```
+
 ## Important Usage Notes
 
-### 1. className Alias
+### 1. String Content vs Raw Content
+
+⚠️ **Important**: When passing string content that contains HTML/XML tags, the tags will be automatically stripped for security:
+
+```php
+<?php
+
+use function Pure\HTML\div;
+use function Pure\Utils\rawHtml;
+
+// ❌ HTML tags in strings are stripped
+div('<p>This will be filtered</p>')->toPrint();
+// Output: <div>This will be filtered</div>
+
+// ✅ Use rawHtml to preserve HTML content
+div(rawHtml('<p>This will be preserved</p>'))->toPrint();
+// Output: <div><p>This will be preserved</p></div>
+```
+
+**Why this matters:**
+- **Security**: Prevents XSS attacks from user input
+- **Predictability**: Ensures consistent behavior
+- **Intentionality**: Forces explicit choice for raw content
+
+**When to use rawHtml/rawXml:**
+- Including pre-formatted HTML/XML content
+- Embedding templates or external content
+- Working with trusted HTML/XML strings
+- Including JavaScript or CSS code blocks
+
+### 2. className Alias
 
 Since `class` is a PHP keyword, PurePHP provides `className` as an alias:
 
@@ -253,6 +357,7 @@ div('Content')
 
 ## Next Steps
 
+- [SVG and XML Support](/guide/svg-xml) - Learn about SVG graphics and XML documents
 - [Utility Functions](/guide/utils) - Learn about built-in utility functions
 - [Components](/guide/components) - Learn how to create and use components
 - [TailwindCSS Integration](/guide/tailwindcss) - Learn how to use with TailwindCSS

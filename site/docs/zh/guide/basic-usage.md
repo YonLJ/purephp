@@ -6,6 +6,10 @@
 
 ### 1. 创建 HTML 元素
 
+PurePHP 提供多种创建 HTML 元素的方式：
+
+#### 函数方式（推荐用于预定义标签）
+
 PurePHP 使用函数调用的方式来创建 HTML 元素：
 
 ```php
@@ -25,6 +29,41 @@ div(
 )->class('container')->toPrint();
 ```
 
+#### 魔术静态方法（适合自定义标签）
+
+```php
+<?php
+
+use Pure\Core\HTML;
+
+// 使用魔术方法创建自定义 HTML 元素
+HTML::customTag('自定义内容')->class('custom')->toPrint();
+
+// 非常适合 Web 组件或非标准标签
+HTML::myComponent(
+    HTML::header('组件头部'),
+    HTML::content('组件主体')
+)->data_component('my-component')->toPrint();
+```
+
+#### 构造函数方法（适合性能关键代码）
+
+```php
+<?php
+
+use Pure\Core\HTML;
+
+// 直接构造函数方式
+(new HTML('div', ['Hello World']))->class('container')->toPrint();
+
+// 对于大型文档有更好的性能
+$elements = [];
+for ($i = 0; $i < 1000; $i++) {
+    $elements[] = new HTML('item', ["项目 $i"]);
+}
+(new HTML('list', $elements))->class('large-list')->toPrint();
+```
+
 ### 2. 设置属性
 
 使用链式调用设置元素属性：
@@ -42,9 +81,74 @@ div('内容')
     ->toPrint();
 ```
 
+## 选择正确的方式
+
+### 何时使用每种方法
+
+#### 使用函数（推荐大多数情况）
+- **最适合**：标准 HTML 标签，日常开发
+- **优点**：语法简洁，性能良好，可读性优秀
+- **示例**：`div()`、`p()`、`span()` 等
+
+#### 使用魔术静态方法
+- **最适合**：自定义标签、Web 组件、动态标签名
+- **优点**：适用于任何标签名，语法优雅
+- **示例**：`HTML::customElement()`、`HTML::webComponent()`
+
+#### 使用构造函数
+- **最适合**：性能关键代码、库、大型文档
+- **优点**：最大性能，明确的类型检查
+- **示例**：`new HTML('tag')` 用于数千个元素
+
+```php
+<?php
+
+use function Pure\HTML\div;
+use Pure\Core\HTML;
+
+// 函数方式 - 推荐用于标准标签
+$standard = div('标准内容')->class('container');
+
+// 魔术方法 - 适合自定义标签
+$custom = HTML::myCustomTag('自定义内容')->data_component('special');
+
+// 构造函数 - 最佳性能
+$performant = new HTML('div', ['性能内容']);
+```
+
 ## 重要用法说明
 
-### 1. className 别名
+### 1. 字符串内容 vs 原始内容
+
+⚠️ **重要**：当传递包含 HTML/XML 标签的字符串内容时，标签会被自动过滤以确保安全：
+
+```php
+<?php
+
+use function Pure\HTML\div;
+use function Pure\Utils\rawHtml;
+
+// ❌ 字符串中的 HTML 标签会被过滤
+div('<p>这会被过滤</p>')->toPrint();
+// 输出: <div>这会被过滤</div>
+
+// ✅ 使用 rawHtml 保留 HTML 内容
+div(rawHtml('<p>这会被保留</p>'))->toPrint();
+// 输出: <div><p>这会被保留</p></div>
+```
+
+**为什么这很重要：**
+- **安全性**：防止用户输入的 XSS 攻击
+- **可预测性**：确保行为一致
+- **明确性**：强制对原始内容做出明确选择
+
+**何时使用 rawHtml/rawXml：**
+- 包含预格式化的 HTML/XML 内容
+- 嵌入模板或外部内容
+- 处理可信的 HTML/XML 字符串
+- 包含 JavaScript 或 CSS 代码块
+
+### 2. className 别名
 
 由于 `class` 是 PHP 的关键字，PurePHP 提供了 `className` 作为别名：
 
@@ -253,6 +357,7 @@ div('内容')
 
 ## 下一步
 
+- [SVG 和 XML 支持](/zh/guide/svg-xml) - 了解 SVG 图形和 XML 文档
 - [工具函数](/zh/guide/utils) - 了解内置的工具函数
 - [组件](/zh/guide/components) - 学习如何创建和使用组件
 - [TailwindCSS 集成](/zh/guide/tailwindcss) - 了解如何与 TailwindCSS 配合使用

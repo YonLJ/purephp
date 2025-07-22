@@ -1,209 +1,143 @@
 # Props
 
-This guide explains the props system in PurePHP.
+PurePHP provides a powerful props system for configuring and customizing component behavior and appearance.
 
 ## Basic Props
 
-Props are data passed to components to customize their behavior and appearance.
+### 1. HTML Attributes
 
 ```php
 <?php
 
-use function Pure\HTML\{div, button};
+use function Pure\HTML\div;
 
-function Button($props) {
-    [
-        'text' => $text,
-        'onClick' => $onClick,
-        'disabled' => $disabled = false
-    ] = $props;
-
-    return button($text)
-        ->onclick($onClick)
-        ->disabled($disabled)
-        ->class('btn');
-}
-
-// Use the component with props
-Button([
-    'text' => 'Click me',
-    'onClick' => 'handleClick()',
-    'disabled' => false
-])->toPrint();
+// Set basic attributes
+div('Content')
+    ->id('main')
+    ->class('container')
+    ->style('background: #fff;')
+    ->toPrint();
 ```
 
-## HTML Attributes
-
-Props can be used to set HTML attributes.
+### 2. Data Attributes
 
 ```php
 <?php
 
-use function Pure\HTML\{div, input};
+use function Pure\HTML\div;
 
-function Input($props) {
-    [
-        'type' => $type = 'text',
-        'name' => $name,
-        'value' => $value = '',
-        'placeholder' => $placeholder = ''
-    ] = $props;
-
-    return input()
-        ->type($type)
-        ->name($name)
-        ->value($value)
-        ->placeholder($placeholder)
-        ->class('form-input');
-}
-
-// Use the component with HTML attributes
-Input([
-    'type' => 'email',
-    'name' => 'email',
-    'value' => 'user@example.com',
-    'placeholder' => 'Enter your email'
-])->toPrint();
+// Set data attributes
+div('Content')
+    ->data_id('123')
+    ->data_type('card')
+    ->data_status('active')
+    ->toPrint();
 ```
 
-## Data Attributes
-
-Props can be used to set data attributes.
+### 3. ARIA Attributes
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\button;
 
-function DataBox($props) {
-    [
-        'id' => $id,
-        'type' => $type,
-        'value' => $value
-    ] = $props;
-
-    return div()
-        ->data('id', $id)
-        ->data('type', $type)
-        ->data('value', $value)
-        ->class('data-box');
-}
-
-// Use the component with data attributes
-DataBox([
-    'id' => 'box1',
-    'type' => 'user',
-    'value' => '123'
-])->toPrint();
-```
-
-## ARIA Attributes
-
-Props can be used to set ARIA attributes for accessibility.
-
-```php
-<?php
-
-use function Pure\HTML\{button};
-
-function AccessibleButton($props) {
-    [
-        'text' => $text,
-        'onClick' => $onClick,
-        'ariaLabel' => $ariaLabel,
-        'ariaExpanded' => $ariaExpanded = false
-    ] = $props;
-
-    return button($text)
-        ->onclick($onClick)
-        ->aria('label', $ariaLabel)
-        ->aria('expanded', $ariaExpanded)
-        ->class('accessible-btn');
-}
-
-// Use the component with ARIA attributes
-AccessibleButton([
-    'text' => 'Toggle Menu',
-    'onClick' => 'toggleMenu()',
-    'ariaLabel' => 'Toggle navigation menu',
-    'ariaExpanded' => false
-])->toPrint();
+// Set ARIA attributes
+button('Submit')
+    ->aria_label('Submit form')
+    ->aria_disabled('false')
+    ->aria_required('true')
+    ->toPrint();
 ```
 
 ## Chained Attributes
 
-PurePHP supports chained attribute calls.
+PurePHP supports chained attribute method calls:
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\div;
 
-function StyledBox($props) {
-    [
-        'width' => $width,
-        'height' => $height,
-        'color' => $color
-    ] = $props;
-
-    return div()
-        ->style('width', "{$width}px")
-        ->style('height', "{$height}px")
-        ->style('background-color', $color)
-        ->class('styled-box')
-        ->data('width', $width)
-        ->data('height', $height)
-        ->data('color', $color);
-}
-
-// Use the component with chained attributes
-StyledBox([
-    'width' => 100,
-    'height' => 100,
-    'color' => '#ff0000'
-])->toPrint();
+div('Content')
+    ->id('main')
+    ->class('container')
+    ->style('background: #fff;')
+    ->data_type('card')
+    ->aria_label('Main content')
+    ->toPrint();
 ```
 
-## Dynamic Attributes
+## Dynamic Props
 
-Props can be used to dynamically set attributes.
+### 1. Conditional Props
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\div;
 
 function DynamicBox($props) {
     [
-        'isActive' => $isActive,
-        'isDisabled' => $isDisabled,
-        'size' => $size
+        'active' => $active = false,
+        'disabled' => $disabled = false
     ] = $props;
 
-    return div()
+    return div('Content')
         ->class('box')
-        ->class('active', $isActive)
-        ->class('disabled', $isDisabled)
-        ->style('width', "{$size}px")
-        ->style('height', "{$size}px");
+        ->class($active ? 'active' : '')
+        ->class($disabled ? 'disabled' : '')
+        ->data_active($active)
+        ->data_disabled($disabled);
 }
 
-// Use the component with dynamic attributes
+// Use the component
 DynamicBox([
-    'isActive' => true,
-    'isDisabled' => false,
-    'size' => 200
+    'active' => true,
+    'disabled' => false
 ])->toPrint();
 ```
 
-## Attribute Validation
-
-Props can be validated before being used as attributes.
+### 2. Computed Props
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
+use function Pure\HTML\div;
+
+function ResponsiveBox($props) {
+    [
+        'width' => $width = 100,
+        'height' => $height = 100
+    ] = $props;
+
+    $style = sprintf(
+        'width: %dpx; height: %dpx; aspect-ratio: %d/%d;',
+        $width,
+        $height,
+        $width,
+        $height
+    );
+
+    return div('Content')
+        ->style($style)
+        ->class('responsive-box');
+}
+
+// Use the component
+ResponsiveBox([
+    'width' => 200,
+    'height' => 150
+])->toPrint();
+```
+
+## Props Validation
+
+### 1. Type Checking
+
+```php
+<?php
+
+use function Pure\HTML\div;
 
 function ValidatedBox($props) {
     [
@@ -212,31 +146,208 @@ function ValidatedBox($props) {
         'color' => $color
     ] = $props;
 
-    // Validate props
-    if (!is_numeric($width) || $width <= 0) {
-        throw new \InvalidArgumentException('Width must be a positive number');
+    // Validate prop types
+    if (!is_numeric($width) || !is_numeric($height)) {
+        throw new \InvalidArgumentException('Width and height must be numbers');
     }
 
-    if (!is_numeric($height) || $height <= 0) {
-        throw new \InvalidArgumentException('Height must be a positive number');
+    if (!is_string($color)) {
+        throw new \InvalidArgumentException('Color must be a string');
     }
 
-    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
-        throw new \InvalidArgumentException('Color must be a valid hex color');
-    }
-
-    return div()
-        ->style('width', "{$width}px")
-        ->style('height', "{$height}px")
-        ->style('background-color', $color)
-        ->class('validated-box');
+    return div('Content')
+        ->style("width: {$width}px; height: {$height}px; background: {$color};");
 }
 
-// Use the component with validated attributes
-ValidatedBox([
-    'width' => 100,
-    'height' => 100,
-    'color' => '#ff0000'
+// Use the component
+try {
+    ValidatedBox([
+        'width' => 200,
+        'height' => 150,
+        'color' => '#ff0000'
+    ])->toPrint();
+} catch (\InvalidArgumentException $e) {
+    echo "Error: {$e->getMessage()}";
+}
+```
+
+### 2. Required Props
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function RequiredBox($props) {
+    // Check required props
+    $required = ['id', 'type'];
+    foreach ($required as $prop) {
+        if (!isset($props[$prop])) {
+            throw new \InvalidArgumentException("{$prop} is a required prop");
+        }
+    }
+
+    return div('Content')
+        ->id($props['id'])
+        ->data_type($props['type']);
+}
+
+// Use the component
+try {
+    RequiredBox([
+        'id' => 'box1',
+        'type' => 'card'
+    ])->toPrint();
+} catch (\InvalidArgumentException $e) {
+    echo "Error: {$e->getMessage()}";
+}
+```
+
+## Default Props
+
+### 1. Using Default Values
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function CustomComponent($props) {
+    // Set default props
+    $defaultProps = [
+        'theme' => 'light',
+        'size' => 'medium',
+        'disabled' => false
+    ];
+
+    $props = array_merge($defaultProps, $props);
+
+    [
+        'theme' => $theme,
+        'size' => $size,
+        'disabled' => $disabled,
+        'content' => $content
+    ] = $props;
+
+    return div($content)
+        ->class("custom-component theme-{$theme} size-{$size}")
+        ->data_disabled($disabled ? 'true' : 'false');
+}
+
+// Use the component
+CustomComponent([
+    'theme' => 'dark',
+    'size' => 'large',
+    'content' => 'Custom content'
+])->toPrint();
+```
+
+### 2. Props Merging
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function MergedBox($props) {
+    [
+        'class' => $class = '',
+        'style' => $style = '',
+        'data' => $data = []
+    ] = $props;
+
+    // Merge class names
+    $classes = array_merge(
+        ['box'],
+        explode(' ', $class)
+    );
+
+    // Merge styles
+    $styles = array_merge(
+        ['background: #fff;'],
+        explode(';', $style)
+    );
+
+    // Merge data attributes
+    $dataAttrs = array_merge(
+        ['type' => 'box'],
+        $data
+    );
+
+    return div('Content')
+        ->class(implode(' ', array_filter($classes)))
+        ->style(implode(';', array_filter($styles)))
+        ->data($dataAttrs);
+}
+
+// Use the component
+MergedBox([
+    'class' => 'custom-box',
+    'style' => 'color: #000;',
+    'data' => ['status' => 'active']
+])->toPrint();
+```
+
+## Props Transformation
+
+### 1. Type Conversion
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function TypedBox($props) {
+    [
+        'width' => $width,
+        'height' => $height,
+        'opacity' => $opacity
+    ] = $props;
+
+    // Convert prop types
+    $width = (int) $width;
+    $height = (int) $height;
+    $opacity = (float) $opacity;
+
+    return div('Content')
+        ->style("width: {$width}px; height: {$height}px; opacity: {$opacity};");
+}
+
+// Use the component
+TypedBox([
+    'width' => '200',
+    'height' => '150',
+    'opacity' => '0.5'
+])->toPrint();
+```
+
+### 2. Value Transformation
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+function TransformedBox($props) {
+    [
+        'color' => $color,
+        'size' => $size
+    ] = $props;
+
+    // Transform color value
+    $color = str_starts_with($color, '#') ? $color : "#{$color}";
+
+    // Transform size value
+    $size = str_ends_with($size, 'px') ? $size : "{$size}px";
+
+    return div('Content')
+        ->style("color: {$color}; font-size: {$size};");
+}
+
+// Use the component
+TransformedBox([
+    'color' => 'ff0000',
+    'size' => '16'
 ])->toPrint();
 ```
 
