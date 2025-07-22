@@ -23,7 +23,7 @@ abstract class Tag
     private bool $selfClose = false;
 
     /** @param array<int, mixed> $children */
-    protected function __construct(string $tagName, array $children)
+    public function __construct(string $tagName, array $children = [])
     {
         $this->tagName = $tagName;
         $this->appendChildren($children);
@@ -167,7 +167,7 @@ abstract class Tag
             $value = $key;
         }
 
-        $this->attrs[$key] = strval($value);
+        $this->attrs[$key] = (string)$value;
 
         return $this;
     }

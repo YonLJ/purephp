@@ -29,7 +29,7 @@ const SELF_CLOSE_SVG_TAGS = [
 class SVG extends XML
 {
     /** @param array<int, mixed> $children */
-    private function __construct(string $tagName, array $children)
+    public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
         if (in_array(strtolower($tagName), SELF_CLOSE_SVG_TAGS)) {

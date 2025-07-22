@@ -111,6 +111,55 @@ class HTMLTest extends TestCase
         $this->assertSame('div', $tag->getTagName());
     }
 
+    public function testMagicStaticMethod(): void
+    {
+        /** @var HTML */
+        $tag = HTML::div('Hello World');
+
+        $this->assertSame('div', $tag->getTagName());
+        $this->assertSame(['Hello World'], $tag->getChildren());
+    }
+
+    public function testConstructorMethod(): void
+    {
+        /** @var HTML */
+        $tag = new HTML('custom-tag', ['Custom Content']);
+
+        $this->assertSame('custom-tag', $tag->getTagName());
+        $this->assertSame(['Custom Content'], $tag->getChildren());
+    }
+
+    public function testStringTagsAreFiltered(): void
+    {
+        // Test that string HTML tags in children are filtered out
+        $tag = HTML::div('<p>This should be filtered</p>', '<strong>This too</strong>');
+
+        $output = (string)$tag;
+
+        // The HTML tags should be stripped, only text content remains
+        $this->assertStringNotContainsString('<p>', $output);
+        $this->assertStringNotContainsString('</p>', $output);
+        $this->assertStringNotContainsString('<strong>', $output);
+        $this->assertStringNotContainsString('</strong>', $output);
+        $this->assertStringContainsString('This should be filtered', $output);
+        $this->assertStringContainsString('This too', $output);
+    }
+
+    public function testRawHtmlPreservesContent(): void
+    {
+        // Test that rawHtml preserves HTML content
+        $tag = HTML::div(
+            rawHtml('<p>This should be preserved</p>'),
+            rawHtml('<strong>This too</strong>')
+        );
+
+        $output = (string)$tag;
+
+        // The HTML tags should be preserved
+        $this->assertStringContainsString('<p>This should be preserved</p>', $output);
+        $this->assertStringContainsString('<strong>This too</strong>', $output);
+    }
+
     public function testClassName(): void
     {
         /** @var HTML */
