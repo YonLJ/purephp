@@ -110,10 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search
 
 
 
-## 示例项目
-
-查看我们的 [示例项目](https://github.com/yourusername/purephp-htmx-example) 获取更多使用场景和最佳实践。
-
 ## 下一步
 
 - [HTMX 文档](https://htmx.org/docs/)

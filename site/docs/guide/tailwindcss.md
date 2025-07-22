@@ -251,6 +251,38 @@ Button([
 ])->toPrint();
 ```
 
+### Theme Toggle
+
+```php
+<?php
+
+use function Pure\HTML\{div, button};
+
+function ThemeProvider($props) {
+    [
+        'children' => $children,
+        'theme' => $theme = 'light'
+    ] = $props;
+
+    $themeClasses = match($theme) {
+        'dark' => 'bg-gray-900 text-white',
+        'light' => 'bg-white text-gray-900',
+        default => 'bg-white text-gray-900'
+    };
+
+    return div(...$children)->class("min-h-screen {$themeClasses}");
+}
+
+function ThemeToggle($currentTheme) {
+    $newTheme = $currentTheme === 'light' ? 'dark' : 'light';
+    $icon = $currentTheme === 'light' ? '🌙' : '☀️';
+
+    return button("{$icon} Toggle Theme")
+        ->onclick("toggleTheme('{$newTheme}')")
+        ->class('fixed top-4 right-4 px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600');
+}
+```
+
 ## Utility Functions
 
 ### Class Name Merging Utility

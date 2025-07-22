@@ -13,7 +13,7 @@ PurePHP and HTMX form a powerful combination that allows you to build dynamic, r
 ### 1. Install Dependencies
 
 ```bash
-composer require purephp/purephp
+composer require yonlj/purephp
 ```
 
 Then include HTMX in your HTML:
@@ -109,10 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search
 ```
 
 
-
-## Example Project
-
-Check out our [example project](https://github.com/yourusername/purephp-htmx-example) for more use cases and best practices.
 
 ## Next Steps
 
