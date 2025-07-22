@@ -28,6 +28,7 @@ const SELF_CLOSE_SVG_TAGS = [
 
 class SVG extends XML
 {
+    /** @param array<int, mixed> $children */
     private function __construct(string $tagName, array $children)
     {
         parent::__construct($tagName, $children);
@@ -36,6 +37,7 @@ class SVG extends XML
         }
     }
 
+    /** @param array<int, mixed> $children */
     public static function __callStatic(string $tag, array $children): SVG
     {
         return new SVG($tag, $children);

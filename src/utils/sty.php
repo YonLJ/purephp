@@ -10,6 +10,7 @@ function sty(array|null $list): string|null
         return null;
     }
 
+    /** @var string[] */
     $styleList = [];
     foreach ($list as $key => $val) {
         if (is_string($key) && (is_string($val) || is_numeric($val))) {

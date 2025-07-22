@@ -6,6 +6,7 @@ namespace Pure\Core;
 
 class XML extends Tag
 {
+    /** @param array<int, mixed> $children */
     public static function __callStatic(string $tag, array $children): XML
     {
         return new XML($tag, $children);

@@ -40,7 +40,7 @@ class HTMLTest extends TestCase
         $this->html = $this->createInstance();
     }
 
-    public function createInstance()
+    public function createInstance(): HTML
     {
         return (
             html(
@@ -103,7 +103,7 @@ class HTMLTest extends TestCase
         );
     }
 
-    public function testTagName()
+    public function testTagName(): void
     {
         /** @var HTML */
         $tag = HTML::div();
@@ -111,7 +111,7 @@ class HTMLTest extends TestCase
         $this->assertSame('div', $tag->getTagName());
     }
 
-    public function testClassName()
+    public function testClassName(): void
     {
         /** @var HTML */
         $tag = HTML::div()
@@ -134,7 +134,7 @@ class HTMLTest extends TestCase
         $this->assertSame('class-a class-b class-c class-d class-e class-j', $tag->getAttr('class'));
     }
 
-    public function testStyle()
+    public function testStyle(): void
     {
         /** @var HTML */
         $tag = HTML::div()
@@ -148,7 +148,7 @@ class HTMLTest extends TestCase
         $this->assertSame('background-color: #fff; line-height: 1.5; font-size: 20px;', $tag->getAttr('style'));
     }
 
-    public function testAttributes()
+    public function testAttributes(): void
     {
         /** @var HTML */
         $tag = HTML::input()
@@ -173,7 +173,7 @@ class HTMLTest extends TestCase
         $this->assertSame('display: inline-block; color: #eee; margin-left: 10px;', $tag->getAttr('style'));
     }
 
-    public function testChildren()
+    public function testChildren(): void
     {
         $child1 = 'Hello';
 
@@ -189,7 +189,7 @@ class HTMLTest extends TestCase
         $this->assertSame($child2, $children[1]);
     }
 
-    public function testToJSON()
+    public function testToJSON(): void
     {
         $expected = [
             'tagName' => 'html',
@@ -441,13 +441,13 @@ class HTMLTest extends TestCase
         $this->assertSame($expected, $this->html->toJSON());
     }
 
-    public function testToString()
+    public function testToString(): void
     {
         $expectedStr = '<html lang="en"><head><meta charset="UTF-8" /><title>Complex HTML Code Example</title></head><body><div class="container"><header class="header"><h1>Welcome to My Website</h1><nav class="nav"><ul><li><a href="#">Home</a></li><li><a href="#">About</a></li><li><a href="#">Services</a></li><li><a href="#">Contact</a></li></ul></nav></header><main><section class="section"><h2>About Us</h2><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam ultrices urna eget sapien ullamcorper, vel efficitur massa semper.</p><a href="#" class="button">Learn More</a></section><section class="section"><h2>Our Services</h2><ul><li>Service 1</li><li>Service 2</li><li>Service 3</li></ul></section><section class="section"><h2>Contact Us</h2><form><label class="form-label" for="name">Name:</label><input type="text" id="name" name="name" class="form-input" /><label class="form-label" for="email">Email:</label><input type="email" id="email" name="email" class="form-input" /><label class="form-label" for="message">Message:</label><textarea id="message" name="message" class="form-input"></textarea><button type="submit" class="button">Submit</button></form></section></main><footer class="footer"><p>&copy; 2023 My Website. All rights reserved.</p></footer></div></body></html>';
         $this->assertSame($expectedStr, (string)$this->html);
     }
 
-    public function testSave()
+    public function testSave(): void
     {
         $outputPath = './output.html';
         $tag = HTML::div('Hello, World!');

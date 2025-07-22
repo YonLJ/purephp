@@ -5,7 +5,8 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Core\XML;
 
-function Address(array $props)
+/** @param array<string, string> $props */
+function Address(array $props): XML
 {
     extract($props);
 
@@ -21,6 +22,7 @@ function Address(array $props)
 
 class XMLTest extends TestCase
 {
+    /** @var array<int, array<string, string>> */
     private array $testData = [
         [
             'street' => '100 Main',
@@ -50,7 +52,7 @@ class XMLTest extends TestCase
         $this->xml = $this->createInstance();
     }
 
-    private function createInstance()
+    private function createInstance(): XML
     {
         return (
             XML::customers(
@@ -62,13 +64,13 @@ class XMLTest extends TestCase
         );
     }
 
-    public function testToString()
+    public function testToString(): void
     {
         $expectedStr = '<customers><customer id="55000"><name>Charter Group</name><address><street>100 Main</street><city>Framingham</city><state>MA</state><zip>01701</zip></address><address><street>720 Prospect</street><city>Framingham</city><state>MA</state><zip>01701</zip></address><address><street>120 Ridge</street><state>MA</state><zip>01760</zip></address></customer></customers>';
         $this->assertSame($expectedStr, (string)$this->xml);
     }
 
-    public function testSave()
+    public function testSave(): void
     {
         $outputPath = './output.xml';
 
