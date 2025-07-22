@@ -9,7 +9,7 @@ use function Pure\Utils\sty;
 
 class UtilsTest extends TestCase
 {
-    public function testClx()
+    public function testClx(): void
     {
         $this->assertEquals('class-a class-b class-c class-d', clx(
             'class-a',
@@ -34,7 +34,7 @@ class UtilsTest extends TestCase
         ));
     }
 
-    public function testSty()
+    public function testSty(): void
     {
         $this->assertEquals('background-color: red; height: 36px; border: 1px solid #fff;', sty([
             'background-color' => 'red',

@@ -27,6 +27,7 @@ class Raw
         return $this->content;
     }
 
+    /** @return array<string, string> */
     public function toJSON(): array
     {
         $type = $this->type === RawType::HTML ? 'HTML' : 'XML';

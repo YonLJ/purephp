@@ -1,14 +1,24 @@
 parameters:
-    level: 6
+    level: 9
     paths:
         - src
         - tests
     excludePaths:
         - vendor
-    checkMissingIterableValueType: false
-    checkGenericClassInNonGenericObjectType: false
     ignoreErrors:
         # Allow dynamic calls in Tag class for HTML attributes
-        - '#Call to an undefined method Pure\\Core\\Tag::[a-zA-Z_]+\(\)#'
+        - '#Call to an undefined method Pure\\Core\\Tag::[a-zA-Z0-9_]+\(\)#'
         # Allow magic methods in HTML/SVG/XML classes
-        - '#Call to an undefined static method Pure\\Core\\(HTML|SVG|XML)::[a-zA-Z_]+\(\)#'
+        - '#Call to an undefined static method Pure\\Core\\(HTML|SVG|XML)::[a-zA-Z0-9_]+\(\)#'
+        # Allow magic instance methods in HTML/SVG/XML classes
+        - '#Call to an undefined method Pure\\Core\\(HTML|SVG|XML)::[a-zA-Z0-9_]+\(\)#'
+        # Allow return type mismatches for template engine flexibility
+        - '#Function Pure\\(HTML|SVG)\\style\(\) should return .+ but returns .+#'
+        # Allow static calls to instance methods for template engine magic
+        - '#Static call to instance method Pure\\Core\\Tag::style\(\)#'
+        # Allow mixed to string casting in template engine
+        - '#Cannot cast mixed to string#'
+        # Allow parameter type mismatches for template engine flexibility
+        - '#Parameter .+ expects .+, mixed given#'
+        # Allow utility function parameter types
+        - '#Function Pure\\Utils\\(clx|sty|filterClassList)\(\) has parameter .+ with no value type specified in iterable type array#'

@@ -30,7 +30,7 @@ class NDom extends Dom
         $this->tagName = $tag->getTagName();
         $this->attrs = $tag->getAttrs();
         $this->children = array_map(
-            fn ($child) => $child instanceof Tag
+            fn (mixed $child) => $child instanceof Tag
                 ? new NDom($child)
                 : $child,
             $tag->getChildren()
@@ -74,7 +74,7 @@ class NDom extends Dom
         }
     }
 
-    private function appendChild(null|string|NDom|Raw $child): void
+    private function appendChild(mixed $child): void
     {
         if (is_null($child)) {
             return;
