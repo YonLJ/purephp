@@ -1,6 +1,15 @@
 # Purephp
 
-Purephp is a Virtual DOM based templating-engine for PHP inspired by ReactJS.
+[![Tests](https://github.com/YonLD/purephp/workflows/Tests/badge.svg)](https://github.com/YonLD/purephp/actions)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-blue.svg)](https://php.net/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+Purephp is a PHP templating engine inspired by ReactJS functional components.
+
+## 📖 Documentation
+
+- **English**: [https://yonld.github.io/purephp/en/](https://yonld.github.io/purephp/en/)
+- **中文**: [https://yonld.github.io/purephp/](https://yonld.github.io/purephp/)
 
 ## Why use Purephp?
 
