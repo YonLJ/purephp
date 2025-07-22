@@ -3,113 +3,113 @@ namespace Pure\HTML;
 
 use Pure\Core\HTML;
 
-function a(): HTML          {return call_user_func_array('\Pure\Core\HTML::a', func_get_args());}
-function abbr(): HTML       {return call_user_func_array('\Pure\Core\HTML::abbr', func_get_args());}
-function address(): HTML    {return call_user_func_array('\Pure\Core\HTML::address', func_get_args());}
-function area(): HTML       {return call_user_func_array('\Pure\Core\HTML::area', func_get_args());}
-function article(): HTML    {return call_user_func_array('\Pure\Core\HTML::article', func_get_args());}
-function aside(): HTML      {return call_user_func_array('\Pure\Core\HTML::aside', func_get_args());}
-function audio(): HTML      {return call_user_func_array('\Pure\Core\HTML::audio', func_get_args());}
-function b(): HTML          {return call_user_func_array('\Pure\Core\HTML::b', func_get_args());}
-function base(): HTML       {return call_user_func_array('\Pure\Core\HTML::base', func_get_args());}
-function bdi(): HTML        {return call_user_func_array('\Pure\Core\HTML::bdi', func_get_args());}
-function bdo(): HTML        {return call_user_func_array('\Pure\Core\HTML::bdo', func_get_args());}
-function blockquote(): HTML {return call_user_func_array('\Pure\Core\HTML::blockquote', func_get_args());}
-function body(): HTML       {return call_user_func_array('\Pure\Core\HTML::body', func_get_args());}
-function br(): HTML         {return call_user_func_array('\Pure\Core\HTML::br', func_get_args());}
-function button(): HTML     {return call_user_func_array('\Pure\Core\HTML::button', func_get_args());}
-function canvas(): HTML     {return call_user_func_array('\Pure\Core\HTML::canvas', func_get_args());}
-function caption(): HTML    {return call_user_func_array('\Pure\Core\HTML::caption', func_get_args());}
-function cite(): HTML       {return call_user_func_array('\Pure\Core\HTML::cite', func_get_args());}
-function code(): HTML       {return call_user_func_array('\Pure\Core\HTML::code', func_get_args());}
-function col(): HTML        {return call_user_func_array('\Pure\Core\HTML::col', func_get_args());}
-function colgroup(): HTML   {return call_user_func_array('\Pure\Core\HTML::colgroup', func_get_args());}
-function data(): HTML       {return call_user_func_array('\Pure\Core\HTML::data', func_get_args());}
-function datalist(): HTML   {return call_user_func_array('\Pure\Core\HTML::datalist', func_get_args());}
-function dd(): HTML         {return call_user_func_array('\Pure\Core\HTML::dd', func_get_args());}
-function del(): HTML        {return call_user_func_array('\Pure\Core\HTML::del', func_get_args());}
-function details(): HTML    {return call_user_func_array('\Pure\Core\HTML::details', func_get_args());}
-function dfn(): HTML        {return call_user_func_array('\Pure\Core\HTML::dfn', func_get_args());}
-function dialog(): HTML     {return call_user_func_array('\Pure\Core\HTML::dialog', func_get_args());}
-function div(): HTML        {return call_user_func_array('\Pure\Core\HTML::div', func_get_args());}
-function dl(): HTML         {return call_user_func_array('\Pure\Core\HTML::dl', func_get_args());}
-function dt(): HTML         {return call_user_func_array('\Pure\Core\HTML::dt', func_get_args());}
-function em(): HTML         {return call_user_func_array('\Pure\Core\HTML::em', func_get_args());}
-function embed(): HTML      {return call_user_func_array('\Pure\Core\HTML::embed', func_get_args());}
-function fieldset(): HTML   {return call_user_func_array('\Pure\Core\HTML::fieldset', func_get_args());}
-function figcaption(): HTML {return call_user_func_array('\Pure\Core\HTML::figcaption', func_get_args());}
-function figure(): HTML     {return call_user_func_array('\Pure\Core\HTML::figure', func_get_args());}
-function footer(): HTML     {return call_user_func_array('\Pure\Core\HTML::footer', func_get_args());}
-function form(): HTML       {return call_user_func_array('\Pure\Core\HTML::form', func_get_args());}
-function h1(): HTML         {return call_user_func_array('\Pure\Core\HTML::h1', func_get_args());}
-function h2(): HTML         {return call_user_func_array('\Pure\Core\HTML::h2', func_get_args());}
-function h3(): HTML         {return call_user_func_array('\Pure\Core\HTML::h3', func_get_args());}
-function h4(): HTML         {return call_user_func_array('\Pure\Core\HTML::h4', func_get_args());}
-function h5(): HTML         {return call_user_func_array('\Pure\Core\HTML::h5', func_get_args());}
-function h6(): HTML         {return call_user_func_array('\Pure\Core\HTML::h6', func_get_args());}
-function head(): HTML       {return call_user_func_array('\Pure\Core\HTML::head', func_get_args());}
-function header(): HTML     {return call_user_func_array('\Pure\Core\HTML::header', func_get_args());}
-function hgroup(): HTML     {return call_user_func_array('\Pure\Core\HTML::hgroup', func_get_args());}
-function hr(): HTML         {return call_user_func_array('\Pure\Core\HTML::hr', func_get_args());}
-function html(): HTML       {return call_user_func_array('\Pure\Core\HTML::html', func_get_args());}
-function i(): HTML          {return call_user_func_array('\Pure\Core\HTML::i', func_get_args());}
-function iframe(): HTML     {return call_user_func_array('\Pure\Core\HTML::iframe', func_get_args());}
-function img(): HTML        {return call_user_func_array('\Pure\Core\HTML::img', func_get_args());}
-function input(): HTML      {return call_user_func_array('\Pure\Core\HTML::input', func_get_args());}
-function ins(): HTML        {return call_user_func_array('\Pure\Core\HTML::ins', func_get_args());}
-function kbd(): HTML        {return call_user_func_array('\Pure\Core\HTML::kbd', func_get_args());}
-function label(): HTML      {return call_user_func_array('\Pure\Core\HTML::label', func_get_args());}
-function legend(): HTML     {return call_user_func_array('\Pure\Core\HTML::legend', func_get_args());}
-function li(): HTML         {return call_user_func_array('\Pure\Core\HTML::li', func_get_args());}
-function link(): HTML       {return call_user_func_array('\Pure\Core\HTML::link', func_get_args());}
-function main(): HTML       {return call_user_func_array('\Pure\Core\HTML::main', func_get_args());}
-function map(): HTML        {return call_user_func_array('\Pure\Core\HTML::map', func_get_args());}
-function mark(): HTML       {return call_user_func_array('\Pure\Core\HTML::mark', func_get_args());}
-function menu(): HTML       {return call_user_func_array('\Pure\Core\HTML::menu', func_get_args());}
-function meta(): HTML       {return call_user_func_array('\Pure\Core\HTML::meta', func_get_args());}
-function meter(): HTML      {return call_user_func_array('\Pure\Core\HTML::meter', func_get_args());}
-function nav(): HTML        {return call_user_func_array('\Pure\Core\HTML::nav', func_get_args());}
-function noscript(): HTML   {return call_user_func_array('\Pure\Core\HTML::noscript', func_get_args());}
-function object(): HTML     {return call_user_func_array('\Pure\Core\HTML::object', func_get_args());}
-function ol(): HTML         {return call_user_func_array('\Pure\Core\HTML::ol', func_get_args());}
-function optgroup(): HTML   {return call_user_func_array('\Pure\Core\HTML::optgroup', func_get_args());}
-function option(): HTML     {return call_user_func_array('\Pure\Core\HTML::option', func_get_args());}
-function output(): HTML     {return call_user_func_array('\Pure\Core\HTML::output', func_get_args());}
-function p(): HTML          {return call_user_func_array('\Pure\Core\HTML::p', func_get_args());}
-function picture(): HTML    {return call_user_func_array('\Pure\Core\HTML::picture', func_get_args());}
-function pre(): HTML        {return call_user_func_array('\Pure\Core\HTML::pre', func_get_args());}
-function progress(): HTML   {return call_user_func_array('\Pure\Core\HTML::progress', func_get_args());}
-function q(): HTML          {return call_user_func_array('\Pure\Core\HTML::q', func_get_args());}
-function rp(): HTML         {return call_user_func_array('\Pure\Core\HTML::rp', func_get_args());}
-function rt(): HTML         {return call_user_func_array('\Pure\Core\HTML::rt', func_get_args());}
-function ruby(): HTML       {return call_user_func_array('\Pure\Core\HTML::ruby', func_get_args());}
-function s(): HTML          {return call_user_func_array('\Pure\Core\HTML::s', func_get_args());}
-function samp(): HTML       {return call_user_func_array('\Pure\Core\HTML::samp', func_get_args());}
-function script(): HTML     {return call_user_func_array('\Pure\Core\HTML::script', func_get_args());}
-function section(): HTML    {return call_user_func_array('\Pure\Core\HTML::section', func_get_args());}
-function select(): HTML     {return call_user_func_array('\Pure\Core\HTML::select', func_get_args());}
-function slot(): HTML       {return call_user_func_array('\Pure\Core\HTML::slot', func_get_args());}
-function small(): HTML      {return call_user_func_array('\Pure\Core\HTML::small', func_get_args());}
-function source(): HTML     {return call_user_func_array('\Pure\Core\HTML::source', func_get_args());}
-function span(): HTML       {return call_user_func_array('\Pure\Core\HTML::span', func_get_args());}
-function strong(): HTML     {return call_user_func_array('\Pure\Core\HTML::strong', func_get_args());}
-function style(): HTML      {return call_user_func_array('\Pure\Core\HTML::style', func_get_args());}
-function sub(): HTML        {return call_user_func_array('\Pure\Core\HTML::sub', func_get_args());}
-function summary(): HTML    {return call_user_func_array('\Pure\Core\HTML::summary', func_get_args());}
-function sup(): HTML        {return call_user_func_array('\Pure\Core\HTML::sup', func_get_args());}
-function table(): HTML      {return call_user_func_array('\Pure\Core\HTML::table', func_get_args());}
-function tbody(): HTML      {return call_user_func_array('\Pure\Core\HTML::tbody', func_get_args());}
-function td(): HTML         {return call_user_func_array('\Pure\Core\HTML::td', func_get_args());}
-function template(): HTML   {return call_user_func_array('\Pure\Core\HTML::template', func_get_args());}
-function textarea(): HTML   {return call_user_func_array('\Pure\Core\HTML::textarea', func_get_args());}
-function tfoot(): HTML      {return call_user_func_array('\Pure\Core\HTML::tfoot', func_get_args());}
-function th(): HTML         {return call_user_func_array('\Pure\Core\HTML::th', func_get_args());}
-function thead(): HTML      {return call_user_func_array('\Pure\Core\HTML::thead', func_get_args());}
-function time(): HTML       {return call_user_func_array('\Pure\Core\HTML::time', func_get_args());}
-function title(): HTML      {return call_user_func_array('\Pure\Core\HTML::title', func_get_args());}
-function tr(): HTML         {return call_user_func_array('\Pure\Core\HTML::tr', func_get_args());}
-function track(): HTML      {return call_user_func_array('\Pure\Core\HTML::track', func_get_args());}
-function u(): HTML          {return call_user_func_array('\Pure\Core\HTML::u', func_get_args());}
-function ul(): HTML         {return call_user_func_array('\Pure\Core\HTML::ul', func_get_args());}
-function video(): HTML      {return call_user_func_array('\Pure\Core\HTML::video', func_get_args());}
-function wbr(): HTML        {return call_user_func_array('\Pure\Core\HTML::wbr', func_get_args());}
+function a(): HTML          {return HTML::a(...func_get_args());}
+function abbr(): HTML       {return HTML::abbr(...func_get_args());}
+function address(): HTML    {return HTML::address(...func_get_args());}
+function area(): HTML       {return HTML::area(...func_get_args());}
+function article(): HTML    {return HTML::article(...func_get_args());}
+function aside(): HTML      {return HTML::aside(...func_get_args());}
+function audio(): HTML      {return HTML::audio(...func_get_args());}
+function b(): HTML          {return HTML::b(...func_get_args());}
+function base(): HTML       {return HTML::base(...func_get_args());}
+function bdi(): HTML        {return HTML::bdi(...func_get_args());}
+function bdo(): HTML        {return HTML::bdo(...func_get_args());}
+function blockquote(): HTML {return HTML::blockquote(...func_get_args());}
+function body(): HTML       {return HTML::body(...func_get_args());}
+function br(): HTML         {return HTML::br(...func_get_args());}
+function button(): HTML     {return HTML::button(...func_get_args());}
+function canvas(): HTML     {return HTML::canvas(...func_get_args());}
+function caption(): HTML    {return HTML::caption(...func_get_args());}
+function cite(): HTML       {return HTML::cite(...func_get_args());}
+function code(): HTML       {return HTML::code(...func_get_args());}
+function col(): HTML        {return HTML::col(...func_get_args());}
+function colgroup(): HTML   {return HTML::colgroup(...func_get_args());}
+function data(): HTML       {return HTML::data(...func_get_args());}
+function datalist(): HTML   {return HTML::datalist(...func_get_args());}
+function dd(): HTML         {return HTML::dd(...func_get_args());}
+function del(): HTML        {return HTML::del(...func_get_args());}
+function details(): HTML    {return HTML::details(...func_get_args());}
+function dfn(): HTML        {return HTML::dfn(...func_get_args());}
+function dialog(): HTML     {return HTML::dialog(...func_get_args());}
+function div(): HTML        {return HTML::div(...func_get_args());}
+function dl(): HTML         {return HTML::dl(...func_get_args());}
+function dt(): HTML         {return HTML::dt(...func_get_args());}
+function em(): HTML         {return HTML::em(...func_get_args());}
+function embed(): HTML      {return HTML::embed(...func_get_args());}
+function fieldset(): HTML   {return HTML::fieldset(...func_get_args());}
+function figcaption(): HTML {return HTML::figcaption(...func_get_args());}
+function figure(): HTML     {return HTML::figure(...func_get_args());}
+function footer(): HTML     {return HTML::footer(...func_get_args());}
+function form(): HTML       {return HTML::form(...func_get_args());}
+function h1(): HTML         {return HTML::h1(...func_get_args());}
+function h2(): HTML         {return HTML::h2(...func_get_args());}
+function h3(): HTML         {return HTML::h3(...func_get_args());}
+function h4(): HTML         {return HTML::h4(...func_get_args());}
+function h5(): HTML         {return HTML::h5(...func_get_args());}
+function h6(): HTML         {return HTML::h6(...func_get_args());}
+function head(): HTML       {return HTML::head(...func_get_args());}
+function header(): HTML     {return HTML::header(...func_get_args());}
+function hgroup(): HTML     {return HTML::hgroup(...func_get_args());}
+function hr(): HTML         {return HTML::hr(...func_get_args());}
+function html(): HTML       {return HTML::html(...func_get_args());}
+function i(): HTML          {return HTML::i(...func_get_args());}
+function iframe(): HTML     {return HTML::iframe(...func_get_args());}
+function img(): HTML        {return HTML::img(...func_get_args());}
+function input(): HTML      {return HTML::input(...func_get_args());}
+function ins(): HTML        {return HTML::ins(...func_get_args());}
+function kbd(): HTML        {return HTML::kbd(...func_get_args());}
+function label(): HTML      {return HTML::label(...func_get_args());}
+function legend(): HTML     {return HTML::legend(...func_get_args());}
+function li(): HTML         {return HTML::li(...func_get_args());}
+function link(): HTML       {return HTML::link(...func_get_args());}
+function main(): HTML       {return HTML::main(...func_get_args());}
+function map(): HTML        {return HTML::map(...func_get_args());}
+function mark(): HTML       {return HTML::mark(...func_get_args());}
+function menu(): HTML       {return HTML::menu(...func_get_args());}
+function meta(): HTML       {return HTML::meta(...func_get_args());}
+function meter(): HTML      {return HTML::meter(...func_get_args());}
+function nav(): HTML        {return HTML::nav(...func_get_args());}
+function noscript(): HTML   {return HTML::noscript(...func_get_args());}
+function object(): HTML     {return HTML::object(...func_get_args());}
+function ol(): HTML         {return HTML::ol(...func_get_args());}
+function optgroup(): HTML   {return HTML::optgroup(...func_get_args());}
+function option(): HTML     {return HTML::option(...func_get_args());}
+function output(): HTML     {return HTML::output(...func_get_args());}
+function p(): HTML          {return HTML::p(...func_get_args());}
+function picture(): HTML    {return HTML::picture(...func_get_args());}
+function pre(): HTML        {return HTML::pre(...func_get_args());}
+function progress(): HTML   {return HTML::progress(...func_get_args());}
+function q(): HTML          {return HTML::q(...func_get_args());}
+function rp(): HTML         {return HTML::rp(...func_get_args());}
+function rt(): HTML         {return HTML::rt(...func_get_args());}
+function ruby(): HTML       {return HTML::ruby(...func_get_args());}
+function s(): HTML          {return HTML::s(...func_get_args());}
+function samp(): HTML       {return HTML::samp(...func_get_args());}
+function script(): HTML     {return HTML::script(...func_get_args());}
+function section(): HTML    {return HTML::section(...func_get_args());}
+function select(): HTML     {return HTML::select(...func_get_args());}
+function slot(): HTML       {return HTML::slot(...func_get_args());}
+function small(): HTML      {return HTML::small(...func_get_args());}
+function source(): HTML     {return HTML::source(...func_get_args());}
+function span(): HTML       {return HTML::span(...func_get_args());}
+function strong(): HTML     {return HTML::strong(...func_get_args());}
+function style(): HTML      {return HTML::style(...func_get_args());}
+function sub(): HTML        {return HTML::sub(...func_get_args());}
+function summary(): HTML    {return HTML::summary(...func_get_args());}
+function sup(): HTML        {return HTML::sup(...func_get_args());}
+function table(): HTML      {return HTML::table(...func_get_args());}
+function tbody(): HTML      {return HTML::tbody(...func_get_args());}
+function td(): HTML         {return HTML::td(...func_get_args());}
+function template(): HTML   {return HTML::template(...func_get_args());}
+function textarea(): HTML   {return HTML::textarea(...func_get_args());}
+function tfoot(): HTML      {return HTML::tfoot(...func_get_args());}
+function th(): HTML         {return HTML::th(...func_get_args());}
+function thead(): HTML      {return HTML::thead(...func_get_args());}
+function time(): HTML       {return HTML::time(...func_get_args());}
+function title(): HTML      {return HTML::title(...func_get_args());}
+function tr(): HTML         {return HTML::tr(...func_get_args());}
+function track(): HTML      {return HTML::track(...func_get_args());}
+function u(): HTML          {return HTML::u(...func_get_args());}
+function ul(): HTML         {return HTML::ul(...func_get_args());}
+function video(): HTML      {return HTML::video(...func_get_args());}
+function wbr(): HTML        {return HTML::wbr(...func_get_args());}
