@@ -5,6 +5,8 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Core\XML;
 
+use function Pure\Utils\rawXml;
+
 /** @param array<string, string> $props */
 function Address(array $props): XML
 {
@@ -83,5 +85,60 @@ class XMLTest extends TestCase
         $this->assertSame($expectedStr, $savedContent);
 
         unlink($outputPath);
+    }
+
+    public function testMagicStaticMethod(): void
+    {
+        // Test magic static method approach
+        $xml = XML::root(
+            XML::item('Content 1'),
+            XML::item('Content 2')
+        );
+
+        $this->assertSame('root', $xml->getTagName());
+        $this->assertCount(2, $xml->getChildren());
+    }
+
+    public function testConstructorMethod(): void
+    {
+        // Test constructor approach
+        $xml = new XML('custom-root', [
+            new XML('custom-item', ['Custom Content 1']),
+            new XML('custom-item', ['Custom Content 2']),
+        ]);
+
+        $this->assertSame('custom-root', $xml->getTagName());
+        $this->assertCount(2, $xml->getChildren());
+    }
+
+    public function testStringTagsAreFiltered(): void
+    {
+        // Test that string XML tags in children are filtered out
+        $xml = XML::root('<item>This should be filtered</item>', '<data>This too</data>');
+
+        $output = (string)$xml;
+
+        // The XML tags should be stripped, only text content remains
+        $this->assertStringNotContainsString('<item>', $output);
+        $this->assertStringNotContainsString('</item>', $output);
+        $this->assertStringNotContainsString('<data>', $output);
+        $this->assertStringNotContainsString('</data>', $output);
+        $this->assertStringContainsString('This should be filtered', $output);
+        $this->assertStringContainsString('This too', $output);
+    }
+
+    public function testRawXmlPreservesContent(): void
+    {
+        // Test that rawXml preserves XML content
+        $xml = XML::root(
+            rawXml('<item>This should be preserved</item>'),
+            rawXml('<data>This too</data>')
+        );
+
+        $output = (string)$xml;
+
+        // The XML tags should be preserved
+        $this->assertStringContainsString('<item>This should be preserved</item>', $output);
+        $this->assertStringContainsString('<data>This too</data>', $output);
     }
 }

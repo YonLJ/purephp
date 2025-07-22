@@ -23,7 +23,7 @@ const SELF_CLOSE_HTML_TAGS = [
 class HTML extends Tag
 {
     /** @param array<int, mixed> $children */
-    protected function __construct(string $tagName, array $children)
+    public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
         if (in_array(strtolower($tagName), SELF_CLOSE_HTML_TAGS)) {
