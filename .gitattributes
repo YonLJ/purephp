@@ -1,2 +1,17 @@
+.github/ export-ignore
+
+site/ export-ignore
+
+.php-cs-fixer.php export-ignore
+.php-cs-fixer.cache export-ignore
+
+phpstan.neon export-ignore
+
 tests/ export-ignore
+phpunit.xml export-ignore
+.phpunit.cache/ export-ignore
+
+coverage/ export-ignore
+coverage.xml export-ignore
+
 examples/ export-ignore
