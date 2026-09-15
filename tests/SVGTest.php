@@ -66,6 +66,22 @@ class SVGTest extends TestCase
         $this->assertTrue($rect->getSelfClose());
     }
 
+    public function testAttributeValuesAreEscaped(): void
+    {
+        $circle = SVG::circle()
+            ->cx('50')
+            ->cy('50')
+            ->r('40')
+            ->fill('" onmouseover="alert(1)');
+
+        $svg = SVG::svg($circle)->width('100')->height('100');
+
+        $this->assertSame(
+            '<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="&quot; onmouseover=&quot;alert(1)" /></svg>',
+            (string)$svg
+        );
+    }
+
     public function testSVGOutput(): void
     {
         $svg = SVG::svg(

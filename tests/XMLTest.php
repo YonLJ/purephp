@@ -87,6 +87,17 @@ class XMLTest extends TestCase
         unlink($outputPath);
     }
 
+    public function testAttributeValuesAreEscaped(): void
+    {
+        $tag = XML::root()
+            ->data('"><item>attack</item>');
+
+        $this->assertSame(
+            '<root data="&quot;&gt;&lt;item&gt;attack&lt;/item&gt;"></root>',
+            (string)$tag
+        );
+    }
+
     public function testMagicStaticMethod(): void
     {
         // Test magic static method approach
