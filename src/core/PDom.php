@@ -47,6 +47,8 @@ class PDom extends Dom
 
     private function buildAttrStr(string $key, string $value): string
     {
+        $value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+
         return "{$key}=\"{$value}\"";
     }
 

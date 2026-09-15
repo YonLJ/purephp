@@ -222,6 +222,19 @@ class HTMLTest extends TestCase
         $this->assertSame('display: inline-block; color: #eee; margin-left: 10px;', $tag->getAttr('style'));
     }
 
+    public function testAttributeValuesAreEscaped(): void
+    {
+        /** @var HTML */
+        $tag = HTML::input()
+            ->type('text')
+            ->value('"><script>alert(1)</script>');
+
+        $this->assertSame(
+            '<input type="text" value="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;" />',
+            (string)$tag
+        );
+    }
+
     public function testChildren(): void
     {
         $child1 = 'Hello';
