@@ -196,23 +196,35 @@ $json = $element->toJSON();
 // Returns: ['tagName' => 'div', 'children' => ['Content'], 'class' => 'container']
 ```
 
-### `toPDom(): PDom`
+### `render(): string`
 
-Converts the element to PDom object (for string output).
+Renders the element and its children to an HTML string directly from the tag tree. Attribute values and text children are escaped while rendering; Raw children are emitted verbatim.
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-$element = div('Content');
-$pdom = $element->toPDom();
-echo $pdom; // Output: <div>Content</div>
+$element = div('Content')->class('container');
+echo $element->render(); // Output: <div class="container">Content</div>
 ```
 
-### `toNDom(): NDom`
+### `__toString(): string`
 
-Converts the element to NDom object (based on DOMDocument).
+String-casts the element, equivalent to `render()`.
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+$element = div('Content')->class('container');
+echo (string)$element; // Output: <div class="container">Content</div>
+```
+
+### `toDom(): Dom`
+
+Converts the element to Dom object (based on DOMDocument).
 
 ```php
 <?php
@@ -220,7 +232,7 @@ Converts the element to NDom object (based on DOMDocument).
 use function Pure\HTML\div;
 
 $element = div('Content');
-$ndom = $element->toNDom();
+$dom = $element->toDom();
 ```
 
 ### `toPrint(): void`

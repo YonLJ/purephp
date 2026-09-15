@@ -1,16 +1,10 @@
 # DOM Classes
 
-PurePHP provides two DOM representation classes for different use cases.
+PurePHP renders to strings directly from the tag tree. For advanced DOM manipulation it provides the Dom representation class, based on DOMDocument.
 
-## PDom Class
+## String Output
 
-`Pure\Core\PDom` is a DOM representation class for string output, extending the Dom abstract class.
-
-### Output Methods
-
-#### `__toString(): string`
-
-Converts the PDom object to HTML/XML string.
+Every tag renders to an HTML string without materializing an intermediate DOM copy:
 
 ```php
 <?php
@@ -18,13 +12,16 @@ Converts the PDom object to HTML/XML string.
 use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
-$pdom = $element->toPDom();
-echo $pdom; // Output: <div class="container">Content</div>
+echo $element; // Output: <div class="container">Content</div>
+$html = $element->render();
 ```
 
 ### Use Cases
 
-PDom is optimized for string output and is the default choice for most scenarios:
+String output is the default choice for most scenarios:
+- You need simple string output
+- Performance is important
+- You're generating HTML/XML for web responses
 
 ```php
 <?php
@@ -41,20 +38,18 @@ $page = html(
     )
 );
 
-// Convert to PDom for string output
-$pdom = $page->toPDom();
-echo $pdom; // Outputs complete HTML
+echo $page; // Outputs complete HTML
 ```
 
-## NDom Class
+## Dom Class
 
-`Pure\Core\NDom` is a DOM representation class based on DOMDocument, extending the Dom abstract class.
+`Pure\Core\Dom` is a DOM representation class based on DOMDocument.
 
 ### Output Methods
 
 #### `__toString(): string`
 
-Converts the NDom object to HTML/XML string.
+Converts the Dom object to HTML/XML string.
 
 ```php
 <?php
@@ -62,8 +57,8 @@ Converts the NDom object to HTML/XML string.
 use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
-$ndom = $element->toNDom();
-echo $ndom; // Output: <div class="container">Content</div>
+$dom = $element->toDom();
+echo $dom; // Output: <div class="container">Content</div>
 ```
 
 #### `toDom(): DOMElement`
@@ -76,13 +71,13 @@ Gets the underlying DOMElement object.
 use function Pure\HTML\div;
 
 $element = div('Content');
-$ndom = $element->toNDom();
-$domElement = $ndom->toDom(); // Returns DOMElement object
+$dom = $element->toDom();
+$domElement = $dom->toDom(); // Returns DOMElement object
 ```
 
 ### Use Cases
 
-NDom is useful when you need to interact with PHP's DOMDocument:
+Dom is useful when you need to interact with PHP's DOMDocument:
 
 ```php
 <?php
@@ -94,57 +89,47 @@ $element = div(
     p('Second paragraph')
 );
 
-$ndom = $element->toNDom();
-$domElement = $ndom->toDom();
+$dom = $element->toDom();
+$domElement = $dom->toDom();
 
 // Use DOMDocument methods
 $document = $domElement->ownerDocument;
 $xpath = new DOMXPath($document);
-$paragraphs = $xpath->query('//p');
+
+// Nodes are not attached to the document root, so query relative to the element
+$paragraphs = $xpath->query('.//p', $domElement);
 
 foreach ($paragraphs as $p) {
     echo $p->textContent . "\n";
 }
 ```
 
-## Choosing Between PDom and NDom
-
-### Use PDom when:
-- You need simple string output
-- Performance is important
-- You're generating HTML/XML for web responses
-- You don't need DOM manipulation
-
-### Use NDom when:
+### Use Dom when:
 - You need to manipulate the DOM after creation
 - You want to use XPath queries
 - You need to integrate with existing DOMDocument code
 - You need advanced DOM features
 
+### Differences from String Output
+
+Both paths produce the same markup for plain tags, but they are not byte-for-byte identical:
+
+- Both paths escape text children and attribute values. `render()` skips double-encoding only for text children (so `&copy;` stays `&copy;`), while attribute values and all DOM-serialized text are re-encoded (`&copy;` becomes `&amp;copy;`).
+- HTML serialization uses double quotes, switching to single quotes only when a value contains `"`; XML/SVG output (`saveXML`) always uses double quotes and escapes `"` as `&quot;`; `render()` always uses double quotes.
+- Void and self-closing elements are serialized in DOM style (`<br>`, `<child/>`), while `render()` writes `<br />`.
+- Raw HTML children are parsed and imported into the DOM, so malformed markup is repaired.
+- Raw XML that is not well-formed throws instead of being silently dropped.
+
+### Migrating from 1.x
+
+`PDom`, `NDom`, `toPDom()` and `toNDom()` were removed:
+
+- `(string)$element` and `$element->render()` replace `(string)$element->toPDom()`.
+- `$element->toDom()` returns the `Dom` wrapper and replaces `$element->toNDom()`.
+
 ## Examples
 
-### Performance Comparison
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-$element = div('Content')->class('container');
-
-// PDom - faster for simple output
-$pdom = $element->toPDom();
-$html1 = (string)$pdom;
-
-// NDom - more features but slower
-$ndom = $element->toNDom();
-$html2 = (string)$ndom;
-
-// Both produce the same output
-assert($html1 === $html2);
-```
-
-### DOM Manipulation with NDom
+### DOM Manipulation
 
 ```php
 <?php
@@ -155,15 +140,15 @@ $container = div(
     p('Original content')
 )->class('container');
 
-$ndom = $container->toNDom();
-$domElement = $ndom->toDom();
+$dom = $container->toDom();
+$domElement = $dom->toDom();
 $document = $domElement->ownerDocument;
 
 // Add a new paragraph using DOMDocument
 $newP = $document->createElement('p', 'Added via DOM');
 $domElement->appendChild($newP);
 
-echo $ndom; // Outputs container with both paragraphs
+echo $dom; // Outputs container with both paragraphs
 ```
 
 ### XPath Queries
@@ -179,19 +164,19 @@ $content = div(
     p('Third paragraph')
 )->class('content');
 
-$ndom = $content->toNDom();
-$domElement = $ndom->toDom();
+$dom = $content->toDom();
+$domElement = $dom->toDom();
 $document = $domElement->ownerDocument;
 
 // Use XPath to find specific elements
 $xpath = new DOMXPath($document);
 
 // Find all paragraphs
-$paragraphs = $xpath->query('//p');
+$paragraphs = $xpath->query('.//p', $domElement);
 echo "Found {$paragraphs->length} paragraphs\n";
 
 // Find spans inside paragraphs
-$spans = $xpath->query('//p/span');
+$spans = $xpath->query('.//p/span', $domElement);
 foreach ($spans as $span) {
     echo "Span content: {$span->textContent}\n";
 }
@@ -210,9 +195,9 @@ $table = table(
     tr(td('Cell 3'), td('Cell 4'))
 )->class('data-table');
 
-// Convert to NDom for DOM manipulation
-$ndom = $table->toNDom();
-$domTable = $ndom->toDom();
+// Convert to Dom for DOM manipulation
+$dom = $table->toDom();
+$domTable = $dom->toDom();
 $document = $domTable->ownerDocument;
 
 // Add attributes using DOM methods
@@ -227,5 +212,5 @@ $newRow->appendChild($cell1);
 $newRow->appendChild($cell2);
 $domTable->appendChild($newRow);
 
-echo $ndom; // Outputs modified table
+echo $dom; // Outputs modified table
 ```

@@ -22,7 +22,7 @@ Extends Tag class for creating XML documents. Perfect for configuration files, d
 Represents raw HTML or XML content that bypasses escaping. Useful for including pre-formatted content or templates.
 
 ### [DOM Classes](/api/dom)
-PDom and NDom classes provide different approaches to DOM representation - PDom for performance, NDom for advanced manipulation.
+Dom class provides DOMDocument-based representation for advanced DOM manipulation; string output is rendered directly from the tag tree via `render()` or `(string)`.
 
 ## Quick Reference
 
@@ -53,7 +53,7 @@ All Tag-based classes share these common methods:
 - `style()` - Set inline styles
 - `id()`, `data_*()`, `aria_*()` - Set attributes
 - `getTagName()`, `getAttrs()`, `getChildren()` - Get information
-- `toJSON()`, `toPrint()`, `__toString()` - Output methods
+- `toJSON()`, `render()`, `toPrint()`, `__toString()` - Output methods
 
 ### Performance Guidelines
 
@@ -71,9 +71,7 @@ Tag (abstract)
 │   └── SVG
 └── Raw
 
-Dom (abstract)
-├── PDom
-└── NDom
+Dom
 ```
 
 ## Next Steps

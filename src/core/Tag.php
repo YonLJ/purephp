@@ -31,7 +31,58 @@ abstract class Tag
 
     public function __toString(): string
     {
-        return (string)$this->toPDom();
+        return $this->render();
+    }
+
+    /**
+     * Render this subtree to an HTML string, without materializing an intermediate DOM copy.
+     *
+     * Attribute values and text children are escaped while rendering; Raw
+     * children are emitted verbatim.
+     */
+    public function render(): string
+    {
+        $tagName = $this->tagName;
+        $attrs = $this->buildAttrsStr();
+
+        if ($this->selfClose) {
+            return "<{$tagName}{$attrs} />";
+        }
+
+        $content = '';
+        foreach ($this->children as $child) {
+            if ($child instanceof Tag) {
+                $content .= $child->render();
+            } elseif ($child instanceof Raw) {
+                $content .= (string)$child;
+            } else {
+                // Escape text children. double_encode=false keeps entities the
+                // caller already escaped (e.g. "&copy;") intact while encoding
+                // bare special characters.
+                $content .= htmlspecialchars((string)$child, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
+            }
+        }
+
+        return "<{$tagName}{$attrs}>{$content}</{$tagName}>";
+    }
+
+    /**
+     * Build the escaped attribute string for this node once. Produces a leading
+     * space plus `key="value"` pairs joined by spaces, or an empty string when
+     * there are no attributes.
+     */
+    private function buildAttrsStr(): string
+    {
+        if (empty($this->attrs)) {
+            return '';
+        }
+
+        $parts = [];
+        foreach ($this->attrs as $key => $value) {
+            $parts[] = "{$key}=\"" . htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"";
+        }
+
+        return ' ' . implode(' ', $parts);
     }
 
     /** @param array<int, mixed> $args */
@@ -85,10 +136,11 @@ abstract class Tag
 
     public function setSelfClose(bool $value): self
     {
-        $this->selfClose = $value;
-        if ($this->selfClose && !empty($this->children)) {
+        if ($value && !empty($this->children)) {
             throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
         }
+
+        $this->selfClose = $value;
 
         return $this;
     }
@@ -226,14 +278,9 @@ abstract class Tag
         ], $this->attrs);
     }
 
-    public function toPDom(): PDom
+    public function toDom(): Dom
     {
-        return new PDom($this);
-    }
-
-    public function toNDom(): NDom
-    {
-        return new NDom($this);
+        return new Dom($this);
     }
 
     public function toPrint(): void
