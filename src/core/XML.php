@@ -19,7 +19,7 @@ class XML extends Tag
             return false;
         }
 
-        $result = fwrite($handle, $header . (string)$this->toPDom());
+        $result = fwrite($handle, $header . $this->render());
         fclose($handle);
 
         return $result;

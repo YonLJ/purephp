@@ -196,23 +196,35 @@ $json = $element->toJSON();
 // 返回: ['tagName' => 'div', 'children' => ['内容'], 'class' => 'container']
 ```
 
-### `toPDom(): PDom`
+### `render(): string`
 
-将元素转换为 PDom 对象（用于字符串输出）。
+直接从标签树将元素及其子节点渲染为 HTML 字符串。渲染时会对属性值和文本子节点做转义，Raw 子节点按原样输出。
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-$element = div('内容');
-$pdom = $element->toPDom();
-echo $pdom; // 输出: <div>内容</div>
+$element = div('内容')->class('container');
+echo $element->render(); // 输出: <div class="container">内容</div>
 ```
 
-### `toNDom(): NDom`
+### `__toString(): string`
 
-将元素转换为 NDom 对象（基于 DOMDocument）。
+对元素进行字符串转换，等价于 `render()`。
+
+```php
+<?php
+
+use function Pure\HTML\div;
+
+$element = div('内容')->class('container');
+echo (string)$element; // 输出: <div class="container">内容</div>
+```
+
+### `toDom(): Dom`
+
+将元素转换为 Dom 对象（基于 DOMDocument）。
 
 ```php
 <?php
@@ -220,7 +232,7 @@ echo $pdom; // 输出: <div>内容</div>
 use function Pure\HTML\div;
 
 $element = div('内容');
-$ndom = $element->toNDom();
+$dom = $element->toDom();
 ```
 
 ### `toPrint(): void`

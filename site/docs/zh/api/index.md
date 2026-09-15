@@ -22,7 +22,7 @@ PurePHP 由几个核心类组成，它们协同工作提供强大的模板系统
 表示绕过转义的原始 HTML 或 XML 内容。用于包含预格式化内容或模板。
 
 ### [DOM 类](/zh/api/dom)
-PDom 和 NDom 类提供不同的 DOM 表示方法 - PDom 用于性能，NDom 用于高级操作。
+Dom 类提供基于 DOMDocument 的表示，用于高级 DOM 操作；字符串输出通过 `render()` 或 `(string)` 直接从标签树渲染。
 
 ## 快速参考
 
@@ -53,7 +53,7 @@ $element3 = new HTML('div', ['内容']);
 - `style()` - 设置内联样式
 - `id()`, `data_*()`, `aria_*()` - 设置属性
 - `getTagName()`, `getAttrs()`, `getChildren()` - 获取信息
-- `toJSON()`, `toPrint()`, `__toString()` - 输出方法
+- `toJSON()`, `render()`, `toPrint()`, `__toString()` - 输出方法
 
 ### 性能指南
 
@@ -71,9 +71,7 @@ Tag (抽象)
 │   └── SVG
 └── Raw
 
-Dom (抽象)
-├── PDom
-└── NDom
+Dom
 ```
 
 ## 下一步
