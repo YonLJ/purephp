@@ -1,358 +1,181 @@
-# Props
+# Props and Slots
 
-PurePHP provides a powerful props system for configuring and customizing component behavior and appearance.
+In PurePHP, "props" come in two forms:
 
-## Basic Props
+- **Static props** — values known while the component is built (function
+  arguments, literal attributes).
+- **Dynamic props** — values bound at render time: `Slot` placeholders.
 
-### 1. HTML Attributes
+This page is the data-binding reference; see
+[Compiled Components](/guide/compiled) for the rendering pipeline itself.
+
+## Static Props
+
+### HTML Attributes
+
+Attributes are set with method chaining and are stored in the shape as
+literals:
 
 ```php
 <?php
+
+use Pure\Compile\Compile;
 
 use function Pure\HTML\div;
 
-// Set basic attributes
-div('Content')
-    ->id('main')
-    ->class('container')
-    ->style('background: #fff;')
-    ->toPrint();
+$shape = Compile::shape(
+    div('Content')
+        ->id('main')
+        ->class('container')
+        ->style('background: #fff;')
+);
+
+$shape([]);
 ```
 
-### 2. Data Attributes
+`className()` is an alias of `class()`, and many attributes can be passed to
+`class()`:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
-
-// Set data attributes
-div('Content')
-    ->data_id('123')
-    ->data_type('card')
-    ->data_status('active')
-    ->toPrint();
+div('Content')->class('container', 'mt-4')->id('main');
 ```
 
-### 3. ARIA Attributes
+### Data and ARIA Attributes
+
+Attribute names containing hyphens use underscores, because `-` is not valid
+in a PHP method name:
 
 ```php
 <?php
 
-use function Pure\HTML\button;
-
-// Set ARIA attributes
-button('Submit')
-    ->aria_label('Submit form')
-    ->aria_disabled('false')
-    ->aria_required('true')
-    ->toPrint();
+div('Content')
+    ->data_id('123')      // data-id="123"
+    ->data_type('card')   // data-type="card"
+    ->aria_label('Card'); // aria-label="Card"
 ```
 
-## Chained Attributes
+### Boolean Attributes
 
-PurePHP supports chained attribute method calls:
+A `true` value renders the attribute with its own name as value; `false` and
+`null` omit it:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
-
-div('Content')
-    ->id('main')
-    ->class('container')
-    ->style('background: #fff;')
-    ->data_type('card')
-    ->aria_label('Main content')
-    ->toPrint();
+input()->type('checkbox')->checked(true);  // checked="checked"
+input()->type('checkbox')->checked(false); // no checked attribute
 ```
 
 ## Dynamic Props
 
-### 1. Conditional Props
+Dynamic attribute values use `Slot::attr()`. A `null` value omits the
+attribute at render time, which is also how conditional attributes work:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
+use Pure\Core\Slot;
 
-function DynamicBox($props) {
-    [
-        'active' => $active = false,
-        'disabled' => $disabled = false
-    ] = $props;
+$shape = Compile::shape(
+    button('Save')->class(Slot::attr('class'))->disabled(Slot::attr('disabled'))
+);
 
-    return div('Content')
-        ->class('box')
-        ->class($active ? 'active' : '')
-        ->class($disabled ? 'disabled' : '')
-        ->data_active($active)
-        ->data_disabled($disabled);
-}
-
-// Use the component
-DynamicBox([
-    'active' => true,
-    'disabled' => false
-])->toPrint();
+$shape(['class' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
+$shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
 ```
 
-### 2. Computed Props
+## Slot Reference
+
+| Slot | Value | Behavior |
+| --- | --- | --- |
+| `Slot::text($name)` | stringable or `null` | escaped text content; `null` renders empty |
+| `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute |
+| `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
+| `Slot::sub($name, $shape)` | array | nested scope for `$shape` |
+| `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
+| `Slot::if($name, $then, $else = null)` | truthy check | renders a branch; a missing key is false |
+| `Slot::eachAny($name, ['kind' => $shape])` | iterable of arrays | dispatches per item on the discriminator key |
+
+## Modifiers
 
 ```php
 <?php
 
-use function Pure\HTML\div;
+use Pure\Core\Slot;
 
-function ResponsiveBox($props) {
-    [
-        'width' => $width = 100,
-        'height' => $height = 100
-    ] = $props;
-
-    $style = sprintf(
-        'width: %dpx; height: %dpx; aspect-ratio: %d/%d;',
-        $width,
-        $height,
-        $width,
-        $height
-    );
-
-    return div('Content')
-        ->style($style)
-        ->class('responsive-box');
-}
-
-// Use the component
-ResponsiveBox([
-    'width' => 200,
-    'height' => 150
-])->toPrint();
+Slot::text('subtitle')->required(false);   // missing key renders as empty
+Slot::text('subtitle')->default('—');       // fallback for a missing key
 ```
 
-## Props Validation
+- `required(false)` makes a slot optional; its value is then read with `??`
+  semantics (`null` when missing).
+- `default($value)` provides a fallback for a missing key and makes the slot
+  optional.
+- `Slot::if()` ignores both modifiers: its condition is truthiness with a
+  `false` fallback.
 
-### 1. Type Checking
+## Value Coercion and Escaping
+
+Text, attribute and raw slots accept `null`, scalars and `Stringable`
+objects. They are converted to string before use; arrays and other objects
+raise an `InvalidArgumentException` naming the full slot path.
+
+- `Slot::text()` escapes with `htmlspecialchars(..., double_encode: false)`,
+  so entities you already escaped (`&copy;`) stay intact.
+- `Slot::attr()` escapes with `double_encode: true`.
+- `Slot::raw()` performs no escaping — only use it with trusted markup.
+- Invalid UTF-8 is substituted with the replacement character instead of
+  producing broken output.
+
+## Missing Data
+
+Required slots throw `Pure\Core\MissingSlotException` with the full path:
 
 ```php
-<?php
-
-use function Pure\HTML\div;
-
-function ValidatedBox($props) {
-    [
-        'width' => $width,
-        'height' => $height,
-        'color' => $color
-    ] = $props;
-
-    // Validate prop types
-    if (!is_numeric($width) || !is_numeric($height)) {
-        throw new \InvalidArgumentException('Width and height must be numbers');
-    }
-
-    if (!is_string($color)) {
-        throw new \InvalidArgumentException('Color must be a string');
-    }
-
-    return div('Content')
-        ->style("width: {$width}px; height: {$height}px; background: {$color};");
-}
-
-// Use the component
 try {
-    ValidatedBox([
-        'width' => 200,
-        'height' => 150,
-        'color' => '#ff0000'
-    ])->toPrint();
-} catch (\InvalidArgumentException $e) {
-    echo "Error: {$e->getMessage()}";
+    $shape([]);
+} catch (\Pure\Core\MissingSlotException $e) {
+    echo $e->getMessage(); // slot 'items[].title' is required but was not provided.
 }
 ```
 
-### 2. Required Props
+Paths identify nested scopes: `card.title` for a sub slot, `items[].title` for
+a list item, `items[].kind` for a heterogeneous list discriminator.
+
+## Derived Props (Maps)
+
+A map closure derives the nested scope of a child component instead of reading
+`$data[$name]` directly:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
+use Pure\Core\Slot;
 
-function RequiredBox($props) {
-    // Check required props
-    $required = ['id', 'type'];
-    foreach ($required as $prop) {
-        if (!isset($props[$prop])) {
-            throw new \InvalidArgumentException("{$prop} is a required prop");
-        }
-    }
+$badge = Compile::shape(span(Slot::text('label'))->class('badge'));
 
-    return div('Content')
-        ->id($props['id'])
-        ->data_type($props['type']);
-}
+$shape = Compile::shape(div(
+    Slot::sub('user', $badge, static fn (array $data): array => [
+        'label' => strtoupper((string)$data['name']),
+    ])
+));
 
-// Use the component
-try {
-    RequiredBox([
-        'id' => 'box1',
-        'type' => 'card'
-    ])->toPrint();
-} catch (\InvalidArgumentException $e) {
-    echo "Error: {$e->getMessage()}";
-}
+$shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
 ```
 
-## Default Props
+`Slot::each()` and `Slot::eachAny()` accept the same optional map, applied to
+every item.
 
-### 1. Using Default Values
+## Component Props Contract
 
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function CustomComponent($props) {
-    // Set default props
-    $defaultProps = [
-        'theme' => 'light',
-        'size' => 'medium',
-        'disabled' => false
-    ];
-
-    $props = array_merge($defaultProps, $props);
-
-    [
-        'theme' => $theme,
-        'size' => $size,
-        'disabled' => $disabled,
-        'content' => $content
-    ] = $props;
-
-    return div($content)
-        ->class("custom-component theme-{$theme} size-{$size}")
-        ->data_disabled($disabled ? 'true' : 'false');
-}
-
-// Use the component
-CustomComponent([
-    'theme' => 'dark',
-    'size' => 'large',
-    'content' => 'Custom content'
-])->toPrint();
-```
-
-### 2. Props Merging
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function MergedBox($props) {
-    [
-        'class' => $class = '',
-        'style' => $style = '',
-        'data' => $data = []
-    ] = $props;
-
-    // Merge class names
-    $classes = array_merge(
-        ['box'],
-        explode(' ', $class)
-    );
-
-    // Merge styles
-    $styles = array_merge(
-        ['background: #fff;'],
-        explode(';', $style)
-    );
-
-    // Merge data attributes
-    $dataAttrs = array_merge(
-        ['type' => 'box'],
-        $data
-    );
-
-    return div('Content')
-        ->class(implode(' ', array_filter($classes)))
-        ->style(implode(';', array_filter($styles)))
-        ->data($dataAttrs);
-}
-
-// Use the component
-MergedBox([
-    'class' => 'custom-box',
-    'style' => 'color: #000;',
-    'data' => ['status' => 'active']
-])->toPrint();
-```
-
-## Props Transformation
-
-### 1. Type Conversion
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function TypedBox($props) {
-    [
-        'width' => $width,
-        'height' => $height,
-        'opacity' => $opacity
-    ] = $props;
-
-    // Convert prop types
-    $width = (int) $width;
-    $height = (int) $height;
-    $opacity = (float) $opacity;
-
-    return div('Content')
-        ->style("width: {$width}px; height: {$height}px; opacity: {$opacity};");
-}
-
-// Use the component
-TypedBox([
-    'width' => '200',
-    'height' => '150',
-    'opacity' => '0.5'
-])->toPrint();
-```
-
-### 2. Value Transformation
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function TransformedBox($props) {
-    [
-        'color' => $color,
-        'size' => $size
-    ] = $props;
-
-    // Transform color value
-    $color = str_starts_with($color, '#') ? $color : "#{$color}";
-
-    // Transform size value
-    $size = str_ends_with($size, 'px') ? $size : "{$size}px";
-
-    return div('Content')
-        ->style("color: {$color}; font-size: {$size};");
-}
-
-// Use the component
-TransformedBox([
-    'color' => 'ff0000',
-    'size' => '16'
-])->toPrint();
-```
+Because a shape is data-free, a component's data contract lives in its slots.
+Document it next to the component and keep the bindings array in one place; a
+missing required key will fail loudly with the full path at render time.
 
 ## Next Steps
 
-- [Events](/guide/events) - Understand event handling
-- [Utility Functions](/guide/utils) - Learn about helper utilities
-- [Components](/guide/components) - Learn more about component development
+- [Compiled Components](/guide/compiled) - Lists, conditionals, caching and limitations
+- [Core Concepts](/guide/concepts) - Shapes, scopes and compiling
+- [Events](/guide/events) - Event attributes and browser-side handlers

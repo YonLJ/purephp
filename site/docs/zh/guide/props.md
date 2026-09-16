@@ -1,358 +1,162 @@
-# 属性系统
+# Props 与槽位
 
-PurePHP 提供了强大的属性系统，用于配置和自定义组件的行为和外观。
+在 PurePHP 中，“props”有两种形式：
 
-## 基本属性
+- **静态 props**——构建组件时已知的值（函数参数、字面量属性）。
+- **动态 props**——渲染时绑定的值：`Slot` 占位符。
 
-### 1. HTML 属性
+本页是数据绑定参考；渲染管线本身请参见[编译组件](/zh/guide/compiled)。
 
-```php
-<?php
+## 静态 props
 
-use function Pure\HTML\{div};
+### HTML 属性
 
-// 设置基本属性
-div('内容')
-    ->id('main')
-    ->class('container')
-    ->style('background: #fff;')
-    ->toPrint();
-```
-
-### 2. 数据属性
+属性通过方法链式调用设置，并以字面量形式存储在形状中：
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
-
-// 设置数据属性
-div('内容')
-    ->data_id('123')
-    ->data_type('card')
-    ->data_status('active')
-    ->toPrint();
-```
-
-### 3. ARIA 属性
-
-```php
-<?php
-
-use function Pure\HTML\{button};
-
-// 设置 ARIA 属性
-button('提交')
-    ->aria_label('提交表单')
-    ->aria_disabled('false')
-    ->aria_required('true')
-    ->toPrint();
-```
-
-## 属性链式调用
-
-PurePHP 支持链式调用属性方法：
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-div('内容')
-    ->id('main')
-    ->class('container')
-    ->style('background: #fff;')
-    ->data_type('card')
-    ->aria_label('主要内容')
-    ->toPrint();
-```
-
-## 动态属性
-
-### 1. 条件属性
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-function DynamicBox($props) {
-    [
-        'active' => $active = false,
-        'disabled' => $disabled = false
-    ] = $props;
-
-    return div('内容')
-        ->class('box')
-        ->class($active ? 'active' : '')
-        ->class($disabled ? 'disabled' : '')
-        ->data_active($active)
-        ->data_disabled($disabled);
-}
-
-// 使用组件
-DynamicBox([
-    'active' => true,
-    'disabled' => false
-])->toPrint();
-```
-
-### 2. 计算属性
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-function ResponsiveBox($props) {
-    [
-        'width' => $width = 100,
-        'height' => $height = 100
-    ] = $props;
-
-    $style = sprintf(
-        'width: %dpx; height: %dpx; aspect-ratio: %d/%d;',
-        $width,
-        $height,
-        $width,
-        $height
-    );
-
-    return div('内容')
-        ->style($style)
-        ->class('responsive-box');
-}
-
-// 使用组件
-ResponsiveBox([
-    'width' => 200,
-    'height' => 150
-])->toPrint();
-```
-
-## 属性验证
-
-### 1. 类型检查
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-function ValidatedBox($props) {
-    [
-        'width' => $width,
-        'height' => $height,
-        'color' => $color
-    ] = $props;
-
-    // 验证属性类型
-    if (!is_numeric($width) || !is_numeric($height)) {
-        throw new \InvalidArgumentException('宽度和高度必须是数字');
-    }
-
-    if (!is_string($color)) {
-        throw new \InvalidArgumentException('颜色必须是字符串');
-    }
-
-    return div('内容')
-        ->style("width: {$width}px; height: {$height}px; background: {$color};");
-}
-
-// 使用组件
-try {
-    ValidatedBox([
-        'width' => 200,
-        'height' => 150,
-        'color' => '#ff0000'
-    ])->toPrint();
-} catch (\InvalidArgumentException $e) {
-    echo "错误: {$e->getMessage()}";
-}
-```
-
-### 2. 必填属性
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-function RequiredBox($props) {
-    // 检查必填属性
-    $required = ['id', 'type'];
-    foreach ($required as $prop) {
-        if (!isset($props[$prop])) {
-            throw new \InvalidArgumentException("{$prop} 是必需的属性");
-        }
-    }
-
-    return div('内容')
-        ->id($props['id'])
-        ->data_type($props['type']);
-}
-
-// 使用组件
-try {
-    RequiredBox([
-        'id' => 'box1',
-        'type' => 'card'
-    ])->toPrint();
-} catch (\InvalidArgumentException $e) {
-    echo "错误: {$e->getMessage()}";
-}
-```
-
-## 默认属性
-
-### 使用默认值
-
-```php
-<?php
+use Pure\Compile\Compile;
 
 use function Pure\HTML\div;
 
-function CustomComponent($props) {
-    // 设置默认属性
-    $defaultProps = [
-        'theme' => 'light',
-        'size' => 'medium',
-        'disabled' => false
-    ];
+$shape = Compile::shape(
+    div('Content')
+        ->id('main')
+        ->class('container')
+        ->style('background: #fff;')
+);
 
-    $props = array_merge($defaultProps, $props);
-
-    [
-        'theme' => $theme,
-        'size' => $size,
-        'disabled' => $disabled,
-        'content' => $content
-    ] = $props;
-
-    return div($content)
-        ->class("custom-component theme-{$theme} size-{$size}")
-        ->data_disabled($disabled ? 'true' : 'false');
-}
-
-// 使用组件
-CustomComponent([
-    'theme' => 'dark',
-    'size' => 'large',
-    'content' => '自定义内容'
-])->toPrint();
+$shape([]);
 ```
 
-### 2. 属性合并
+`className()` 是 `class()` 的别名，并且可以向 `class()` 传入多个值：
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
-
-function MergedBox($props) {
-    [
-        'class' => $class = '',
-        'style' => $style = '',
-        'data' => $data = []
-    ] = $props;
-
-    // 合并类名
-    $classes = array_merge(
-        ['box'],
-        explode(' ', $class)
-    );
-
-    // 合并样式
-    $styles = array_merge(
-        ['background: #fff;'],
-        explode(';', $style)
-    );
-
-    // 合并数据属性
-    $dataAttrs = array_merge(
-        ['type' => 'box'],
-        $data
-    );
-
-    return div('内容')
-        ->class(implode(' ', array_filter($classes)))
-        ->style(implode(';', array_filter($styles)))
-        ->data($dataAttrs);
-}
-
-// 使用组件
-MergedBox([
-    'class' => 'custom-box',
-    'style' => 'color: #000;',
-    'data' => ['status' => 'active']
-])->toPrint();
+div('Content')->class('container', 'mt-4')->id('main');
 ```
 
-## 属性转换
+### 数据属性与 ARIA 属性
 
-### 1. 类型转换
+包含连字符的属性名使用下划线，因为 `-` 在 PHP 方法名中无效：
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
-
-function TypedBox($props) {
-    [
-        'width' => $width,
-        'height' => $height,
-        'opacity' => $opacity
-    ] = $props;
-
-    // 转换属性类型
-    $width = (int) $width;
-    $height = (int) $height;
-    $opacity = (float) $opacity;
-
-    return div('内容')
-        ->style("width: {$width}px; height: {$height}px; opacity: {$opacity};");
-}
-
-// 使用组件
-TypedBox([
-    'width' => '200',
-    'height' => '150',
-    'opacity' => '0.5'
-])->toPrint();
+div('Content')
+    ->data_id('123')      // data-id="123"
+    ->data_type('card')   // data-type="card"
+    ->aria_label('Card'); // aria-label="Card"
 ```
 
-### 2. 值转换
+### 布尔属性
+
+值为 `true` 时，属性以自身名称作为值渲染；`false` 与 `null` 则省略该属性：
 
 ```php
 <?php
 
-use function Pure\HTML\{div};
-
-function TransformedBox($props) {
-    [
-        'color' => $color,
-        'size' => $size
-    ] = $props;
-
-    // 转换颜色值
-    $color = str_starts_with($color, '#') ? $color : "#{$color}";
-
-    // 转换尺寸值
-    $size = str_ends_with($size, 'px') ? $size : "{$size}px";
-
-    return div('内容')
-        ->style("color: {$color}; font-size: {$size};");
-}
-
-// 使用组件
-TransformedBox([
-    'color' => 'ff0000',
-    'size' => '16'
-])->toPrint();
+input()->type('checkbox')->checked(true);  // checked="checked"
+input()->type('checkbox')->checked(false); // no checked attribute
 ```
+
+## 动态 props
+
+动态属性值使用 `Slot::attr()`。`null` 值会在渲染时省略该属性，条件属性也是以此实现的：
+
+```php
+<?php
+
+use Pure\Core\Slot;
+
+$shape = Compile::shape(
+    button('Save')->class(Slot::attr('class'))->disabled(Slot::attr('disabled'))
+);
+
+$shape(['class' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
+$shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
+```
+
+## 槽位参考
+
+| 槽位 | 值 | 行为 |
+| --- | --- | --- |
+| `Slot::text($name)` | 可字符串化或 `null` | 转义后的文本内容；`null` 渲染为空 |
+| `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 省略该属性 |
+| `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
+| `Slot::sub($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
+| `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |
+| `Slot::if($name, $then, $else = null)` | 真值判断 | 渲染分支；缺失的键为 false |
+| `Slot::eachAny($name, ['kind' => $shape])` | 数组的可迭代集合 | 按判别键逐项分派 |
+
+## 修饰符
+
+```php
+<?php
+
+use Pure\Core\Slot;
+
+Slot::text('subtitle')->required(false);   // 键缺失时渲染为空
+Slot::text('subtitle')->default('—');       // 键缺失时的回退值
+```
+
+- `required(false)` 使槽位可选；此时其值按 `??` 语义读取（缺失时为 `null`）。
+- `default($value)` 为缺失的键提供回退值，并使槽位可选。
+- `Slot::if()` 会忽略这两个修饰符：它的条件是真值判断，回退为 `false`。
+
+## 值转换与转义
+
+文本槽位、属性槽位与 raw 槽位接受 `null`、标量和 `Stringable` 对象。使用前会先转换为字符串；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
+
+- `Slot::text()` 使用 `htmlspecialchars(..., double_encode: false)` 转义，因此你已经转义过的实体（`&copy;`）会保持不变。
+- `Slot::attr()` 使用 `double_encode: true` 转义。
+- `Slot::raw()` 不执行任何转义——请仅对受信任的标记使用。
+- 无效的 UTF-8 会被替换为替换字符，而不是产生损坏的输出。
+
+## 缺失数据
+
+必填槽位会抛出带完整路径的 `Pure\Core\MissingSlotException`：
+
+```php
+try {
+    $shape([]);
+} catch (\Pure\Core\MissingSlotException $e) {
+    echo $e->getMessage(); // slot 'items[].title' is required but was not provided.
+}
+```
+
+路径用于标识嵌套作用域：`card.title` 表示 sub 槽位，`items[].title` 表示列表项，`items[].kind` 表示异构列表的判别键。
+
+## 派生 props（映射）
+
+映射闭包用于派生子组件的嵌套作用域，而不是直接读取 `$data[$name]`：
+
+```php
+<?php
+
+use Pure\Core\Slot;
+
+$badge = Compile::shape(span(Slot::text('label'))->class('badge'));
+
+$shape = Compile::shape(div(
+    Slot::sub('user', $badge, static fn (array $data): array => [
+        'label' => strtoupper((string)$data['name']),
+    ])
+));
+
+$shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
+```
+
+`Slot::each()` 与 `Slot::eachAny()` 接受同样的可选映射，并应用于每个项。
+
+## 组件 props 契约
+
+由于形状不含数据，组件的数据契约就存在于它的槽位中。请在组件旁边记录该契约，并把绑定数组集中放在一处；渲染时缺失必填键会带完整路径明确报错。
 
 ## 下一步
 
-- [事件](/zh/guide/events) - 学习事件处理
-- [工具函数](/zh/guide/utils) - 了解内置的工具函数
-- [组件](/zh/guide/components) - 深入学习组件开发
+- [编译组件](/zh/guide/compiled) - 列表、条件、缓存与限制
+- [基本概念](/zh/guide/concepts) - 形状、作用域与编译
+- [事件](/zh/guide/events) - 事件属性与浏览器端处理器

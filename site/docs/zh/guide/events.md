@@ -2,6 +2,8 @@
 
 本指南解释如何在 PurePHP 组件中处理事件。
 
+*诸如 `->onclick(...)` 这样的事件属性属于标签 API，依然有效；它们是静态属性，因此在形状上的设置方式相同。对于页面，应构建形状并编译它们——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它仍是用于代码片段和调试的即时渲染路径。*
+
 ## 基本事件处理
 
 PurePHP 通过属性方法支持所有标准 HTML 事件。事件处理程序通常是作为字符串传递的 JavaScript 函数：
@@ -13,13 +15,13 @@ use function Pure\HTML\{div, button, input};
 
 function BasicEvents() {
     return div(
-        button('点击我')
+        button('Click me')
             ->onclick('handleClick()')
             ->class('btn'),
         input()
             ->type('text')
             ->oninput('handleInput(event)')
-            ->placeholder('输入一些内容...')
+            ->placeholder('Type something...')
             ->class('input')
     )->class('events-container');
 }
@@ -38,8 +40,8 @@ BasicEvents()->toPrint();
 use function Pure\HTML\div;
 
 function MouseEvents() {
-    return div('悬停并点击我！')
-        ->onclick('console.log("点击了！")')
+    return div('Hover and click me!')
+        ->onclick('console.log("Clicked!")')
         ->onmouseover('this.style.backgroundColor = "#f0f0f0"')
         ->onmouseout('this.style.backgroundColor = ""')
         ->onmousedown('this.style.transform = "scale(0.95)"')
@@ -63,13 +65,13 @@ use function Pure\HTML\{div, input, p};
 
 function KeyboardEvents() {
     return div(
-        p('在下面的输入框中输入：'),
+        p('Type in the input below:'),
         input()
             ->type('text')
             ->onkeydown('handleKeyDown(event)')
             ->onkeyup('handleKeyUp(event)')
             ->oninput('handleInput(event)')
-            ->placeholder('按键...')
+            ->placeholder('Press keys...')
             ->class('keyboard-input'),
         p()->id('key-display')->style('margin-top: 10px; font-family: monospace;')
     )->class('keyboard-events');
@@ -81,15 +83,15 @@ echo KeyboardEvents();
 <script>
 function handleKeyDown(event) {
     document.getElementById('key-display').textContent =
-        `按下的键: ${event.key} (代码: ${event.code})`;
+        `Key pressed: ${event.key} (Code: ${event.code})`;
 }
 
 function handleKeyUp(event) {
-    console.log('释放的键:', event.key);
+    console.log('Key released:', event.key);
 }
 
 function handleInput(event) {
-    console.log('输入值:', event.target.value);
+    console.log('Input value:', event.target.value);
 }
 </script>
 ```
@@ -107,7 +109,7 @@ function FormEvents() {
     return div(
         form(
             div(
-                label('用户名:')->for('username'),
+                label('Username:')->for('username'),
                 input()
                     ->type('text')
                     ->id('username')
@@ -116,7 +118,7 @@ function FormEvents() {
                     ->required()
             )->class('form-group'),
             div(
-                label('邮箱:')->for('email'),
+                label('Email:')->for('email'),
                 input()
                     ->type('email')
                     ->id('email')
@@ -124,7 +126,7 @@ function FormEvents() {
                     ->onchange('handleChange(event)')
                     ->required()
             )->class('form-group'),
-            button('提交')
+            button('Submit')
                 ->type('submit')
                 ->class('submit-btn')
         )
@@ -139,7 +141,7 @@ echo FormEvents();
 ?>
 <script>
 function handleChange(event) {
-    console.log(`${event.target.name} 改变为: ${event.target.value}`);
+    console.log(`${event.target.name} changed to: ${event.target.value}`);
 }
 
 function handleFormSubmit(event) {
@@ -148,9 +150,9 @@ function handleFormSubmit(event) {
     const data = Object.fromEntries(formData);
 
     document.getElementById('form-status').textContent =
-        `表单提交数据: ${JSON.stringify(data)}`;
+        `Form submitted with: ${JSON.stringify(data)}`;
 
-    console.log('表单数据:', data);
+    console.log('Form data:', data);
 }
 </script>
 ```
@@ -167,13 +169,13 @@ use function Pure\HTML\{div, button};
 function EventDelegation() {
     $buttons = [];
     for ($i = 1; $i <= 5; $i++) {
-        $buttons[] = button("按钮 {$i}")
+        $buttons[] = button("Button {$i}")
             ->data_id($i)
             ->class('delegated-btn');
     }
 
     return div(
-        div('点击任意按钮:')->style('margin-bottom: 10px;'),
+        div('Click any button:')->style('margin-bottom: 10px;'),
         div(...$buttons)->class('button-group'),
         div()->id('delegation-output')->style('margin-top: 10px; color: #666;')
     )
@@ -189,8 +191,8 @@ function handleDelegatedClick(event) {
     if (event.target.classList.contains('delegated-btn')) {
         const buttonId = event.target.dataset.id;
         document.getElementById('delegation-output').textContent =
-            `点击了按钮 ${buttonId}`;
-        console.log('点击的按钮:', buttonId);
+            `Clicked button ${buttonId}`;
+        console.log('Clicked button:', buttonId);
     }
 }
 </script>
@@ -198,49 +200,64 @@ function handleDelegatedClick(event) {
 
 ## 组件事件通信
 
-在组件之间传递事件处理程序：
+将事件处理程序作为静态事件属性传递给子组件；动态值通过槽位传递：
 
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, button, p};
 
-function ParentComponent() {
-    return div(
-        p('父组件'),
-        ChildComponent([
-            'onButtonClick' => 'handleChildClick',
-            'message' => '从子组件点击我！'
-        ]),
-        p()->id('parent-output')->style('margin-top: 10px; color: #666;')
-    )->class('parent-component');
+function ChildShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            p('Child Component'),
+            button(Slot::text('message'))
+                ->onclick("handleChildClick('Hello from child!')")
+                ->class('child-btn')
+        )
+        ->class('child-component')
+        ->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;')
+    );
 }
 
-function ChildComponent($props) {
-    [
-        'onButtonClick' => $onButtonClick,
-        'message' => $message
-    ] = $props;
+function ParentShape(): Shape
+{
+    static $shape;
 
-    return div(
-        p('子组件'),
-        button($message)
-            ->onclick("{$onButtonClick}('来自子组件的问候！')")
-            ->class('child-btn')
-    )->class('child-component')->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;');
+    return $shape ??= Compile::shape(
+        div(
+            p('Parent Component'),
+            Slot::sub('child', ChildShape()),
+            p()->id('parent-output')->style('margin-top: 10px; color: #666;')
+        )->class('parent-component')
+    );
 }
 
-// 使用带 JavaScript 的组件
-echo ParentComponent();
+// 父形状的绑定数据；子项从 `$data['child']` 渲染。
+$bindings = [
+    'child' => [
+        'message' => 'Click me from child!',
+    ],
+];
+
+ParentShape()->print($bindings);
 ?>
 <script>
 function handleChildClick(message) {
     document.getElementById('parent-output').textContent =
-        `从子组件接收到: ${message}`;
-    console.log('子组件事件:', message);
+        `Received from child: ${message}`;
+    console.log('Child event:', message);
 }
 </script>
 ```
+
+处理程序会作为静态属性编译进形状，因此处理程序名不能来自请求数据。完整流程参见[编译组件](/zh/guide/compiled)。
 
 ## 自定义事件属性
 
@@ -253,16 +270,16 @@ use function Pure\HTML\{div, img};
 
 function CustomEventAttributes() {
     return div(
-        div('带加载事件的图片:'),
+        div('Image with load event:'),
         img()
             ->src('https://via.placeholder.com/200x100')
-            ->alt('占位符图片')
-            ->onload('console.log("图片已加载！")')
-            ->onerror('console.log("图片加载失败")')
+            ->alt('Placeholder image')
+            ->onload('console.log("Image loaded!")')
+            ->onerror('console.log("Image failed to load")')
             ->style('display: block; margin: 10px 0;'),
 
-        div('带焦点事件的 Div:'),
-        div('点击获得焦点，然后按 Tab')
+        div('Div with focus events:'),
+        div('Click to focus, then press Tab')
             ->tabindex('0')
             ->onfocus('this.style.outline = "2px solid blue"')
             ->onblur('this.style.outline = "none"')
@@ -284,12 +301,12 @@ CustomEventAttributes()->toPrint();
 use function Pure\HTML\{div, button};
 
 // 内联处理程序（适合简单操作）
-$inlineButton = button('内联处理程序')
-    ->onclick('alert("来自内联的问候！")')
+$inlineButton = button('Inline Handler')
+    ->onclick('alert("Hello from inline!")')
     ->class('btn');
 
 // 外部处理程序（适合复杂逻辑）
-$externalButton = button('外部处理程序')
+$externalButton = button('External Handler')
     ->onclick('handleComplexAction()')
     ->class('btn');
 
@@ -301,7 +318,7 @@ div(
 <script>
 function handleComplexAction() {
     // 复杂逻辑在这里
-    console.log('执行复杂操作');
+    console.log('Complex action executed');
     // ... 更多代码
 }
 </script>
@@ -316,7 +333,7 @@ use function Pure\HTML\{div, button};
 
 function EventObjectExample() {
     return div(
-        button('获取事件信息')
+        button('Get Event Info')
             ->onclick('showEventInfo(event)')
             ->class('btn'),
         div()->id('event-info')->style('margin-top: 10px; font-family: monospace;')
@@ -328,10 +345,10 @@ echo EventObjectExample();
 <script>
 function showEventInfo(event) {
     const info = `
-        事件类型: ${event.type}
-        目标: ${event.target.tagName}
-        时间戳: ${event.timeStamp}
-        坐标: (${event.clientX}, ${event.clientY})
+        Event Type: ${event.type}
+        Target: ${event.target.tagName}
+        Timestamp: ${event.timeStamp}
+        Coordinates: (${event.clientX}, ${event.clientY})
     `;
     document.getElementById('event-info').textContent = info;
 }

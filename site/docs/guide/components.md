@@ -1,256 +1,249 @@
 # Components
 
-Components are the building blocks of user interfaces in PurePHP. This guide explains how to create and use components.
+Components are the building blocks of a PurePHP UI. A component is a PHP
+function that returns a `Shape`; it is compiled once per process (a
+long-running worker; under standard PHP-FPM enable `Compile::cachePath()` so
+requests load the compiled renderer) and rendered as many times as needed with
+different data.
 
 ## Function Components
 
-PurePHP uses function components to build user interfaces. Function components are simple PHP functions that accept props and return HTML elements:
+A component takes static configuration as function arguments and describes
+dynamic values with slots. Memoize the shape in a `static` variable so the
+compile step happens once per process:
 
 ```php
 <?php
 
-use function Pure\HTML\{div, h2, p, img};
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content,
-        'image' => $image = null
-    ] = $props;
+use function Pure\HTML\{div, h2, p};
 
-    return div(
-        $image ? img()->src($image)->class('card-img-top') : null,
+function CardShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
         div(
-            h2($title)->class('card-title'),
-            p($content)->class('card-text')
-        )->class('card-body')
-    )->class('card');
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class('card')
+    );
 }
 
-// Use the component
-Card([
-    'title' => 'Card Title',
-    'content' => 'Card Content',
-    'image' => 'image.jpg'
-])->toPrint();
+// Render the component with data
+CardShape()->print([
+    'title' => 'Title',
+    'content' => 'Content',
+]);
 ```
+
+Never call `Compile::shape()` inside a request handler; the guard
+(`Compile::guard(true)`) warns when a call site builds shapes repeatedly.
 
 ## Component Props
 
-### 1. Basic Props
+### 1. Static Props
+
+Static props become function arguments. Memoize per argument value so each
+variant gets its own shape:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
+function CardShape(string $classList = 'card'): Shape
+{
+    static $shapes = [];
 
-function Box($props) {
-    [
-        'width' => $width = '100%',
-        'height' => $height = '100px',
-        'color' => $color = '#000'
-    ] = $props;
-
-    return div()
-        ->style("width: {$width}; height: {$height}; background: {$color};");
-}
-
-// Use the component
-Box([
-    'width' => '200px',
-    'height' => '150px',
-    'color' => '#ff0000'
-])->toPrint();
-```
-
-### 2. Event Props
-
-```php
-<?php
-
-use function Pure\HTML\button;
-
-function ActionButton($props) {
-    [
-        'text' => $text,
-        'onClick' => $onClick,
-        'disabled' => $disabled = false
-    ] = $props;
-
-    return button($text)
-        ->onclick($onClick)
-        ->disabled($disabled)
-        ->class('action-button');
-}
-
-// Use the component
-ActionButton([
-    'text' => 'Submit',
-    'onClick' => 'handleSubmit()',
-    'disabled' => false
-])->toPrint();
-```
-
-### 3. Child Components
-
-```php
-<?php
-
-use function Pure\HTML\{div, h1};
-
-function Layout($props) {
-    [
-        'header' => $header,
-        'content' => $content,
-        'footer' => $footer
-    ] = $props;
-
-    return div(
-        div($header)->class('header'),
-        div($content)->class('content'),
-        div($footer)->class('footer')
-    )->class('layout');
-}
-
-// Use the component
-Layout([
-    'header' => h1('Title'),
-    'content' => 'Main content',
-    'footer' => 'Footer'
-])->toPrint();
-```
-
-## Component Communication
-
-### 1. Props Passing
-
-```php
-<?php
-
-use function Pure\HTML\{div, button, p};
-
-function ParentComponent() {
-    return div(
-        ChildComponent([
-            'message' => 'Message from parent component',
-            'onAction' => 'handleChildAction'
-        ])
-    );
-}
-
-function ChildComponent($props) {
-    [
-        'message' => $message,
-        'onAction' => $onAction
-    ] = $props;
-
-    return div(
-        p($message),
-        button('Trigger Action')
-            ->onclick($onAction)
-    );
-}
-```
-
-### 2. Event Handling
-
-```php
-<?php
-
-use function Pure\HTML\button;
-
-function EventButton($props) {
-    [
-        'text' => $text,
-        'onClick' => $onClick
-    ] = $props;
-
-    return button($text)->onclick($onClick);
-}
-
-// Use event component
-EventButton([
-    'text' => 'Click Me',
-    'onClick' => 'alert("Button clicked!")'
-])->toPrint();
-```
-
-## Component Reusability
-
-### 1. Higher-Order Components
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function withLoading($Component) {
-    return function($props) use ($Component) {
-        [
-            'loading' => $loading = false,
-            'error' => $error = null,
-            ...$rest
-        ] = $props;
-
-        if ($loading) {
-            return div('Loading...')->class('loading');
-        }
-
-        if ($error) {
-            return div($error)->class('error');
-        }
-
-        return $Component($rest);
-    };
-}
-
-// Use higher-order component
-$LoadingCard = withLoading('Card');
-$LoadingCard([
-    'loading' => true,
-    'title' => 'Title',
-    'content' => 'Content'
-])->toPrint();
-```
-
-### 2. Component Composition
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-function Page($props) {
-    [
-        'header' => $header,
-        'sidebar' => $sidebar,
-        'content' => $content,
-        'footer' => $footer
-    ] = $props;
-
-    return div(
-        Header($header),
+    return $shapes[$classList] ??= Compile::shape(
         div(
-            Sidebar($sidebar),
-            MainContent($content)
-        )->class('main-container'),
-        Footer($footer)
-    )->class('page');
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
+    );
 }
 
-// Use composed components
-Page([
-    'header' => ['title' => 'Page Title'],
-    'sidebar' => ['items' => ['Menu Item 1', 'Menu Item 2']],
-    'content' => ['title' => 'Main Content'],
-    'footer' => ['copyright' => '© 2024']
-])->toPrint();
+CardShape('card shadow')->print([
+    'title' => 'Shadowed',
+    'content' => 'Static props are function arguments',
+]);
 ```
 
+### 2. Dynamic Props
 
+Dynamic props are slots, bound at render time:
+
+```php
+<?php
+
+$shape = Compile::shape(
+    button(Slot::text('label'))->type('button')->class(Slot::attr('class'))
+);
+
+$shape(['label' => 'Save', 'class' => 'btn btn-primary']);
+```
+
+### 3. Event Props
+
+Event handlers are static attributes on the tag (`->onclick(...)`,
+`->onchange(...)`); the browser-side handler is identified by its name, so it
+is part of the shape:
+
+```php
+<?php
+
+$shape = Compile::shape(
+    button(Slot::text('label'))->onclick('handleClick()')
+);
+
+$shape(['label' => 'Click me']);
+```
+
+## Child Components
+
+`Slot::sub()` embeds another shape and creates a nested data scope for it:
+
+```php
+<?php
+
+function IconShape(string $class = 'icon'): Shape
+{
+    static $shapes = [];
+
+    return $shapes[$class] ??= Compile::shape(
+        span(Slot::attr('glyph'))->class($class)
+    );
+}
+
+function ButtonShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        button(
+            Slot::sub('icon', IconShape()),
+            Slot::text('label')
+        )->class('btn')
+    );
+}
+
+ButtonShape()->print([
+    'icon' => ['glyph' => '+'],
+    'label' => 'Add',
+]);
+```
+
+When a child component needs a different data shape than its parent, pass a map
+closure as the third argument; it derives the child scope from the parent data:
+
+```php
+<?php
+
+Slot::sub('user', BadgeShape(), static fn (array $data): array => [
+    'label' => strtoupper((string)$data['name']),
+]);
+```
+
+## Lists
+
+`Slot::each()` renders a child shape for every item:
+
+```php
+<?php
+
+$row = Compile::shape(li(Slot::text('label')));
+$list = Compile::shape(ul(Slot::each('rows', $row))->class('list'));
+
+$list(['rows' => [['label' => 'a'], ['label' => 'b']]]);
+```
+
+Each item becomes the data scope of the child shape; missing keys follow the
+usual rules (`default()`, `required(false)`, or `MissingSlotException`).
+
+## Conditional Rendering
+
+`Slot::if()` renders a branch based on the truthiness of a data key. A missing
+key is simply false — it never throws — and the branches share the current
+scope:
+
+```php
+<?php
+
+$shape = Compile::shape(
+    div(
+        Slot::if('admin', Compile::shape(span('Administrator')), Compile::shape(span('Guest')))
+    )
+);
+
+$shape(['admin' => true]);  // <div><span>Administrator</span></div>
+$shape([]);                 // <div><span>Guest</span></div>
+```
+
+## Mixed Lists
+
+`Slot::eachAny()` dispatches each item on a discriminator key (default
+`kind`):
+
+```php
+<?php
+
+$shape = Compile::shape(div(Slot::eachAny('blocks', [
+    'text' => Compile::shape(p(Slot::text('value'))),
+    'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
+])));
+
+$shape(['blocks' => [
+    ['kind' => 'text', 'value' => 'hello'],
+    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
+]]);
+```
+
+An item without the discriminator or with an unknown kind raises an
+`InvalidArgumentException` naming the full path (`blocks[].kind`).
+
+## Component Composition
+
+Components compose by nesting shapes — either directly in a parent shape or
+through `Slot::sub()`:
+
+```php
+<?php
+
+function PageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        main(
+            Slot::sub('header', HeaderShape()),
+            Slot::each('cards', CardShape())
+        )->class('page')
+    );
+}
+```
+
+Because a shape is data-free, a component shape can be reused in many pages at
+no extra cost: it is compiled once and inlined into each parent compiler.
+
+## Immediate Rendering (Snippets)
+
+For one-off fragments you can skip shapes entirely and render a tag tree
+directly:
+
+```php
+<?php
+
+use function Pure\HTML\{div, h2, p};
+
+div(h2('Title'), p('Content'))->class('card')->toPrint();
+```
+
+Use this for snippets and debugging only; production pages should compile
+shapes so escaping and structure costs are paid once.
 
 ## Next Steps
 
-- [Props](/guide/props) - Learn more about props system
-- [Events](/guide/events) - Understand event handling
-- [TailwindCSS Integration](/guide/tailwindcss) - Style your components
+- [Compiled Components](/guide/compiled) - Caching, guard and limitations
+- [Props and Slots](/guide/props) - The complete data-binding reference
+- [Events](/guide/events) - Event attributes and browser-side handlers

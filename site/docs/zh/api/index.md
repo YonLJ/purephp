@@ -22,7 +22,7 @@ PurePHP 由几个核心类组成，它们协同工作提供强大的模板系统
 表示绕过转义的原始 HTML 或 XML 内容。用于包含预格式化内容或模板。
 
 ### [编译渲染](/zh/api/compile)
-`Pure\Compile\Compile`、`Shape` 与 `Compiled` 把带 `Slot` 占位符的无数据形状树编译成扁平 PHP 渲染器：静态标记变成字面量，渲染速度与编译型模板引擎持平，同时保留流式 PHP API。
+`Pure\Compile\Compile`、`Shape` 与 `Renderer` 把带 `Slot` 占位符的无数据形状树编译成扁平 PHP 渲染器。静态标记变成字面量，渲染速度与编译型模板引擎持平，同时保留流式 PHP API。
 
 ## 快速参考
 
@@ -36,13 +36,30 @@ use function Pure\HTML\div;
 use function Pure\SVG\circle;
 
 // 函数方式（推荐用于标准标签）
-$element1 = div('内容');
+$element1 = div('Content');
 
 // 魔术静态方法（推荐用于自定义标签）
-$element2 = HTML::customTag('内容');
+$element2 = HTML::customTag('Content');
 
 // 构造函数（推荐用于性能）
-$element3 = new HTML('div', ['内容']);
+$element3 = new HTML('div', ['Content']);
+```
+
+### 编译形状
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1};
+
+$shape = Compile::shape(
+    div(h1(Slot::text('title')))->class('card')
+);
+
+$shape->print(['title' => 'Hello']);
 ```
 
 ### 通用方法
@@ -53,14 +70,19 @@ $element3 = new HTML('div', ['内容']);
 - `style()` - 设置内联样式
 - `id()`, `data_*()`, `aria_*()` - 设置属性
 - `getTagName()`, `getAttrs()`, `getChildren()` - 获取信息
-- `toJSON()`, `render()`, `toPrint()`, `__toString()` - 输出方法
+- `toJSON()`, `render()`, `toPrint()`, `__toString()` - 输出方法（片段/调试）
+
+`Pure\Compile\Shape` 和 `Pure\Compile\Renderer` 提供生产环境的输出方法：
+`__invoke($data)`、`print($data)` 和 `save($path, $data)`。
 
 ### 性能指南
 
+- **每个进程只编译一次形状** —— 用 `static $shape ??= Compile::shape(...)` 记忆化（标准 PHP-FPM 下请启用 `Compile::cachePath()`，让请求加载渲染器而不是重建）
 - **使用函数** 用于标准 HTML/SVG 标签
 - **使用魔术方法** 用于自定义或动态标签
 - **使用构造函数** 用于性能关键代码
 - **使用 Raw 类** 用于预格式化内容
+- **在生产环境启用 `Compile::cachePath()`**，让已预热的 worker 跳过代码生成
 
 ## 类层次结构
 
@@ -71,10 +93,15 @@ Tag (抽象)
     └── SVG
 
 Raw
+
+Pure\Compile\Compile   (门面：shape、cache、guard)
+Pure\Compile\Shape     (无数据树)
+Pure\Compile\Renderer  (扁平渲染器)
+Pure\Core\Slot         (数据占位符)
 ```
 
 ## 下一步
 
 - 浏览各个类文档以获取详细示例
-- 查看[指南](/zh/guide/)了解实用使用模式
+- 阅读[编译组件指南](/zh/guide/compiled)了解生产路径
 - 参见 [SVG 和 XML 支持](/zh/guide/svg-xml) 了解图形和数据处理

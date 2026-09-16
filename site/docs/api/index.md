@@ -22,7 +22,7 @@ Extends Tag class for creating XML documents. Perfect for configuration files, d
 Represents raw HTML or XML content that bypasses escaping. Useful for including pre-formatted content or templates.
 
 ### [Compiled Rendering](/api/compile)
-`Pure\Compile\Compile`, `Shape` and `Compiled` compile a data-free shape tree with `Slot` placeholders into a flat PHP renderer. Static markup becomes literals, so rendering is at parity with compiled template engines while keeping the fluent PHP API.
+`Pure\Compile\Compile`, `Shape` and `Renderer` compile a data-free shape tree with `Slot` placeholders into a flat PHP renderer. Static markup becomes literals, so rendering is at parity with compiled template engines while keeping the fluent PHP API.
 
 ## Quick Reference
 
@@ -45,6 +45,23 @@ $element2 = HTML::customTag('Content');
 $element3 = new HTML('div', ['Content']);
 ```
 
+### Compiling Shapes
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1};
+
+$shape = Compile::shape(
+    div(h1(Slot::text('title')))->class('card')
+);
+
+$shape->print(['title' => 'Hello']);
+```
+
 ### Common Methods
 
 All Tag-based classes share these common methods:
@@ -53,14 +70,19 @@ All Tag-based classes share these common methods:
 - `style()` - Set inline styles
 - `id()`, `data_*()`, `aria_*()` - Set attributes
 - `getTagName()`, `getAttrs()`, `getChildren()` - Get information
-- `toJSON()`, `render()`, `toPrint()`, `__toString()` - Output methods
+- `toJSON()`, `render()`, `toPrint()`, `__toString()` - Output methods (snippets/debugging)
+
+`Pure\Compile\Shape` and `Pure\Compile\Renderer` provide the production output
+methods: `__invoke($data)`, `print($data)` and `save($path, $data)`.
 
 ### Performance Guidelines
 
+- **Compile shapes once per process** — memoize them with `static $shape ??= Compile::shape(...)` (under standard PHP-FPM enable `Compile::cachePath()` so requests load the renderer instead of rebuilding it)
 - **Use functions** for standard HTML/SVG tags
 - **Use magic methods** for custom or dynamic tags
 - **Use constructors** for performance-critical code
 - **Use Raw class** for pre-formatted content
+- **Enable `Compile::cachePath()`** in production so warm workers skip code generation
 
 ## Class Hierarchy
 
@@ -71,10 +93,15 @@ Tag (abstract)
     └── SVG
 
 Raw
+
+Pure\Compile\Compile   (facade: shape, cache, guard)
+Pure\Compile\Shape     (data-free tree)
+Pure\Compile\Renderer  (flat renderer)
+Pure\Core\Slot         (data placeholder)
 ```
 
 ## Next Steps
 
 - Browse individual class documentation for detailed examples
-- Check out the [Guide](/guide/) for practical usage patterns
+- Read the [compiled components guide](/guide/compiled) for the production path
 - See [SVG and XML Support](/guide/svg-xml) for graphics and data handling

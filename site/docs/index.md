@@ -26,8 +26,8 @@ features:
     title: HTML-like Syntax
     details: Syntax very similar to HTML, low learning curve
   - icon: ⚡️
-    title: Simple and Efficient
-    details: Direct PHP object to HTML string conversion, simple and straightforward
+    title: Compiled Rendering
+    details: Compile data-free shapes into flat renderers for template-engine performance
   - icon: 🛠
     title: Easy to Extend
     details: Support for custom components and tags

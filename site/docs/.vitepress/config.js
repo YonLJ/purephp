@@ -34,7 +34,8 @@ export default {
           text: '介绍',
           items: [
             { text: '什么是 PurePHP?', link: '/zh/guide/' },
-            { text: '快速开始', link: '/zh/guide/getting-started' }
+            { text: '快速开始', link: '/zh/guide/getting-started' },
+            { text: '编译组件', link: '/zh/guide/compiled' }
           ]
         },
         {
@@ -83,7 +84,8 @@ export default {
           text: 'Introduction',
           items: [
             { text: 'What is PurePHP?', link: '/guide/' },
-            { text: 'Quick Start', link: '/guide/getting-started' }
+            { text: 'Quick Start', link: '/guide/getting-started' },
+            { text: 'Compiled Components', link: '/guide/compiled' }
           ]
         },
         {

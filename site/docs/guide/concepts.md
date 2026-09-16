@@ -2,171 +2,199 @@
 
 This guide explains the core concepts of PurePHP.
 
-## Object-to-HTML Conversion
+## Tag Trees
 
-PurePHP's core is a PHP object-to-HTML string conversion system. It uses PHP objects to represent HTML elements, then converts these objects to HTML strings.
+PurePHP represents HTML with PHP objects. Tag helper functions build a tree, and
+method chaining sets attributes:
 
-### How It Works
+```php
+<?php
 
-1. **Create HTML Objects**
-   ```php
-   <?php
+use function Pure\HTML\{div, h1, p};
 
-   use function Pure\HTML\{div, h1, p};
+$element = div(
+    h1('Title'),
+    p('Content')
+)->class('container');
 
-   // Create HTML objects
-   $element = div(
-       h1('Title'),
-       p('Content')
-   )->class('container');
-   ```
+echo $element; // <div class="container"><h1>Title</h1><p>Content</p></div>
+```
 
-2. **Convert to HTML String**
-   ```php
-   // Output HTML string
-   echo $element; // or $element->toPrint();
-   ```
+Text children and attribute values are escaped while rendering; `Raw` children
+are emitted verbatim. A tag tree that contains data is rendered immediately
+with `render()`, `toPrint()` or `__toString()`. That path is the right tool for
+snippets and debugging.
 
-3. **Set Attributes**
-   ```php
-   // Chain method calls to set attributes
-   $element->class('new-container')->style('color: red;');
-   ```
+## Shapes and Slots
 
-### Advantages
+A **shape** is the same kind of tree, but *data-free*: dynamic values are
+replaced by `Slot` placeholders. A shape describes structure; data arrives
+later.
 
-- **Type Safety**: Leverages PHP's type system for better development experience
-- **Component-based**: HTML structures can be encapsulated into reusable PHP functions
-- **Easy Testing**: HTML structure and attributes can be easily tested
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1, p};
+
+$shape = Compile::shape(
+    div(
+        h1(Slot::text('heading')),
+        p(Slot::text('lead'))
+    )->class('container')
+);
+```
+
+Slot types:
+
+| Slot | Binds | Creates a nested scope |
+| --- | --- | --- |
+| `Slot::text()` | stringable value, escaped | no |
+| `Slot::attr()` | attribute value, escaped | no |
+| `Slot::raw()` | stringable value, verbatim | no |
+| `Slot::sub()` | array | yes |
+| `Slot::each()` | iterable of arrays | yes, per item |
+| `Slot::if()` | truthy condition | no (branches share the scope) |
+| `Slot::eachAny()` | iterable of arrays with a discriminator | yes, per item |
+
+## Compiling
+
+`Compile::shape()` wraps a tree as a `Shape`. The first render compiles it into
+a flat PHP closure: static markup becomes a literal string, escaping is done
+once, and only slots remain as runtime work.
+
+```php
+<?php
+
+$shape([
+    'heading' => 'Welcome',
+    'lead' => 'Compiled rendering',
+]);
+```
+
+Key properties:
+
+- **Compiled once per process** — memoize shapes in `static` variables inside
+  component functions, never build them inside a request handler. Under
+  standard PHP-FPM statics reset every request, so enable
+  `Compile::cachePath()` to load compiled renderers instead of regenerating
+  them.
+- **Byte-identical output** — the compiled path and `render()` share the same
+  escaping implementation.
+- **Optional disk cache** — `Compile::cachePath($dir)` stores compiled
+  renderers so warm workers load code instead of generating it.
+
+`Shape::id()` is a structural fingerprint (tags, attributes, slots, nested
+shapes and map closures) that is available without compiling; it is used as the
+cache file name and as a component cache key.
+
+## Data Binding and Scope
+
+Rendering a shape binds plain data:
+
+```php
+<?php
+
+$item = Compile::shape(li(Slot::text('title')));
+$list = Compile::shape(ul(Slot::each('items', $item)));
+
+$list(['items' => [['title' => 'a'], ['title' => 'b']]]);
+```
+
+`Slot::sub()` and `Slot::each()` establish a nested scope, so inside `li` the
+slot `title` resolves against the current item. Missing required keys throw
+`Pure\Core\MissingSlotException` with the full path
+(`slot 'items[].title' is required but was not provided.`); use
+`->default($value)` or `->required(false)` for optional data.
 
 ## Components
 
-Components are the building blocks for user interfaces in PurePHP.
-
-### Function Components
+A component is a function returning a `Shape`. Static props are function
+arguments and dynamic props are slots:
 
 ```php
 <?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
 
 use function Pure\HTML\{div, h2, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content
-    ] = $props;
+function CardShape(string $classList = 'card'): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h2($title),
-        p($content)
-    )->class('card');
+    return $shapes[$classList] ??= Compile::shape(
+        div(
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
+    );
 }
-
-// Use the component
-Card([
-    'title' => 'Title',
-    'content' => 'Content'
-])->toPrint();
 ```
 
-## Props
-
-Props are used to configure component behavior and appearance.
-
-### Basic Props
-
-```php
-<?php
-
-use function Pure\HTML\{div, p};
-
-div(
-    p('Content')
-)
-->id('main')
-->class('container')
-->style('background: #fff;')
-->toPrint();
-```
-
-### Event Props
-
-```php
-<?php
-
-use function Pure\HTML\button;
-
-button('Click me')
-    ->onclick('handleClick()')
-    ->onmouseover('handleHover()')
-    ->toPrint();
-```
-
-### Data Props
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-div('Content')
-    ->data_id('123')      // Corresponds to data-id="123" in HTML
-    ->data_type('card')   // Corresponds to data-type="card" in HTML
-    ->toPrint();
-```
-
-**Important Note**: Since `-` has special meaning in PHP, all attribute names containing hyphens must use underscores `_` instead.
+See [Compiled Components](/guide/compiled) for lists, conditionals,
+heterogeneous lists, caching and the per-request guard.
 
 ## State Management
 
-PurePHP supports state management through PHP variables and functions.
+State is plain PHP: values are passed into the shape as data.
 
 ### Simple State
 
 ```php
 <?php
 
-use function Pure\HTML\{div, button, p};
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
 
-function Counter($count = 0) {
-    return div(
-        p("Count: {$count}"),
-        button('Increment')
-            ->onclick("increment()")
+use function Pure\HTML\{button, div, p};
+
+function CounterShape(): \Pure\Compile\Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            p(Slot::text('count')),
+            button('Increment')->onclick('increment()')
+        )
     );
 }
 
-// Use state
-$currentCount = 0;
-Counter($currentCount)->toPrint();
+CounterShape()->print(['count' => 0]);
 ```
 
 ### Global State
 
+Any PHP store works; assemble the data array and render:
+
 ```php
 <?php
 
-class Store {
-    private static $state = [];
+class Store
+{
+    private static array $state = [];
 
-    public static function set($key, $value) {
+    public static function set(string $key, mixed $value): void
+    {
         self::$state[$key] = $value;
     }
 
-    public static function get($key) {
+    public static function get(string $key): mixed
+    {
         return self::$state[$key] ?? null;
     }
 }
 
-// Use global state
 Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
 
-
-
 ## Next Steps
 
-- [Basic Usage](/guide/basic-usage) - Learn basic syntax and usage
-- [Utility Functions](/guide/utils) - Learn about built-in utility functions
-- [Components](/guide/components) - Deep dive into component development
+- [Compiled Components](/guide/compiled) - The production rendering path
+- [Props and Slots](/guide/props) - How data is bound to shapes
+- [Basic Usage](/guide/basic-usage) - The tag API used by snippets

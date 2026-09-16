@@ -40,7 +40,9 @@ Run the test file:
 php test.php
 ```
 
-If you see HTML output, the installation was successful.
+If you see HTML output, the installation was successful. Note that this uses
+immediate rendering — it is the right tool for a quick check, but pages should
+compile shapes (see below).
 
 ## Create Your First Application
 
@@ -61,13 +63,35 @@ Create `index.php`:
 
 require 'vendor/autoload.php';
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h1, p};
 
-div(
-    h1('My First PurePHP Application'),
-    p('Welcome to PurePHP!'),
-    p('This is a simple yet powerful PHP template engine.')
-)->class('container')->toPrint();
+/**
+ * The page shape: a data-free tree with Slot placeholders.
+ * It is built once per process (in long-running workers; under standard
+ * PHP-FPM enable Compile::cachePath() so requests load the compiled
+ * renderer instead of rebuilding it).
+ */
+function PageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            h1(Slot::text('heading')),
+            p(Slot::text('lead')),
+            p(Slot::text('body'))
+        )->class('container')
+    );
+}
+
+PageShape()->print([
+    'heading' => 'My First PurePHP Application',
+    'lead' => 'Welcome to PurePHP!',
+    'body' => 'This is a simple yet powerful PHP template engine.',
+]);
 ```
 
 ### 3. Run the Application
@@ -84,35 +108,60 @@ Then visit `http://localhost:8000` to see your first PurePHP application!
 
 ### Using Components
 
-Create a simple component:
+A component is a function that returns a `Shape`; static props are function
+arguments, dynamic props are slots:
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h2, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content
-    ] = $props;
+function CardShape(string $classList = 'card'): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h2($title),
-        p($content)
-    )->class('card');
+    return $shapes[$classList] ??= Compile::shape(
+        div(
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
+    );
 }
 
-// Use the component
-Card([
+// Render the component with data
+CardShape()->print([
     'title' => 'Card Title',
-    'content' => 'This is the card content'
-])->toPrint();
+    'content' => 'This is the card content',
+]);
 ```
 
 ### Setting Attributes
+
+Static attributes are set on the shape; dynamic attributes use
+`Slot::attr()`:
+
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\div;
+
+$shape = Compile::shape(
+    div('Content')->class('container')->id(Slot::attr('id'))
+);
+
+$shape(['id' => 'main-content']);
+```
+
+For snippets — small fragments that are rendered immediately — you can keep
+using the tag API and `toPrint()`:
 
 ```php
 <?php
@@ -128,6 +177,6 @@ div('Content')
 
 ## Next Steps
 
+- [Compiled Components](/guide/compiled) - Components, lists, conditionals and caching
 - [Core Concepts](/guide/concepts) - Understand PurePHP fundamentals
-- [Basic Usage](/guide/basic-usage) - Learn basic syntax and usage
-- [Components](/guide/components) - Learn how to create and use components
+- [Props and Slots](/guide/props) - Learn how data is bound to a shape

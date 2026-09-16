@@ -2,6 +2,8 @@
 
 PurePHP 提供了一些实用的工具函数来简化开发，这些函数在设置元素属性时会自动使用。
 
+*`clx()`、`sty()` 和 `rawHtml()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::text()` / `Slot::attr()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
+
 ## clx 函数
 
 `clx` 函数用于合并类名，支持字符串、数组和条件类名。
@@ -67,7 +69,7 @@ use function Pure\HTML\div;
 $isActive = true;
 $size = 'large';
 
-div('内容')
+div('Content')
     ->class('btn', 'btn-primary', $isActive ? 'active' : null, $size)
     ->toPrint();
 
@@ -75,7 +77,7 @@ div('内容')
 use function Pure\Utils\clx;
 
 $classes = clx('btn', 'btn-primary', $isActive ? 'active' : null, $size);
-div('内容')->class($classes)->toPrint();
+div('Content')->class($classes)->toPrint();
 ```
 
 ## sty 函数
@@ -126,7 +128,7 @@ echo $styles; // 输出: color: blue; display: block; opacity: 1;
 
 use function Pure\HTML\div;
 
-div('内容')
+div('Content')
     ->style([
         'background-color' => '#f0f0f0',
         'padding' => '20px',
@@ -144,7 +146,7 @@ $styles = sty([
     'border-radius' => '8px',
     'margin' => '10px 0'
 ]);
-div('内容')->style($styles)->toPrint();
+div('Content')->style($styles)->toPrint();
 ```
 
 ## rawHtml 函数
@@ -160,8 +162,8 @@ use function Pure\HTML\div;
 use function Pure\Utils\rawHtml;
 
 div(
-    rawHtml('<strong>这是粗体文本</strong>'),
-    rawHtml('<em>这是斜体文本</em>')
+    rawHtml('<strong>This is bold text</strong>'),
+    rawHtml('<em>This is italic text</em>')
 )->toPrint();
 ```
 
@@ -188,83 +190,77 @@ div(rawHtml($iconHtml))->toPrint();
 
 ### 动态按钮组件
 
+静态配置是函数参数；标签文本和按钮状态则是槽位：
+
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\button;
+use function Pure\Utils\sty;
 
-function Button($props) {
-    [
-        'text' => $text,
-        'variant' => $variant = 'primary',
-        'size' => $size = 'medium',
-        'disabled' => $disabled = false,
-        'loading' => $loading = false
-    ] = $props;
+function ButtonShape(string $variant = 'primary', string $size = 'medium', bool $loading = false): Shape
+{
+    static $shapes = [];
 
-    return button($loading ? '加载中...' : $text)
-        ->class(
-            'btn',
-            "btn-{$variant}",
-            "btn-{$size}",
-            $disabled ? 'disabled' : null,
-            $loading ? 'loading' : null
-        )
-        ->style([
-            'opacity' => $disabled ? 0.6 : 1,
-            'cursor' => $disabled ? 'not-allowed' : 'pointer'
-        ])
-        ->disabled($disabled);
+    return $shapes["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+        button(Slot::text('text'))
+            ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
+            ->style(Slot::attr('style'))
+            ->disabled(Slot::attr('disabled'))
+    );
 }
 
-// 使用示例
-Button([
-    'text' => '提交',
-    'variant' => 'success',
-    'size' => 'large',
-    'loading' => false
-])->toPrint();
+// 绑定数据：仅为渲染时的值；为 null 的属性会被省略。
+$bindings = [
+    'text' => 'Submit',
+    'style' => sty(['opacity' => 1, 'cursor' => 'pointer']),
+    'disabled' => null,
+];
+
+ButtonShape('success', 'large')->print($bindings);
 ```
 
 ### 响应式卡片组件
 
+卡片接受 HTML 子内容，因此其内容使用 `Slot::raw()` 绑定：
+
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h3, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content,
-        'featured' => $featured = false,
-        'theme' => $theme = 'light'
-    ] = $props;
+function CardShape(string $theme = 'light', bool $featured = false): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h3($title)->class('card-title'),
-        p($content)->class('card-content')
-    )
-    ->class(
-        'card',
-        "card-{$theme}",
-        $featured ? 'card-featured' : null
-    )
-    ->style([
-        'border-width' => $featured ? '2px' : '1px',
-        'box-shadow' => $featured ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)',
-        'background-color' => $theme === 'dark' ? '#333' : '#fff',
-        'color' => $theme === 'dark' ? '#fff' : '#333'
-    ]);
+    return $shapes["{$theme}|" . (int) $featured] ??= Compile::shape(
+        div(
+            h3(Slot::text('title'))->class('card-title'),
+            p(Slot::raw('content'))->class('card-content')
+        )
+        ->class('card', "card-{$theme}", $featured ? 'card-featured' : null)
+        ->style([
+            'border-width' => $featured ? '2px' : '1px',
+            'box-shadow' => $featured ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)',
+            'background-color' => $theme === 'dark' ? '#333' : '#fff',
+            'color' => $theme === 'dark' ? '#fff' : '#333'
+        ])
+    );
 }
 
-// 使用示例
-Card([
-    'title' => '特色卡片',
-    'content' => '这是一个特色卡片的内容',
-    'featured' => true,
-    'theme' => 'dark'
-])->toPrint();
+// 绑定数据：`content` 是可信 HTML，将原样输出。
+$bindings = [
+    'title' => 'Featured Card',
+    'content' => '<strong>This is the content</strong> of a featured card',
+];
+
+CardShape('dark', true)->print($bindings);
 ```
 
 ## 下一步
