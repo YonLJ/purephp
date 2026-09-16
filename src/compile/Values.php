@@ -18,13 +18,13 @@ final class Values
     /** Coerce a slot value to escaped text content. */
     public static function text(mixed $value, string $path): string
     {
-        return Escaper::text(self::stringify($value, $path));
+        return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING, false);
     }
 
     /** Coerce a slot value to an escaped attribute value. */
     public static function attr(mixed $value, string $path): string
     {
-        return Escaper::attr(self::stringify($value, $path));
+        return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING);
     }
 
     /** Coerce a slot value to verbatim output. */
@@ -73,6 +73,41 @@ final class Values
         }
 
         return $value;
+    }
+
+    /** Coerce a condition value using PHP truthiness; missing keys arrive as false. */
+    public static function truthy(mixed $value): bool
+    {
+        return (bool)$value;
+    }
+
+    /**
+     * Validate a heterogeneous list item and return its discriminator.
+     *
+     * @param array<int, string> $allowed
+     */
+    public static function kind(mixed $item, string $kindKey, string $path, array $allowed): string
+    {
+        if (!is_array($item)) {
+            throw new InvalidArgumentException("slot '{$path}' must be an array, " . get_debug_type($item) . ' given.');
+        }
+
+        if (!array_key_exists($kindKey, $item)) {
+            throw new InvalidArgumentException("slot '{$path}.{$kindKey}' is required but was not provided.");
+        }
+
+        $kind = $item[$kindKey];
+        if (!is_string($kind) || !in_array($kind, $allowed, true)) {
+            throw new InvalidArgumentException("slot '{$path}.{$kindKey}' must be one of " . self::listKinds($allowed) . ', ' . get_debug_type($kind) . ' given.');
+        }
+
+        return $kind;
+    }
+
+    /** @param array<int, string> $allowed */
+    private static function listKinds(array $allowed): string
+    {
+        return implode(', ', array_map(static fn (string $kind): string => "'{$kind}'", $allowed));
     }
 
     private static function stringify(mixed $value, string $path): string
