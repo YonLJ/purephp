@@ -4,20 +4,25 @@ declare(strict_types=1);
 
 namespace Pure\Core;
 
+/**
+ * Void elements, keyed as a set for O(1) membership tests.
+ *
+ * @var array<string, true>
+ */
 const SELF_CLOSE_HTML_TAGS = [
-    'area',
-    'base',
-    'br',
-    'col',
-    'embed',
-    'hr',
-    'img',
-    'input',
-    'link',
-    'meta',
-    'source',
-    'track',
-    'wbr',
+    'area' => true,
+    'base' => true,
+    'br' => true,
+    'col' => true,
+    'embed' => true,
+    'hr' => true,
+    'img' => true,
+    'input' => true,
+    'link' => true,
+    'meta' => true,
+    'source' => true,
+    'track' => true,
+    'wbr' => true,
 ];
 
 class HTML extends Tag
@@ -31,7 +36,7 @@ class HTML extends Tag
     public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
-        if (in_array(strtolower($tagName), SELF_CLOSE_HTML_TAGS)) {
+        if (isset(SELF_CLOSE_HTML_TAGS[strtolower($tagName)])) {
             $this->setSelfClose(true);
         }
     }
