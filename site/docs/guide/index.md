@@ -1,21 +1,62 @@
 # What is PurePHP?
 
-PurePHP is a PHP template engine inspired by ReactJS functional components. It uses PHP objects to represent HTML elements, providing a declarative way to build user interfaces, making code more concise, maintainable, and reusable.
+PurePHP is a PHP template engine inspired by ReactJS functional components. You describe a UI as a tree of PHP objects that look like HTML, and PurePHP turns it into an HTML string — everything is 100% native PHP, no template syntax to learn.
+
+PurePHP has two rendering paths:
+
+| Path | What you write | When to use |
+| --- | --- | --- |
+| **Compiled rendering** | A data-free *shape* tree with `Slot` placeholders, compiled once per worker process (or loaded from the renderer cache) and rendered per request with plain data | Pages and components in production |
+| **Immediate rendering** | A tag tree containing the real values, rendered on the spot with `render()` / `toPrint()` | Snippets, prototypes, CLI tools and debugging |
 
 ## Why Choose PurePHP?
 
 In traditional PHP development, the view layer often requires mixing HTML, PHP code, and other template syntax, which can be confusing for developers. PurePHP solves these problems by:
 
-- **Pure PHP Implementation**: All code is 100% native PHP, no need to learn new template syntax
-- **Component-Based Development**: Eliminate repetitive HTML code through PHP function encapsulation
-- **HTML-like Syntax**: Uses syntax very similar to HTML, reducing learning curve
-- **Object Conversion**: Uses PHP objects to represent HTML elements, then converts to HTML strings
+- **Pure PHP Implementation**: All code is 100% native PHP, no new template syntax to learn
+- **Component-Based Development**: Reusable component shapes instead of repetitive HTML
+- **HTML-like Syntax**: Tag helpers and method chaining look very close to HTML
+- **Compiled Rendering**: Static markup is escaped once at compile time, so rendering costs little more than string concatenation
 
-## Core Features
+## Compiled Rendering
 
-### 1. Declarative Rendering
+Describe the page once, bind data at render time:
 
-PurePHP uses a declarative approach to describe UI, making code more readable and maintainable:
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1, p};
+
+function PageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            h1(Slot::text('heading')),
+            p(Slot::text('lead'))
+        )->class('container')
+    );
+}
+
+PageShape()->print([
+    'heading' => 'Welcome to PurePHP',
+    'lead' => 'A PHP template engine',
+]);
+```
+
+The shape is memoized in a `static` variable and compiled once per process —
+in long-running workers. Under standard PHP-FPM every request starts fresh, so
+enable `Compile::cachePath()` and requests will load the compiled renderer
+instead of rebuilding it. See [Compiled Components](/guide/compiled) for
+components, lists, conditionals and caching.
+
+## Immediate Rendering
+
+For snippets and debugging, build a tag tree with real values and print it:
 
 ```php
 <?php
@@ -28,59 +69,16 @@ div(
 )->class('container')->toPrint();
 ```
 
-### 2. Component-Based Development
-
-Split your UI into independent, reusable PHP functions:
-
-```php
-<?php
-
-use function Pure\HTML\{div, h2, p};
-
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content
-    ] = $props;
-
-    return div(
-        h2($title),
-        p($content)
-    )->class('card');
-}
-
-// Using components
-Card([
-    'title' => 'Card Title',
-    'content' => 'Card Content'
-])->toPrint();
-```
-
-### 3. Method Chaining for Attributes
-
-Supports method chaining for setting element attributes:
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-div('Content')
-    ->class('container')
-    ->style('background: #fff;')
-    ->data_id('main')
-    ->toPrint();
-```
-
 ## Advantages
 
 1. **Simple and Easy**: API design is simple and intuitive with a gentle learning curve
-2. **Type Safe**: Full support for PHP's type system, providing better development experience
-3. **Lightweight**: Small core library with no unnecessary dependencies
-4. **Component-Based**: Component-based development makes code easier to maintain and reuse
+2. **Fast**: Compiled shapes render at parity with compiled template engines
+3. **Type Safe**: Full support for PHP's type system, providing better development experience
+4. **Lightweight**: Small core library with no unnecessary dependencies
 
 ## Next Steps
 
 - [Quick Start](/guide/getting-started) - Learn how to create your first PurePHP application
+- [Compiled Components](/guide/compiled) - Build pages and components the production way
 - [Core Concepts](/guide/concepts) - Understand PurePHP fundamentals
-- [Basic Usage](/guide/basic-usage) - Learn basic syntax and usage
+- [Basic Usage](/guide/basic-usage) - Learn the tag API used by snippets

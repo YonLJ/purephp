@@ -21,14 +21,68 @@ However, with Purephp:
 + Everything is 100% native PHP code.
 + Encapsulate components to eliminate repetitive HTML code.
 + The syntax closely resembles HTML.
++ Compile data-free **shapes** into flat renderers, for performance on par with compiled template engines.
 
 ## Install
 
 `composer require yonld/purephp`
 
-## Basic usage
+## Quick start
 
-Here is a simple example that will show how to use `Purephp`:
+Describe the page once as a data-free **shape** (a tag tree with `Slot`
+placeholders), compile it once per process, then render it per request with
+plain data:
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{a, div, li, ul};
+
+function ItemShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(li(Slot::text('label')));
+}
+
+function PageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            a('PHP')->href('https://www.php.net'),
+            ul(Slot::each('items', ItemShape()))
+        )->class('container')
+    );
+}
+
+PageShape()->print([
+    'items' => [['label' => 'Compiled'], ['label' => 'rendering']],
+]);
+```
+
+The above code will output:
+
+```html
+<div class="container"><a href="https://www.php.net">PHP</a><ul><li>Compiled</li><li>rendering</li></ul></div>
+```
+
+Shapes are memoized in `static` variables and compiled once per PHP process;
+requests only bind data. In long-running workers (or with `opcache.preload`)
+that means once per worker. Under standard PHP-FPM every request starts fresh,
+so enable `Compile::cachePath()` to load generated renderers instead of
+rebuilding them. See the
+[compiled rendering guide](https://yonld.github.io/purephp/guide/compiled) for
+caching, conditionals and heterogeneous lists.
+
+## Snippets and debugging
+
+For small fragments, one-off snippets and debugging you can build a regular tag
+tree and render it immediately:
 
 ```php
 <?php
@@ -48,103 +102,49 @@ The above code will output:
 <div class="container" style="background: #fff;" data-key="primary">Hello <a href="https://www.php.net">PHP</a></div>
 ```
 
-## Component
+`render()` and `toPrint()` are the debug/snippet outlet. Production pages
+should compile shapes, because a shape is compiled and static markup is escaped
+once instead of on every render.
 
-You can use Pure to encapsulate repeated code snippets into a functional component, which looks a lot like a React functional component:
+## Compiled components
+
+Component shapes take static props as function arguments and dynamic props as
+slots:
 
 ```php
 <?php
 
-use function Pure\HTML\div;
-use function Pure\HTML\h2;
-use function Pure\HTML\h3;
-use function Pure\HTML\a;
-use function Pure\HTML\p;
-use function Pure\SVG\svg;
-use function Pure\SVG\svgUse;
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
 
-// use named arguments
-function Section($title, $contents, $classList)
+use function Pure\HTML\{div, h2, p};
+
+function CardShape(string $classList = 'card'): Shape
 {
-    return (
+    static $shapes = [];
+
+    return $shapes[$classList] ??= Compile::shape(
         div(
-            h2($title)->class('pb-2 border-bottom'),
-            div(...$contents)->class($classList)
-        )->class('container px-4 py-5')
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
     );
 }
 
-// use array destructuring assignments
-function IconColumn($props)
-{
-    [
-        'icon' => $icon,
-        'title' => $title,
-        'content' => $content,
-        'linkText' => $linkText,
-        'link' => $link
-    ] = $props;
-
-    return (
-        div(
-            div(
-                Icon($icon)->class('bi')->width('1em')->height('1em')
-            )->class('feature-icon d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-2 mb-3'),
-            h3($title)->class('fs-2'),
-            p($content),
-            a(
-                $linkText,
-                Icon('chevron-right')->class('bi')->width('1em')->height('1em'),
-            )->href($link)->class('icon-link d-inline-flex align-items-center')
-        )->class('feature col')
-    );
-}
-
-// use extract()
-function HangingIcon($props)
-{
-    extract($props);
-
-    return (
-        div(
-            div(
-                Icon($icon)->class('bi')->width('1em')->height('1em')
-            )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
-            div(
-                h3($title)->class('fs-2'),
-                p($content),
-                a($linkText)->href($link)->class('btn btn-primary')
-            )
-        )->class('col d-flex align-items-start')
-    );
-}
-
-function Icon($icon)
-{
-    return(
-        svg(
-            svgUse()->href("#$icon")
-        )
-    );
-}
-
-main(
-    Section(
-        title: 'Columns with icons',
-        contents: array_map(fn($data) => IconColumn($data), $columnsData),
-        classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
-    ),
-    Section(
-        title: 'Hanging icons',
-        contents: array_map(fn($data) => HangingIcon($data), $hangingData),
-        classList: 'row g-4 py-5 row-cols-1 row-cols-lg-3'
-    ),
-)->toPrint();
+CardShape()->print([
+    'title' => 'Card Title',
+    'content' => 'Card Content',
+]);
 ```
+
+Nested components use `Slot::sub()`, lists use `Slot::each()` (or
+`Slot::eachAny()` for mixed item types), and conditionals use `Slot::if()`.
+Everything else is plain PHP.
 
 ## Examples
 
 For more usage examples see [here](https://github.com/YonLD/purephp/tree/master/examples).
+Every example renders through the compiled path.
 
 ## License
 

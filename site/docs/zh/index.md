@@ -26,8 +26,8 @@ features:
     title: 类 HTML 语法
     details: 语法与 HTML 非常相似，学习成本低
   - icon: ⚡️
-    title: 简单高效
-    details: 直接的 PHP 对象到 HTML 字符串转换，简单易懂
+    title: 编译渲染
+    details: 把无数据的形状树编译为扁平渲染器，性能比肩编译型模板引擎
   - icon: 🛠
     title: 易于扩展
     details: 支持自定义组件和标签

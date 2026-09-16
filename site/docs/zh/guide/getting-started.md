@@ -9,9 +9,9 @@
 
 ## 安装
 
-### 使用 Composer 安装
+### 使用 Composer
 
-在你的项目目录中运行：
+在你的项目目录中运行以下命令：
 
 ```bash
 composer require yonld/purephp
@@ -29,8 +29,8 @@ require_once __DIR__ . '/vendor/autoload.php';
 use function Pure\HTML\{div, h1, p};
 
 div(
-    h1('PurePHP 安装成功'),
-    p('恭喜！PurePHP 已经正确安装。')
+    h1('PurePHP Installation Successful'),
+    p('Congratulations! PurePHP is correctly installed.')
 )->toPrint();
 ```
 
@@ -40,7 +40,7 @@ div(
 php test.php
 ```
 
-如果看到输出的 HTML，说明安装成功。
+如果看到 HTML 输出，说明安装成功。注意这里使用的是即时渲染——它适合快速检查，但页面应当编译形状（见下文）。
 
 ## 创建第一个应用
 
@@ -54,72 +54,115 @@ composer require yonld/purephp
 
 ### 2. 创建入口文件
 
-创建 `index.php` 文件：
+创建 `index.php`：
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h1, p};
 
-div(
-    h1('我的第一个 PurePHP 应用'),
-    p('欢迎使用 PurePHP！'),
-    p('这是一个简单而强大的 PHP 模板引擎。')
-)->class('container')->toPrint();
+/**
+ * 页面形状：把数据换成 Slot 占位符的无数据树。
+ * 它在每个进程只构建一次（长驻 worker；标准 PHP-FPM 下请启用
+ * Compile::cachePath()，让请求加载已编译的渲染器而不是重建）。
+ */
+function PageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            h1(Slot::text('heading')),
+            p(Slot::text('lead')),
+            p(Slot::text('body'))
+        )->class('container')
+    );
+}
+
+PageShape()->print([
+    'heading' => 'My First PurePHP Application',
+    'lead' => 'Welcome to PurePHP!',
+    'body' => 'This is a simple yet powerful PHP template engine.',
+]);
 ```
 
 ### 3. 运行应用
 
-在浏览器中打开 `index.php` 或使用 PHP 内置服务器：
+在浏览器中打开 `index.php`，或使用 PHP 内置服务器：
 
 ```bash
 php -S localhost:8000
 ```
 
-然后访问 `http://localhost:8000`，你应该能看到你的第一个 PurePHP 应用！
+然后访问 `http://localhost:8000`，查看你的第一个 PurePHP 应用！
 
 ## 基础示例
 
 ### 使用组件
 
-创建一个简单的组件：
+组件是返回 `Shape` 的函数；静态 props 是函数参数，动态 props 是槽位：
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h2, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content
-    ] = $props;
+function CardShape(string $classList = 'card'): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h2($title),
-        p($content)
-    )->class('card');
+    return $shapes[$classList] ??= Compile::shape(
+        div(
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
+    );
 }
 
-// 使用组件
-Card([
-    'title' => '卡片标题',
-    'content' => '这是卡片的内容'
-])->toPrint();
+// 使用数据渲染组件
+CardShape()->print([
+    'title' => 'Card Title',
+    'content' => 'This is the card content',
+]);
 ```
 
-### 属性设置
+### 设置属性
+
+静态属性设置在形状上；动态属性使用 `Slot::attr()`：
+
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\div;
+
+$shape = Compile::shape(
+    div('Content')->class('container')->id(Slot::attr('id'))
+);
+
+$shape(['id' => 'main-content']);
+```
+
+对于代码片段——即立即渲染的小片段——你可以继续使用标签 API 与 `toPrint()`：
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-div('内容')
+div('Content')
     ->class('container')
     ->style('background: #f0f0f0; padding: 20px;')
     ->data_id('main-content')
@@ -128,6 +171,6 @@ div('内容')
 
 ## 下一步
 
-- [基本概念](/zh/guide/concepts) - 深入理解 PurePHP 的核心概念
-- [基本用法](/zh/guide/basic-usage) - 学习基础语法和用法
-- [组件](/zh/guide/components) - 学习如何创建和使用组件
+- [编译组件](/zh/guide/compiled) - 组件、列表、条件与缓存
+- [基本概念](/zh/guide/concepts) - 理解 PurePHP 的基础知识
+- [Props 与槽位](/zh/guide/props) - 学习数据如何绑定到形状

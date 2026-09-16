@@ -2,6 +2,8 @@
 
 本指南将介绍 PurePHP 的核心概念和基本用法。
 
+*本页介绍用于代码片段、原型和调试的标签 API；以此方式构建的树通过 `render()` / `toPrint()` 即时渲染。生产页面应改为编译形状——参见[编译组件](/zh/guide/compiled)。*
+
 ## 基本语法
 
 ### 1. 创建 HTML 元素
@@ -24,8 +26,8 @@ div('Hello World')->toPrint();
 
 // 创建嵌套的元素
 div(
-    h1('标题'),
-    p('段落内容')
+    h1('Title'),
+    p('Paragraph content')
 )->class('container')->toPrint();
 ```
 
@@ -37,12 +39,12 @@ div(
 use Pure\Core\HTML;
 
 // 使用魔术方法创建自定义 HTML 元素
-HTML::customTag('自定义内容')->class('custom')->toPrint();
+HTML::customTag('Custom content')->class('custom')->toPrint();
 
 // 非常适合 Web 组件或非标准标签
 HTML::myComponent(
-    HTML::header('组件头部'),
-    HTML::content('组件主体')
+    HTML::header('Component Header'),
+    HTML::content('Component Body')
 )->data_component('my-component')->toPrint();
 ```
 
@@ -59,7 +61,7 @@ use Pure\Core\HTML;
 // 对于大型文档有更好的性能
 $elements = [];
 for ($i = 0; $i < 1000; $i++) {
-    $elements[] = new HTML('item', ["项目 $i"]);
+    $elements[] = new HTML('item', ["Item $i"]);
 }
 (new HTML('list', $elements))->class('large-list')->toPrint();
 ```
@@ -73,7 +75,7 @@ for ($i = 0; $i < 1000; $i++) {
 
 use function Pure\HTML\div;
 
-div('内容')
+div('Content')
     ->class('container')
     ->style('background: #fff;')
     ->data_key('primary')
@@ -107,13 +109,13 @@ use function Pure\HTML\div;
 use Pure\Core\HTML;
 
 // 函数方式 - 推荐用于标准标签
-$standard = div('标准内容')->class('container');
+$standard = div('Standard content')->class('container');
 
 // 魔术方法 - 适合自定义标签
-$custom = HTML::myCustomTag('自定义内容')->data_component('special');
+$custom = HTML::myCustomTag('Custom content')->data_component('special');
 
 // 构造函数 - 最佳性能
-$performant = new HTML('div', ['性能内容']);
+$performant = new HTML('div', ['Performance content']);
 ```
 
 ## 重要用法说明
@@ -129,12 +131,12 @@ use function Pure\HTML\div;
 use function Pure\Utils\rawHtml;
 
 // ❌ 字符串中的 HTML 标签会被过滤
-div('<p>这会被过滤</p>')->toPrint();
-// 输出: <div>这会被过滤</div>
+div('<p>This will be filtered</p>')->toPrint();
+// 输出: <div>This will be filtered</div>
 
 // ✅ 使用 rawHtml 保留 HTML 内容
-div(rawHtml('<p>这会被保留</p>'))->toPrint();
-// 输出: <div><p>这会被保留</p></div>
+div(rawHtml('<p>This will be preserved</p>'))->toPrint();
+// 输出: <div><p>This will be preserved</p></div>
 ```
 
 **为什么这很重要：**
@@ -158,8 +160,8 @@ div(rawHtml('<p>这会被保留</p>'))->toPrint();
 use function Pure\HTML\div;
 
 // 两种写法都可以
-div('内容')->class('container')->toPrint();
-div('内容')->className('container')->toPrint();
+div('Content')->class('container')->toPrint();
+div('Content')->className('container')->toPrint();
 ```
 
 ### 3. 内置工具函数
@@ -175,7 +177,7 @@ $isActive = true;
 $isLarge = false;
 
 // class 方法自动使用 clx 处理
-div('内容')
+div('Content')
     ->class('btn', $isActive ? 'active' : null, $isLarge ? 'large' : null)
     ->style(['color' => 'red', 'font-size' => '16px'])
     ->toPrint();
@@ -186,7 +188,7 @@ use function Pure\Utils\{clx, sty};
 $classes = clx('btn', $isActive ? 'active' : null, $isLarge ? 'large' : null);
 $styles = sty(['color' => 'red', 'font-size' => '16px']);
 
-div('内容')
+div('Content')
     ->class($classes)
     ->style($styles)
     ->toPrint();
@@ -201,10 +203,10 @@ div('内容')
 
 use function Pure\HTML\div;
 
-div('内容')
+div('Content')
     ->data_id('123')           // 对应 data-id="123"
     ->data_type('card')        // 对应 data-type="card"
-    ->aria_label('按钮')       // 对应 aria-label="按钮"
+    ->aria_label('Button')     // 对应 aria-label="Button"
     ->toPrint();
 ```
 
@@ -219,9 +221,9 @@ use function Pure\HTML\div;
 use function Pure\HTML\p;
 
 div(
-    p('第一段'),
-    p('第二段'),
-    p('第三段')
+    p('First paragraph'),
+    p('Second paragraph'),
+    p('Third paragraph')
 )->class('content')->toPrint();
 ```
 
@@ -239,23 +241,23 @@ use function Pure\HTML\{
 };
 
 // 创建链接
-a('点击这里')->href('https://example.com')->toPrint();
+a('Click here')->href('https://example.com')->toPrint();
 
 // 创建图片
-img()->src('image.jpg')->alt('图片描述')->toPrint();
+img()->src('image.jpg')->alt('Image description')->toPrint();
 
 // 创建列表
 ul(
-    li('项目 1'),
-    li('项目 2'),
-    li('项目 3')
+    li('Item 1'),
+    li('Item 2'),
+    li('Item 3')
 )->class('list')->toPrint();
 
 // 创建表单
 form(
     input()->type('text')->name('username'),
     input()->type('password')->name('password'),
-    button('提交')->type('submit')
+    button('Submit')->type('submit')
 )->method('POST')->action('/login')->toPrint();
 ```
 
@@ -302,9 +304,39 @@ use function Pure\HTML\{div, p};
 $isLoggedIn = true;
 
 div(
-    $isLoggedIn ? p('欢迎回来！') : p('请登录')
+    $isLoggedIn ? p('Welcome back!') : p('Please log in')
 )->class('message')->toPrint();
 ```
+
+在编译渲染中，条件会成为一个 `Slot::if()` 占位符，各分支则是形状。诸如 `Slot::text()` 这类槽位用于代表在渲染时绑定的值：
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, p};
+
+function MessageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            Slot::if(
+                'isLoggedIn',
+                Compile::shape(p('Welcome back!')),
+                Compile::shape(p('Please log in'))
+            )
+        )->class('message')
+    );
+}
+
+MessageShape()->print(['isLoggedIn' => true]);
+```
+
+`Slot::if()` 读取当前数据作用域，缺失的键视为 false，形状通过 `static` 记忆化，因此每个进程只构建一次。
 
 ## 循环渲染
 
@@ -315,12 +347,43 @@ div(
 
 use function Pure\HTML\{ul, li};
 
-$items = ['苹果', '香蕉', '橙子'];
+$items = ['Apple', 'Banana', 'Orange'];
 
 ul(
     ...array_map(fn($item) => li($item), $items)
 )->class('fruits')->toPrint();
 ```
+
+在编译渲染中，列表是 `Slot::each()` 槽位：条目形状会为所绑定可迭代对象的每个元素渲染，`Slot::text()` 标记要绑定的值：
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{ul, li};
+
+function FruitsShape(): Shape
+{
+    static $shape;
+    static $item;
+
+    $item ??= Compile::shape(li(Slot::text('name')));
+
+    return $shape ??= Compile::shape(
+        ul(Slot::each('items', $item))->class('fruits')
+    );
+}
+
+FruitsShape()->print(['items' => [
+    ['name' => 'Apple'],
+    ['name' => 'Banana'],
+    ['name' => 'Orange'],
+]]);
+```
+
+每个元素都是一个数组，提供条目形状所使用的槽位名；请求只向已编译好的形状绑定数据。
 
 ## 样式处理
 
@@ -331,7 +394,7 @@ ul(
 
 use function Pure\HTML\div;
 
-div('内容')
+div('Content')
     ->style('
         background: #f0f0f0;
         padding: 20px;
@@ -349,7 +412,7 @@ use function Pure\HTML\div;
 
 $isActive = true;
 
-div('内容')
+div('Content')
     ->class('container')
     ->class($isActive ? 'active' : 'inactive')
     ->toPrint();
@@ -357,6 +420,7 @@ div('内容')
 
 ## 下一步
 
+- [编译组件](/zh/guide/compiled) - 为生产渲染编译形状
 - [SVG 和 XML 支持](/zh/guide/svg-xml) - 了解 SVG 图形和 XML 文档
 - [工具函数](/zh/guide/utils) - 了解内置的工具函数
 - [组件](/zh/guide/components) - 学习如何创建和使用组件

@@ -2,9 +2,19 @@
 
 `Pure\Core\Tag` is the base abstract class for all HTML and SVG tags.
 
+Tag trees serve two purposes:
+
+- **Immediate rendering** (snippets and debugging): build the tree with real
+  values and render it with `render()` / `toPrint()`.
+- **Compiled rendering** (production): build a data-free tree with
+  `Pure\Core\Slot` placeholders, wrap it with `Pure\Compile\Compile::shape()`
+  and bind data at render time. See [Compiled Rendering](./compile).
+
+The attribute and traversal methods below are shared by both paths.
+
 ## Attribute Methods
 
-### `class(string|array|null ...$args): self`
+### `class(string|array|Slot|null ...$args): self`
 
 Sets the CSS class names of the element, with built-in `clx` function to handle multiple arguments.
 
@@ -25,6 +35,9 @@ div('Content')->class('btn', $isActive ? 'active' : null);
 
 // Array format
 div('Content')->class(['btn', 'btn-primary']);
+
+// Dynamic classes (compiled rendering)
+div('Content')->class(\Pure\Core\Slot::attr('classList'));
 ```
 
 ### `className(string|array|null ...$args): self`
@@ -39,7 +52,7 @@ use function Pure\HTML\div;
 div('Content')->className('container');
 ```
 
-### `style(string|array|null $value): self`
+### `style(string|array|Slot|null $value): self`
 
 Sets the inline styles of the element, supporting both string and array formats.
 
@@ -124,7 +137,7 @@ $attrs = $element->getAttrs();
 // Returns: ['class' => 'container', 'id' => 'main']
 ```
 
-### `getAttr(string $key): string`
+### `getAttr(string $key): string|Slot`
 
 Gets the value of a specific attribute.
 
@@ -198,9 +211,16 @@ $json = $element->toJSON();
 
 ### `render(): string`
 
-Renders the element and its children to an HTML string directly from the tag tree. Attribute values and text children are escaped while rendering; Raw children are emitted verbatim.
+Renders the tag tree and its children to an HTML string directly, with real
+values. Attribute values and text children are escaped while rendering; Raw
+children are emitted verbatim.
 
-Trees containing `Slot` placeholders cannot be rendered directly: compile them with `Pure\Compile\Compile::shape()` and bind data at render time, see [Compiled Rendering](./compile).
+`render()` (and `toPrint()` / `__toString()`) is the **snippet and debugging**
+outlet. Production pages should compile shapes instead, so static markup is
+escaped once at compile time — see [Compiled Rendering](./compile).
+
+Trees containing `Slot` placeholders cannot be rendered directly: compile them
+with `Pure\Compile\Compile::shape()` and bind data at render time.
 
 ```php
 <?php

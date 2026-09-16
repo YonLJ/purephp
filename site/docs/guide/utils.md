@@ -2,6 +2,12 @@
 
 PurePHP provides several utility functions to simplify development. These functions are automatically used when setting element attributes.
 
+*`clx()`, `sty()` and `rawHtml()` are unchanged by compiled rendering: use them
+while building static attributes in a shape, and bind dynamic values with
+`Slot::text()` / `Slot::attr()` / `Slot::raw()` — see
+[Compiled Components](/guide/compiled). Most examples below use the tag API,
+which remains valid for snippets and debugging.*
+
 ## clx Function
 
 The `clx` function is used to merge class names, supporting strings, arrays, and conditional class names.
@@ -188,83 +194,78 @@ div(rawHtml($iconHtml))->toPrint();
 
 ### Dynamic Button Component
 
+Static configuration is a function argument; the label and the button state
+are slots:
+
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\button;
+use function Pure\Utils\sty;
 
-function Button($props) {
-    [
-        'text' => $text,
-        'variant' => $variant = 'primary',
-        'size' => $size = 'medium',
-        'disabled' => $disabled = false,
-        'loading' => $loading = false
-    ] = $props;
+function ButtonShape(string $variant = 'primary', string $size = 'medium', bool $loading = false): Shape
+{
+    static $shapes = [];
 
-    return button($loading ? 'Loading...' : $text)
-        ->class(
-            'btn',
-            "btn-{$variant}",
-            "btn-{$size}",
-            $disabled ? 'disabled' : null,
-            $loading ? 'loading' : null
-        )
-        ->style([
-            'opacity' => $disabled ? 0.6 : 1,
-            'cursor' => $disabled ? 'not-allowed' : 'pointer'
-        ])
-        ->disabled($disabled);
+    return $shapes["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+        button(Slot::text('text'))
+            ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
+            ->style(Slot::attr('style'))
+            ->disabled(Slot::attr('disabled'))
+    );
 }
 
-// Usage example
-Button([
+// Bindings: render-time values only; a null attribute is omitted.
+$bindings = [
     'text' => 'Submit',
-    'variant' => 'success',
-    'size' => 'large',
-    'loading' => false
-])->toPrint();
+    'style' => sty(['opacity' => 1, 'cursor' => 'pointer']),
+    'disabled' => null,
+];
+
+ButtonShape('success', 'large')->print($bindings);
 ```
 
 ### Responsive Card Component
 
+The card accepts an HTML child, so its content is bound with `Slot::raw()`:
+
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, h3, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content,
-        'featured' => $featured = false,
-        'theme' => $theme = 'light'
-    ] = $props;
+function CardShape(string $theme = 'light', bool $featured = false): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h3($title)->class('card-title'),
-        p($content)->class('card-content')
-    )
-    ->class(
-        'card',
-        "card-{$theme}",
-        $featured ? 'card-featured' : null
-    )
-    ->style([
-        'border-width' => $featured ? '2px' : '1px',
-        'box-shadow' => $featured ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)',
-        'background-color' => $theme === 'dark' ? '#333' : '#fff',
-        'color' => $theme === 'dark' ? '#fff' : '#333'
-    ]);
+    return $shapes["{$theme}|" . (int) $featured] ??= Compile::shape(
+        div(
+            h3(Slot::text('title'))->class('card-title'),
+            p(Slot::raw('content'))->class('card-content')
+        )
+        ->class('card', "card-{$theme}", $featured ? 'card-featured' : null)
+        ->style([
+            'border-width' => $featured ? '2px' : '1px',
+            'box-shadow' => $featured ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)',
+            'background-color' => $theme === 'dark' ? '#333' : '#fff',
+            'color' => $theme === 'dark' ? '#fff' : '#333'
+        ])
+    );
 }
 
-// Usage example
-Card([
+// Bindings: `content` is trusted HTML, emitted verbatim.
+$bindings = [
     'title' => 'Featured Card',
-    'content' => 'This is the content of a featured card',
-    'featured' => true,
-    'theme' => 'dark'
-])->toPrint();
+    'content' => '<strong>This is the content</strong> of a featured card',
+];
+
+CardShape('dark', true)->print($bindings);
 ```
 
 ## Next Steps

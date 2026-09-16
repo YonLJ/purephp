@@ -2,9 +2,17 @@
 
 `Pure\Core\Tag` 是所有 HTML 和 SVG 标签的基础抽象类。
 
+标签树有两种用途：
+
+- **即时渲染**（片段与调试）：用真实值构建树，再用 `render()` / `toPrint()` 渲染。
+- **编译渲染**（生产环境）：用 `Pure\Core\Slot` 占位符构建不含数据的树，通过
+  `Pure\Compile\Compile::shape()` 包装，并在渲染时绑定数据。参见[编译渲染](./compile)。
+
+下文的属性方法与遍历方法为两条路径共用。
+
 ## 属性方法
 
-### `class(string|array|null ...$args): self`
+### `class(string|array|Slot|null ...$args): self`
 
 设置元素的 CSS 类名，内置 `clx` 函数处理多个参数。
 
@@ -14,17 +22,20 @@
 use function Pure\HTML\div;
 
 // 单个类名
-div('内容')->class('container');
+div('Content')->class('container');
 
 // 多个类名
-div('内容')->class('btn', 'btn-primary', 'large');
+div('Content')->class('btn', 'btn-primary', 'large');
 
 // 条件类名
 $isActive = true;
-div('内容')->class('btn', $isActive ? 'active' : null);
+div('Content')->class('btn', $isActive ? 'active' : null);
 
 // 数组格式
-div('内容')->class(['btn', 'btn-primary']);
+div('Content')->class(['btn', 'btn-primary']);
+
+// 动态类名（编译渲染）
+div('Content')->class(\Pure\Core\Slot::attr('classList'));
 ```
 
 ### `className(string|array|null ...$args): self`
@@ -36,12 +47,12 @@ div('内容')->class(['btn', 'btn-primary']);
 
 use function Pure\HTML\div;
 
-div('内容')->className('container');
+div('Content')->className('container');
 ```
 
-### `style(string|array|null $value): self`
+### `style(string|array|Slot|null $value): self`
 
-设置元素的内联样式，支持字符串和数组格式。
+设置元素的内联样式，同时支持字符串和数组格式。
 
 ```php
 <?php
@@ -49,10 +60,10 @@ div('内容')->className('container');
 use function Pure\HTML\div;
 
 // 字符串格式
-div('内容')->style('background: #fff; padding: 20px;');
+div('Content')->style('background: #fff; padding: 20px;');
 
 // 数组格式（内置 sty 函数）
-div('内容')->style([
+div('Content')->style([
     'background-color' => '#fff',
     'padding' => '20px',
     'border-radius' => '8px'
@@ -70,7 +81,7 @@ div('内容')->style([
 
 use function Pure\HTML\div;
 
-$element = div('内容')->setAttrs([
+$element = div('Content')->setAttrs([
     'id' => 'main',
     'class' => 'container',
     'data-type' => 'card'
@@ -86,9 +97,9 @@ $element = div('内容')->setAttrs([
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('btn primary');
+$element = div('Content')->class('btn primary');
 
-// 添加新的类名
+// 追加一个新的类名
 $element->setAttrByCb('class', fn($val) => $val . ' active');
 
 // 删除属性
@@ -106,7 +117,7 @@ $element->setAttrByCb('class', fn($val) => null);
 
 use function Pure\HTML\div;
 
-$element = div('内容');
+$element = div('Content');
 echo $element->getTagName(); // 输出: div
 ```
 
@@ -119,12 +130,12 @@ echo $element->getTagName(); // 输出: div
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('container')->id('main');
+$element = div('Content')->class('container')->id('main');
 $attrs = $element->getAttrs();
 // 返回: ['class' => 'container', 'id' => 'main']
 ```
 
-### `getAttr(string $key): string`
+### `getAttr(string $key): string|Slot`
 
 获取特定属性的值。
 
@@ -133,7 +144,7 @@ $attrs = $element->getAttrs();
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('container');
+$element = div('Content')->class('container');
 echo $element->getAttr('class'); // 输出: container
 ```
 
@@ -146,7 +157,7 @@ echo $element->getAttr('class'); // 输出: container
 
 use function Pure\HTML\{div, p};
 
-$element = div(p('段落 1'), p('段落 2'));
+$element = div(p('Paragraph 1'), p('Paragraph 2'));
 $children = $element->getChildren();
 ```
 
@@ -161,7 +172,7 @@ $children = $element->getChildren();
 
 use function Pure\HTML\{div, img};
 
-$div = div('内容');
+$div = div('Content');
 echo $div->getSelfClose(); // 输出: false
 
 $img = img()->src('image.jpg');
@@ -191,24 +202,29 @@ $element = div()->setSelfClose(true);
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('container');
+$element = div('Content')->class('container');
 $json = $element->toJSON();
-// 返回: ['tagName' => 'div', 'children' => ['内容'], 'class' => 'container']
+// 返回: ['tagName' => 'div', 'children' => ['Content'], 'class' => 'container']
 ```
 
 ### `render(): string`
 
-直接从标签树将元素及其子节点渲染为 HTML 字符串。渲染时会对属性值和文本子节点做转义，Raw 子节点按原样输出。
+直接用真实值把标签树及其子节点渲染为 HTML 字符串。渲染时属性值和文本子节点会被转义；
+Raw 子节点按原样输出。
 
-含 `Slot` 占位符的树不能直接渲染：请用 `Pure\Compile\Compile::shape()` 编译并在渲染时绑定数据，参见[编译渲染](./compile)。
+`render()`（以及 `toPrint()` / `__toString()`）是**片段与调试**出口。生产页面应改为
+编译形状，这样静态标记只在编译期转义一次——参见[编译渲染](./compile)。
+
+含 `Slot` 占位符的树不能直接渲染：请用 `Pure\Compile\Compile::shape()` 编译，并在渲染
+时绑定数据。
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('container');
-echo $element->render(); // 输出: <div class="container">内容</div>
+$element = div('Content')->class('container');
+echo $element->render(); // 输出: <div class="container">Content</div>
 ```
 
 ### `__toString(): string`
@@ -220,8 +236,8 @@ echo $element->render(); // 输出: <div class="container">内容</div>
 
 use function Pure\HTML\div;
 
-$element = div('内容')->class('container');
-echo (string)$element; // 输出: <div class="container">内容</div>
+$element = div('Content')->class('container');
+echo (string)$element; // 输出: <div class="container">Content</div>
 ```
 
 ### `toPrint(): void`
@@ -233,8 +249,8 @@ echo (string)$element; // 输出: <div class="container">内容</div>
 
 use function Pure\HTML\div;
 
-div('内容')->class('container')->toPrint();
-// 输出: <div class="container">内容</div>
+div('Content')->class('container')->toPrint();
+// 输出: <div class="container">Content</div>
 ```
 
 ## 动态属性方法
@@ -247,17 +263,17 @@ Tag 类通过 `__call` 魔术方法支持动态设置任何 HTML 属性：
 use function Pure\HTML\{div, input, img};
 
 // 设置 ID
-div('内容')->id('main');
+div('Content')->id('main');
 
 // 设置 data 属性（注意使用下划线）
-div('内容')->data_id('123')->data_type('card');
+div('Content')->data_id('123')->data_type('card');
 
 // 设置 ARIA 属性
-div('内容')->aria_label('主要内容');
+div('Content')->aria_label('Main content');
 
 // 设置表单属性
-input()->type('text')->name('username')->placeholder('输入用户名');
+input()->type('text')->name('username')->placeholder('Enter username');
 
 // 设置图片属性
-img()->src('image.jpg')->alt('图片描述')->width('100')->height('100');
+img()->src('image.jpg')->alt('Image description')->width('100')->height('100');
 ```

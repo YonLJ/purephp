@@ -2,6 +2,12 @@
 
 This guide explains how to handle events in PurePHP components.
 
+*Event attributes such as `->onclick(...)` are part of the tag API and stay
+valid; they are static attributes, so they are set the same way on shapes. For
+pages, build shapes and compile them — see
+[Compiled Components](/guide/compiled). Most examples below use the tag API,
+which remains the immediate rendering path for snippets and debugging.*
+
 ## Basic Event Handling
 
 PurePHP supports all standard HTML events through attribute methods. Event handlers are typically JavaScript functions passed as strings:
@@ -198,40 +204,54 @@ function handleDelegatedClick(event) {
 
 ## Component Event Communication
 
-Pass event handlers between components:
+Pass event handlers to child components as static event attributes; dynamic
+values flow through slots:
 
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
 use function Pure\HTML\{div, button, p};
 
-function ParentComponent() {
-    return div(
-        p('Parent Component'),
-        ChildComponent([
-            'onButtonClick' => 'handleChildClick',
-            'message' => 'Click me from child!'
-        ]),
-        p()->id('parent-output')->style('margin-top: 10px; color: #666;')
-    )->class('parent-component');
+function ChildShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            p('Child Component'),
+            button(Slot::text('message'))
+                ->onclick("handleChildClick('Hello from child!')")
+                ->class('child-btn')
+        )
+        ->class('child-component')
+        ->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;')
+    );
 }
 
-function ChildComponent($props) {
-    [
-        'onButtonClick' => $onButtonClick,
-        'message' => $message
-    ] = $props;
+function ParentShape(): Shape
+{
+    static $shape;
 
-    return div(
-        p('Child Component'),
-        button($message)
-            ->onclick("{$onButtonClick}('Hello from child!')")
-            ->class('child-btn')
-    )->class('child-component')->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;');
+    return $shape ??= Compile::shape(
+        div(
+            p('Parent Component'),
+            Slot::sub('child', ChildShape()),
+            p()->id('parent-output')->style('margin-top: 10px; color: #666;')
+        )->class('parent-component')
+    );
 }
 
-// Use the components with JavaScript
-echo ParentComponent();
+// Bindings for the parent shape; the child renders from `$data['child']`.
+$bindings = [
+    'child' => [
+        'message' => 'Click me from child!',
+    ],
+];
+
+ParentShape()->print($bindings);
 ?>
 <script>
 function handleChildClick(message) {
@@ -241,6 +261,10 @@ function handleChildClick(message) {
 }
 </script>
 ```
+
+The handler is compiled into the shape as a static attribute, so the handler
+name cannot come from request data. See
+[Compiled Components](/guide/compiled) for the full pipeline.
 
 ## Custom Event Attributes
 

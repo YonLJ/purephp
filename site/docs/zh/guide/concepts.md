@@ -1,174 +1,178 @@
 # 基本概念
 
-本指南将介绍 PurePHP 的核心概念。
+本指南介绍 PurePHP 的核心概念。
 
-## 对象到HTML转换
+## 标签树
 
-PurePHP 的核心是一个 PHP 对象到 HTML 字符串的转换系统。它使用 PHP 对象来表示 HTML 元素，然后将这些对象转换为 HTML 字符串。
+PurePHP 用 PHP 对象表示 HTML。标签辅助函数构建树，方法链式调用设置属性：
 
-### 工作原理
+```php
+<?php
 
-1. **创建 HTML 对象**
-   ```php
-   <?php
+use function Pure\HTML\{div, h1, p};
 
-   use function Pure\HTML\{div, h1, p};
+$element = div(
+    h1('Title'),
+    p('Content')
+)->class('container');
 
-   // 创建 HTML 对象
-   $element = div(
-       h1('标题'),
-       p('内容')
-   )->class('container');
-   ```
+echo $element; // <div class="container"><h1>Title</h1><p>Content</p></div>
+```
 
-2. **转换为 HTML 字符串**
-   ```php
-   // 输出 HTML 字符串
-   echo $element; // 或者 $element->toPrint();
-   ```
+渲染时文本子节点与属性值会被转义；`Raw` 子节点原样输出。包含数据的标签树通过 `render()`、`toPrint()` 或 `__toString()` 立即渲染。这条路径适合代码片段与调试。
 
-3. **设置属性**
-   ```php
-   // 链式调用设置属性
-   $element->class('new-container')->style('color: red;');
-   ```
+## 形状与槽位
 
-### 优势
+**形状**是同样的树，但*不含数据*：动态值被替换为 `Slot` 占位符。形状描述结构，数据稍后到达。
 
-- **类型安全**：利用 PHP 的类型系统提供更好的开发体验
-- **组件化**：可以将 HTML 结构封装成可重用的 PHP 函数
-- **易于测试**：可以方便地测试 HTML 结构和属性
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1, p};
+
+$shape = Compile::shape(
+    div(
+        h1(Slot::text('heading')),
+        p(Slot::text('lead'))
+    )->class('container')
+);
+```
+
+槽位类型：
+
+| 槽位 | 绑定 | 是否创建嵌套作用域 |
+| --- | --- | --- |
+| `Slot::text()` | 可字符串化的值，会转义 | 否 |
+| `Slot::attr()` | 属性值，会转义 | 否 |
+| `Slot::raw()` | 可字符串化的值，原样输出 | 否 |
+| `Slot::sub()` | 数组 | 是 |
+| `Slot::each()` | 数组的可迭代集合 | 是，逐项 |
+| `Slot::if()` | 真值条件 | 否（各分支共享作用域） |
+| `Slot::eachAny()` | 带判别键的数组的可迭代集合 | 是，逐项 |
+
+## 编译
+
+`Compile::shape()` 把一棵树包装为 `Shape`。首次渲染会将它编译成扁平的 PHP 闭包：静态标记变成字面量字符串，转义只做一次，运行时只剩槽位的工作。
+
+```php
+<?php
+
+$shape([
+    'heading' => 'Welcome',
+    'lead' => 'Compiled rendering',
+]);
+```
+
+关键特性：
+
+- **每个进程只编译一次**——把形状记忆化到组件函数内的 `static` 变量中，绝不要在请求处理器中构建形状。标准 PHP-FPM 下 `static` 每个请求都会重置，因此请启用 `Compile::cachePath()`，让请求加载已编译的渲染器而不是重新生成。
+- **输出逐字节一致**——编译路径与 `render()` 共用同一份转义实现。
+- **可选的磁盘缓存**——`Compile::cachePath($dir)` 会存储编译后的渲染器，让已预热的 worker 直接加载代码而不是生成代码。
+
+`Shape::id()` 是结构性指纹（标签、属性、槽位、嵌套形状与映射闭包），无需编译即可获得；它被用作缓存文件名和组件缓存键。
+
+## 数据绑定与作用域
+
+渲染形状时绑定普通数据：
+
+```php
+<?php
+
+$item = Compile::shape(li(Slot::text('title')));
+$list = Compile::shape(ul(Slot::each('items', $item)));
+
+$list(['items' => [['title' => 'a'], ['title' => 'b']]]);
+```
+
+`Slot::sub()` 与 `Slot::each()` 会建立嵌套作用域，因此在 `li` 内部，槽位 `title` 针对当前项解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`（`slot 'items[].title' is required but was not provided.`）；可选数据请使用 `->default($value)` 或 `->required(false)`。
 
 ## 组件
 
-组件是 PurePHP 中构建用户界面的基本单位。
-
-### 函数组件
+组件是返回 `Shape` 的函数。静态 props 是函数参数，动态 props 是槽位：
 
 ```php
 <?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
 
 use function Pure\HTML\{div, h2, p};
 
-function Card($props) {
-    [
-        'title' => $title,
-        'content' => $content
-    ] = $props;
+function CardShape(string $classList = 'card'): Shape
+{
+    static $shapes = [];
 
-    return div(
-        h2($title),
-        p($content)
-    )->class('card');
+    return $shapes[$classList] ??= Compile::shape(
+        div(
+            h2(Slot::text('title')),
+            p(Slot::text('content'))
+        )->class($classList)
+    );
 }
-
-// 使用组件
-Card([
-    'title' => '标题',
-    'content' => '内容'
-])->toPrint();
 ```
 
-
-
-## 属性
-
-属性用于配置组件的行为和外观。
-
-### 基本属性
-
-```php
-<?php
-
-use function Pure\HTML\{div, p};
-
-div(
-    p('内容')
-)
-->id('main')
-->class('container')
-->style('background: #fff;')
-->toPrint();
-```
-
-### 事件属性
-
-```php
-<?php
-
-use function Pure\HTML\{button};
-
-button('点击我')
-    ->onclick('handleClick()')
-    ->onmouseover('handleHover()')
-    ->toPrint();
-```
-
-### 数据属性
-
-```php
-<?php
-
-use function Pure\HTML\{div};
-
-div('内容')
-    ->data_id('123')      // 对应 HTML 中的 data-id="123"
-    ->data_type('card')   // 对应 HTML 中的 data-type="card"
-    ->toPrint();
-```
-
-**重要提示**：由于 `-` 在 PHP 中有特殊含义，所有包含连字符的属性名都需要用下划线 `_` 替代。
+列表、条件、异构列表、缓存与每请求守卫请参见[编译组件](/zh/guide/compiled)。
 
 ## 状态管理
 
-PurePHP 支持通过 PHP 变量和函数来管理状态。
+状态就是普通 PHP：值作为数据传入形状。
 
 ### 简单状态
 
 ```php
 <?php
 
-use function Pure\HTML\{div, button, p};
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
 
-function Counter($count = 0) {
-    return div(
-        p("计数: {$count}"),
-        button('增加')
-            ->onclick("increment()")
+use function Pure\HTML\{button, div, p};
+
+function CounterShape(): \Pure\Compile\Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            p(Slot::text('count')),
+            button('Increment')->onclick('increment()')
+        )
     );
 }
 
-// 使用状态
-$currentCount = 0;
-Counter($currentCount)->toPrint();
+CounterShape()->print(['count' => 0]);
 ```
 
 ### 全局状态
 
+任何 PHP 存储方案都可以；组装好数据数组后渲染：
+
 ```php
 <?php
 
-class Store {
-    private static $state = [];
+class Store
+{
+    private static array $state = [];
 
-    public static function set($key, $value) {
+    public static function set(string $key, mixed $value): void
+    {
         self::$state[$key] = $value;
     }
 
-    public static function get($key) {
+    public static function get(string $key): mixed
+    {
         return self::$state[$key] ?? null;
     }
 }
 
-// 使用全局状态
-Store::set('user', ['name' => '张三']);
+Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
 
-
-
 ## 下一步
 
-- [基本用法](/zh/guide/basic-usage) - 学习基础语法和用法
-- [工具函数](/zh/guide/utils) - 了解内置的工具函数
-- [组件](/zh/guide/components) - 深入学习组件开发
+- [编译组件](/zh/guide/compiled) - 生产环境的渲染路径
+- [Props 与槽位](/zh/guide/props) - 数据如何绑定到形状
+- [基本用法](/zh/guide/basic-usage) - 代码片段所用的标签 API

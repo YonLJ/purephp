@@ -2,6 +2,8 @@
 
 PurePHP provides comprehensive support for creating SVG graphics and XML documents with the same elegant syntax as HTML.
 
+*HTML, SVG and XML tag instances all extend `Tag`, so any of them can be wrapped in `Compile::shape()` and rendered with data — see [Compiled Components](/guide/compiled). The SVG sections below are a tag-API reference and render immediately with `render()` / `toPrint()`; the XML sections use the compiled path.*
+
 ## SVG Support
 
 ### Basic SVG Creation
@@ -126,138 +128,90 @@ $animatedCircle = SVG::svg(
 
 ## XML Support
 
-### Basic XML Creation
+XML tags extend `Tag` as well, so a document is built as a compiled shape: the
+tree and its slots are created once per process, and each export binds data and
+saves or prints it.
 
-Create XML documents with structured data:
+### Compiled XML Documents
+
+`AddressShape()` renders one record; `city` is optional and only appears when
+the data provides it:
 
 ```php
 <?php
 
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
 use Pure\Core\XML;
 
-// Using magic static methods
-$document = XML::root(
-    XML::metadata(
-        XML::title('Document Title'),
-        XML::author('Author Name'),
-        XML::created('2024-01-01')
-    ),
-    XML::content(
-        XML::section(
-            XML::heading('Section 1'),
-            XML::paragraph('This is the content of section 1.')
-        )->id('section-1')
+function AddressShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        XML::address(
+            XML::street(Slot::text('street')),
+            Slot::if('city', Compile::shape(XML::city(Slot::text('city')))),
+            XML::state(Slot::text('state')),
+            XML::zip(Slot::text('zip'))
+        )
+    );
+}
+
+$page = Compile::shape(
+    XML::customers(
+        XML::customer(
+            XML::name('Charter Group'),
+            Slot::each('addresses', AddressShape())
+        )->id('55000')
     )
 );
 
-echo $document;
-```
-
-### Constructor Approach for XML
-
-```php
-<?php
-
-use Pure\Core\XML;
-
-// Using constructor for better performance
-$document = new XML('root', [
-    new XML('metadata', [
-        new XML('title', ['Document Title']),
-        new XML('author', ['Author Name']),
-        new XML('created', ['2024-01-01'])
-    ]),
-    new XML('content', [
-        (new XML('section', [
-            new XML('heading', ['Section 1']),
-            new XML('paragraph', ['This is the content of section 1.'])
-        ]))->id('section-1')
-    ])
-]);
-```
-
-### XML Configuration Files
-
-```php
-<?php
-
-use Pure\Core\XML;
-
-function createConfig(array $settings): XML
-{
-    $config = XML::configuration();
-
-    foreach ($settings as $key => $value) {
-        if (is_array($value)) {
-            $section = XML::section()->name($key);
-            foreach ($value as $subKey => $subValue) {
-                $section = $section->appendChild(
-                    XML::setting($subValue)->key($subKey)
-                );
-            }
-            $config = $config->appendChild($section);
-        } else {
-            $config = $config->appendChild(
-                XML::setting($value)->key($key)
-            );
-        }
-    }
-
-    return $config;
-}
-
-// Usage
-$settings = [
-    'database' => [
-        'host' => 'localhost',
-        'port' => '3306',
-        'name' => 'myapp'
+$data = [
+    'addresses' => [
+        ['street' => '100 Main', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+        ['street' => '720 Prospect', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+        ['street' => '120 Ridge', 'state' => 'MA', 'zip' => '01760'],
     ],
-    'debug' => 'true'
 ];
 
-$configXml = createConfig($settings);
-$configXml->toSave('config.xml');
+$page->compile()->save('./example.xml', $data, '<?xml version="1.0"?>');
 ```
 
-### Data Export to XML
+`Slot::each()` renders one `AddressShape()` per record, and `Slot::if()` skips
+the `city` element for records without it — a missing key is false and never
+throws. The same shape renders to a string with `$page($data)` or
+`$page->print($data)`; `Renderer::save()` only prefixes the document header.
+
+### Data-driven Elements
+
+Tag names are fixed at build time, so dynamic keys and values become slots —
+here `key` attributes and text content over a list of settings:
 
 ```php
 <?php
 
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
 use Pure\Core\XML;
 
-function exportUsersToXml(array $users): XML
-{
-    $usersXml = XML::users();
+$setting = Compile::shape(
+    XML::setting(Slot::text('value'))->key(Slot::attr('key'))
+);
 
-    foreach ($users as $userData) {
-        $user = XML::user(
-            XML::name($userData['name']),
-            XML::email($userData['email']),
-            XML::role($userData['role'])
-        )->id($userData['id']);
+$config = Compile::shape(
+    XML::configuration(Slot::each('settings', $setting))
+);
 
-        if (!empty($userData['addresses'])) {
-            $addresses = XML::addresses();
-            foreach ($userData['addresses'] as $addr) {
-                $addresses = $addresses->appendChild(
-                    XML::address(
-                        XML::street($addr['street']),
-                        XML::city($addr['city']),
-                        XML::zip($addr['zip'])
-                    )->type($addr['type'])
-                );
-            }
-            $user = $user->appendChild($addresses);
-        }
-
-        $usersXml = $usersXml->appendChild($user);
-    }
-
-    return $usersXml;
-}
+$config->print(['settings' => [
+    ['key' => 'host', 'value' => 'localhost'],
+    ['key' => 'port', 'value' => '3306'],
+    ['key' => 'debug', 'value' => 'true'],
+]]);
 ```
+
+When the structure itself has to vary with the data, use `Slot::if()` or
+`Slot::eachAny()`; the tag set of a shape cannot.
 
 ## Performance Considerations
 
@@ -317,6 +271,10 @@ XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 - Embedding external XML/SVG content
 - Working with pre-formatted markup
 - Including complex nested structures
+
+Compiled shapes filter static strings the same way; bound data is escaped by
+`Slot::text()` / `Slot::attr()`, and `Slot::raw()` is the verbatim equivalent of
+`rawXml()` when data must keep its markup.
 
 ## Best Practices
 

@@ -2,6 +2,8 @@
 
 This guide introduces the core concepts and basic usage of PurePHP.
 
+*This page documents the tag API used for snippets, prototypes, and debugging; trees built this way render immediately via `render()` / `toPrint()`. Production pages should compile shapes instead — see [Compiled Components](/guide/compiled).*
+
 ## Basic Syntax
 
 ### 1. Creating HTML Elements
@@ -306,6 +308,39 @@ div(
 )->class('message')->toPrint();
 ```
 
+With compiled rendering, the condition becomes a `Slot::if()` placeholder and
+the branches are shapes. Slots such as `Slot::text()` stand in for the values
+that are bound at render time:
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, p};
+
+function MessageShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            Slot::if(
+                'isLoggedIn',
+                Compile::shape(p('Welcome back!')),
+                Compile::shape(p('Please log in'))
+            )
+        )->class('message')
+    );
+}
+
+MessageShape()->print(['isLoggedIn' => true]);
+```
+
+`Slot::if()` reads the current data scope, a missing key is false, and the
+shape is memoized in `static` so it is built once per process.
+
 ## Loop Rendering
 
 Use PHP loop statements to render lists:
@@ -321,6 +356,40 @@ ul(
     ...array_map(fn($item) => li($item), $items)
 )->class('fruits')->toPrint();
 ```
+
+With compiled rendering, lists are `Slot::each()` slots: the item shape is
+rendered for every element of the bound iterable, with `Slot::text()` marking
+the value to bind:
+
+```php
+<?php
+
+use Pure\Compile\{Compile, Shape};
+use Pure\Core\Slot;
+
+use function Pure\HTML\{ul, li};
+
+function FruitsShape(): Shape
+{
+    static $shape;
+    static $item;
+
+    $item ??= Compile::shape(li(Slot::text('name')));
+
+    return $shape ??= Compile::shape(
+        ul(Slot::each('items', $item))->class('fruits')
+    );
+}
+
+FruitsShape()->print(['items' => [
+    ['name' => 'Apple'],
+    ['name' => 'Banana'],
+    ['name' => 'Orange'],
+]]);
+```
+
+Each item is an array supplying the slot names used by the item shape; requests
+only bind data to the already compiled shape.
 
 ## Style Handling
 
@@ -357,6 +426,7 @@ div('Content')
 
 ## Next Steps
 
+- [Compiled Components](/guide/compiled) - Compile shapes for production rendering
 - [SVG and XML Support](/guide/svg-xml) - Learn about SVG graphics and XML documents
 - [Utility Functions](/guide/utils) - Learn about built-in utility functions
 - [Components](/guide/components) - Learn how to create and use components
