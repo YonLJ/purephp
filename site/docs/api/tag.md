@@ -200,6 +200,8 @@ $json = $element->toJSON();
 
 Renders the element and its children to an HTML string directly from the tag tree. Attribute values and text children are escaped while rendering; Raw children are emitted verbatim.
 
+Trees containing `Slot` placeholders cannot be rendered directly: compile them with `Pure\Compile\Compile::shape()` and bind data at render time, see [Compiled Rendering](./compile).
+
 ```php
 <?php
 

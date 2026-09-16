@@ -24,6 +24,9 @@ PurePHP 由几个核心类组成，它们协同工作提供强大的模板系统
 ### [DOM 类](/zh/api/dom)
 Dom 类提供基于 DOMDocument 的表示，用于高级 DOM 操作；字符串输出通过 `render()` 或 `(string)` 直接从标签树渲染。
 
+### [编译渲染](/zh/api/compile)
+`Pure\Compile\Compile`、`Shape` 与 `Compiled` 把带 `Slot` 占位符的无数据形状树编译成扁平 PHP 渲染器：静态标记变成字面量，渲染速度与编译型模板引擎持平，同时保留流式 PHP API。
+
 ## 快速参考
 
 ### 创建元素

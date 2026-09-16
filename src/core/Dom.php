@@ -34,9 +34,12 @@ class Dom
 
     public function __construct(Tag $tag)
     {
+        $tag->assertNoSlots();
         $this->isXML = $tag instanceof XML;
         $this->tagName = $tag->getTagName();
-        $this->attrs = $tag->getAttrs();
+        /** @var array<string, string> $attrs */
+        $attrs = $tag->getAttrs();
+        $this->attrs = $attrs;
         $this->createDom();
         $this->appendAttrNodes();
         $this->appendChildren(array_map(

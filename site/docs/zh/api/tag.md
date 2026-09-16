@@ -200,6 +200,8 @@ $json = $element->toJSON();
 
 直接从标签树将元素及其子节点渲染为 HTML 字符串。渲染时会对属性值和文本子节点做转义，Raw 子节点按原样输出。
 
+含 `Slot` 占位符的树不能直接渲染：请用 `Pure\Compile\Compile::shape()` 编译并在渲染时绑定数据，参见[编译渲染](./compile)。
+
 ```php
 <?php
 
