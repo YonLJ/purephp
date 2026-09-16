@@ -19,8 +19,6 @@ use function Pure\HTML\ul;
 use function Pure\SVG\svg;
 use function Pure\SVG\svgUse;
 
-require_once __DIR__ . '/components/Divider.php';
-
 /**
  * Shapes are data-free trees: static props come from function arguments,
  * dynamic props are Slot placeholders bound when the shape is rendered.
@@ -183,13 +181,13 @@ function FeaturePageShape(): Shape
         main(
             h1('Features examples')->class('visually-hidden'),
             Slot::sub('columns', SectionShape(IconColumnShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
-            Divider(),
+            div()->class('b-example-divider'),
             Slot::sub('hanging', SectionShape(HangingIconShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
-            Divider(),
+            div()->class('b-example-divider'),
             Slot::sub('cards', SectionShape(CustomCardShape(), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5')),
-            Divider(),
+            div()->class('b-example-divider'),
             Slot::sub('grid', SectionShape(CellIconShape(), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5')),
-            Divider(),
+            div()->class('b-example-divider'),
             Slot::sub('features', FeatureSectionShape()),
         )
     );

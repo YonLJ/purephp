@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
-use Pure\Core\HTML;
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Slot;
 
 use function Pure\HTML\a;
 use function Pure\HTML\div;
@@ -8,17 +10,23 @@ use function Pure\HTML\h5;
 use function Pure\HTML\li;
 use function Pure\HTML\ul;
 
-function ColLinks(array $props): HTML
+function FooterLinkShape(): Shape
 {
-    [
-        'title' => $title,
-        'links' => $links
-    ] = $props;
+    static $shape;
 
-    return div(
-        h5($title),
-        ul(
-            array_map(fn($link) => li(a($link['text'])->class('text-muted')->href($link['href'])), $links)
-        )->class('list-unstyled text-small')
-    )->class('col-6 col-md');
+    return $shape ??= Compile::shape(
+        li(a(Slot::text('text'))->class('text-muted')->href(Slot::attr('href')))
+    );
+}
+
+function ColLinksShape(): Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            h5(Slot::text('title')),
+            ul(Slot::each('links', FooterLinkShape()))->class('list-unstyled text-small')
+        )->class('col-6 col-md')
+    );
 }

@@ -11,6 +11,9 @@ site/docs/.vitepress/dist
 coverage/
 coverage.xml
 
+# Generated example output
+examples/xml/example.xml
+
 # Code Quality Tools
 .php-cs-fixer.cache
 
