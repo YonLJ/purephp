@@ -122,7 +122,8 @@ $performant = new HTML('div', ['Performance content']);
 
 ### 1. 字符串内容 vs 原始内容
 
-⚠️ **重要**：当传递包含 HTML/XML 标签的字符串内容时，标签会被自动过滤以确保安全：
+字符串子节点一律转义，因此对用户输入是安全的，也不会丢数据：`2<3`、`a<b`
+这类比较文本会原样保留。形似标签的字符串会作为文本显示，而不会被解析：
 
 ```php
 <?php
@@ -130,19 +131,19 @@ $performant = new HTML('div', ['Performance content']);
 use function Pure\HTML\div;
 use function Pure\Utils\rawHtml;
 
-// ❌ 字符串中的 HTML 标签会被过滤
-div('<p>This will be filtered</p>')->toPrint();
-// 输出: <div>This will be filtered</div>
+// ✅ 字符串内容被转义，不会被解析
+div('<p>This is shown as text</p>')->toPrint();
+// 输出: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
-// ✅ 使用 rawHtml 保留 HTML 内容
-div(rawHtml('<p>This will be preserved</p>'))->toPrint();
-// 输出: <div><p>This will be preserved</p></div>
+// ✅ 使用 rawHtml 输出可信标记
+div(rawHtml('<p>This is preserved</p>'))->toPrint();
+// 输出: <div><p>This is preserved</p></div>
 ```
 
 **为什么这很重要：**
-- **安全性**：防止用户输入的 XSS 攻击
-- **可预测性**：确保行为一致
-- **明确性**：强制对原始内容做出明确选择
+- **安全性**：转义消除了用户输入中的 XSS
+- **不丢数据**：只是看起来像标记的文本会被完整保留
+- **明确性**：输出标记必须显式使用 rawHtml()/rawXml()
 
 **何时使用 rawHtml/rawXml：**
 - 包含预格式化的 HTML/XML 内容

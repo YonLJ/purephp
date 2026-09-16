@@ -78,6 +78,7 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 
 - `->required(false)`——允许槽位缺失。
 - `->default($value)`——键缺失时使用的回退值。
+- `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - `Slot::sub($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
   `Slot::eachAny(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；
   组件借此把自身 props 映射给子组件（例如 `fn (array $d) => ['href' => '#' . $d['icon']]`）。

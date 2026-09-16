@@ -239,9 +239,9 @@ use function Pure\HTML\div;
 $element3 = div('content')->customAttr('value');
 ```
 
-## 重要：字符串内容过滤
+## 重要：字符串内容会被转义
 
-⚠️ **安全提示**：包含 XML/SVG 标签的字符串内容会被自动过滤：
+⚠️ **安全提示**：字符串内容一律会被转义，因此形似 XML/SVG 的文本是安全的，并且会原样显示：
 
 ```php
 <?php
@@ -249,11 +249,11 @@ $element3 = div('content')->customAttr('value');
 use Pure\Core\XML;
 use function Pure\Utils\rawXml;
 
-// ❌ 字符串中的 XML 标签会被过滤
-XML::root('<item>This gets filtered</item>')->toPrint();
-// 输出: <root>This gets filtered</root>
+// ✅ 字符串中的 XML 标签会被转义，不会被解析
+XML::root('<item>This stays visible</item>')->toPrint();
+// 输出: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
-// ✅ 使用 rawXml 保留 XML 内容
+// ✅ 使用 rawXml 输出 XML 内容
 XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 // 输出: <root><item>This is preserved</item></root>
 ```
@@ -264,7 +264,7 @@ XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 - 处理预格式化的标记
 - 包含复杂的嵌套结构
 
-编译形状以相同方式过滤静态字符串；绑定的数据由 `Slot::text()` / `Slot::attr()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `rawXml()` 的等价原样输出。
+两条渲染路径行为一致；绑定的数据由 `Slot::text()` / `Slot::attr()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `rawXml()` 的等价原样输出。
 
 ## 最佳实践
 

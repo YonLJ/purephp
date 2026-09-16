@@ -68,10 +68,15 @@ input()->type('checkbox')->checked(true);  // checked="checked"
 input()->type('checkbox')->checked(false); // no checked attribute
 ```
 
+`Slot::attr()` follows the same rules at render time, so static and dynamic
+attributes cannot drift apart: a bound `false` omits the attribute and a bound
+`true` renders `checked="checked"`.
+
 ## Dynamic Props
 
 Dynamic attribute values use `Slot::attr()`. A `null` value omits the
-attribute at render time, which is also how conditional attributes work:
+attribute at render time (a bound `false` behaves the same), which is also how
+conditional attributes work:
 
 ```php
 <?php
@@ -112,9 +117,10 @@ Slot::text('subtitle')->default('—');       // fallback for a missing key
 - `required(false)` makes a slot optional; its value is then read with `??`
   semantics (`null` when missing).
 - `default($value)` provides a fallback for a missing key and makes the slot
-  optional.
-- `Slot::if()` ignores both modifiers: its condition is truthiness with a
-  `false` fallback.
+  optional. The default is inlined into the compiled renderer, so it must be a
+  value type: `null`, a scalar or an array of value types.
+- `Slot::if()` rejects both modifiers with a `LogicException`: its condition is
+  truthiness with a `false` fallback.
 
 ## Value Coercion and Escaping
 

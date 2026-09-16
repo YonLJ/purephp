@@ -55,8 +55,9 @@ echo $page([
 
 修饰符：
 
-- `->required(false)`——槽位可以缺失（`Slot::if` 上不可用）。
+- `->required(false)`——槽位可以缺失。
 - `->default($value)`——键缺失时使用的回退值。
+- `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - `Slot::sub(..., $map)` / `Slot::each(..., $map)` / `Slot::eachAny(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；组件正是通过这种方式把自己的 props 映射给子组件。
 
 值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
@@ -195,6 +196,7 @@ php examples/bootstrap-features/bench.php
 - 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()` / `Slot::eachAny()`，或者在渲染前规范化数据。
 - 编译后的代码与形状结构绑定；改变形状会改变它的 `id()`，从而改变其缓存文件。
 - 映射闭包按文件与行号生成指纹；就地修改闭包体不会改变指纹。编辑映射闭包时请清除缓存（或提升 `Compile::CACHE_VERSION`）。
+- 编译时会读取当前的形状树，`id()` 也反映调用时刻的树。已编译的渲染器会持续渲染它编译时的那份树，因此在修改已包装为形状的树之后需要调用 `Compile::flush()`；每个进程只构建一次形状即可完全避免此问题。
 - 形状不得包含请求数据——它们是进程级产物。
 
 ## 经典组件 → 形状映射

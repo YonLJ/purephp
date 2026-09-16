@@ -58,9 +58,10 @@ $br = new HTML('br');
 
 ## Save Methods
 
-### `toSave(string $path, string $header = '<!DOCTYPE html>'): int|false`
+### `toSave(string $path, ?string $header = null): int|false`
 
-Saves the HTML element to a file.
+Saves the HTML element to a file. When `$header` is omitted, `<!DOCTYPE html>`
+is written first.
 
 ```php
 <?php

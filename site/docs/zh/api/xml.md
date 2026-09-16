@@ -44,9 +44,9 @@ $customer = (new XML('customer', [
 
 ## 保存方法
 
-### `toSave(string $path, string $header = '<?xml version="1.0"?>'): int|false`
+### `toSave(string $path, ?string $header = null): int|false`
 
-将 XML 元素保存到文件。
+将 XML 元素保存到文件。省略 `$header` 时会先写入 `<?xml version="1.0"?>`。
 
 ```php
 <?php

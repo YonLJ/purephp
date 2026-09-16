@@ -14,9 +14,9 @@ The attribute and traversal methods below are shared by both paths.
 
 ## Attribute Methods
 
-### `class(string|array|Slot|null ...$args): self`
+### `class(array|bool|int|float|string|Slot|null ...$args): self`
 
-Sets the CSS class names of the element, with built-in `clx` function to handle multiple arguments.
+Sets the CSS class names of the element, with built-in `clx` function to handle multiple arguments. Booleans are ignored, which keeps the conditional idiom `->class('btn', $active && 'active')` working. Empty strings, `null` and empty arrays produce no `class` attribute.
 
 ```php
 <?php
@@ -40,7 +40,7 @@ div('Content')->class(['btn', 'btn-primary']);
 div('Content')->class(\Pure\Core\Slot::attr('classList'));
 ```
 
-### `className(string|array|null ...$args): self`
+### `className(array|bool|int|float|string|Slot|null ...$args): self`
 
 Alias for `class()` method, since `class` is a PHP keyword.
 
@@ -90,6 +90,11 @@ $element = div('Content')->setAttrs([
 ]);
 ```
 
+Values must be scalar, `Stringable`, `Slot` or `null`; arrays raise an
+`InvalidArgumentException` (use `class()`/`style()` for them). Keys are
+normalized like the chained setters: `className` → `class`, `data_id` →
+`data-id`.
+
 ### `setAttrByCb(string $key, callable $callback): self`
 
 Modifies an attribute value using a callback function. If the callback returns null, the attribute is removed.
@@ -137,9 +142,9 @@ $attrs = $element->getAttrs();
 // Returns: ['class' => 'container', 'id' => 'main']
 ```
 
-### `getAttr(string $key): string|Slot`
+### `getAttr(string $key): string|Slot|null`
 
-Gets the value of a specific attribute.
+Gets the value of a specific attribute, or `null` when the attribute is not set.
 
 ```php
 <?php
@@ -147,7 +152,8 @@ Gets the value of a specific attribute.
 use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
-echo $element->getAttr('class'); // Output: container
+echo $element->getAttr('class');   // Output: container
+var_dump($element->getAttr('id')); // NULL
 ```
 
 ### `getChildren(): array`
@@ -197,7 +203,9 @@ $element = div()->setSelfClose(true);
 
 ### `toJSON(): array`
 
-Converts the element to JSON array format.
+Converts the element to a nested JSON-compatible array: `tagName`, `attrs` and
+`children`. Attributes live under their own key so an attribute can never
+collide with the structural keys. Slots are described as `['slot' => 'name']`.
 
 ```php
 <?php
@@ -206,7 +214,11 @@ use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
 $json = $element->toJSON();
-// Returns: ['tagName' => 'div', 'children' => ['Content'], 'class' => 'container']
+// Returns: [
+//     'tagName' => 'div',
+//     'attrs' => ['class' => 'container'],
+//     'children' => ['Content'],
+// ]
 ```
 
 ### `render(): string`

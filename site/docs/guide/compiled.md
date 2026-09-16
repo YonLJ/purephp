@@ -61,8 +61,9 @@ paths share the same escaping implementation.
 
 Modifiers:
 
-- `->required(false)` — the slot may be missing (not available on `Slot::if`).
+- `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
+- `Slot::if()` rejects both modifiers with a `LogicException`.
 - `Slot::sub(..., $map)` / `Slot::each(..., $map)` / `Slot::eachAny(..., $map)` — derive
   the nested scope with a closure instead of reading `$data[$name]`; this is how a
   component maps its own props to a child component.
@@ -230,6 +231,11 @@ php examples/bootstrap-features/bench.php
 - Map closures are fingerprinted by file and line; changing a closure body in
   place does not change the fingerprint. Clear the cache (or bump
   `Compile::CACHE_VERSION`) when you edit map closures.
+- A shape tree is read live while it compiles, and `id()` reflects the tree as
+  it is at that moment. An already compiled renderer keeps rendering the tree
+  state it was built from, so call `Compile::flush()` after mutating a tree that
+  is already wrapped in a shape; building shapes once per process avoids this
+  entirely.
 - Shapes must not contain request data — they are process-level artifacts.
 
 ## Classic Component → Shape Mapping

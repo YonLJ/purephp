@@ -12,9 +12,9 @@
 
 ## 属性方法
 
-### `class(string|array|Slot|null ...$args): self`
+### `class(array|bool|int|float|string|Slot|null ...$args): self`
 
-设置元素的 CSS 类名，内置 `clx` 函数处理多个参数。
+设置元素的 CSS 类名，内置 `clx` 函数处理多个参数。布尔值会被忽略，因此条件写法 `->class('btn', $active && 'active')` 依然可用。空字符串、`null` 与空数组不会产生 `class` 属性。
 
 ```php
 <?php
@@ -38,7 +38,7 @@ div('Content')->class(['btn', 'btn-primary']);
 div('Content')->class(\Pure\Core\Slot::attr('classList'));
 ```
 
-### `className(string|array|null ...$args): self`
+### `className(array|bool|int|float|string|Slot|null ...$args): self`
 
 `class()` 方法的别名，因为 `class` 是 PHP 关键字。
 
@@ -88,6 +88,8 @@ $element = div('Content')->setAttrs([
 ]);
 ```
 
+值必须是标量、`Stringable`、`Slot` 或 `null`；数组会抛出 `InvalidArgumentException`（数组请使用 `class()`/`style()`）。键名会像链式 setter 一样归一化：`className` → `class`，`data_id` → `data-id`。
+
 ### `setAttrByCb(string $key, callable $callback): self`
 
 通过回调函数修改属性值。如果回调返回 null，则删除该属性。
@@ -135,9 +137,9 @@ $attrs = $element->getAttrs();
 // 返回: ['class' => 'container', 'id' => 'main']
 ```
 
-### `getAttr(string $key): string|Slot`
+### `getAttr(string $key): string|Slot|null`
 
-获取特定属性的值。
+获取指定属性的值；属性不存在时返回 `null`。
 
 ```php
 <?php
@@ -145,7 +147,8 @@ $attrs = $element->getAttrs();
 use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
-echo $element->getAttr('class'); // 输出: container
+echo $element->getAttr('class');   // 输出: container
+var_dump($element->getAttr('id')); // NULL
 ```
 
 ### `getChildren(): array`
@@ -195,7 +198,8 @@ $element = div()->setSelfClose(true);
 
 ### `toJSON(): array`
 
-将元素转换为 JSON 数组格式。
+把元素转换为嵌套的 JSON 兼容数组：`tagName`、`attrs`、`children`。属性放在独立
+键下，因此属性名永远不会与结构键冲突。槽位描述为 `['slot' => 'name']`。
 
 ```php
 <?php
@@ -204,7 +208,11 @@ use function Pure\HTML\div;
 
 $element = div('Content')->class('container');
 $json = $element->toJSON();
-// 返回: ['tagName' => 'div', 'children' => ['Content'], 'class' => 'container']
+// 返回: [
+//     'tagName' => 'div',
+//     'attrs' => ['class' => 'container'],
+//     'children' => ['Content'],
+// ]
 ```
 
 ### `render(): string`

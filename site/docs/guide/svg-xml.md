@@ -247,9 +247,10 @@ use function Pure\HTML\div;
 $element3 = div('content')->customAttr('value');
 ```
 
-## Important: String Content Filtering
+## Important: String Content Is Escaped
 
-⚠️ **Security Note**: String content containing XML/SVG tags is automatically filtered:
+⚠️ **Security Note**: String content is always escaped, so XML/SVG-looking text
+is safe and stays visible:
 
 ```php
 <?php
@@ -257,11 +258,11 @@ $element3 = div('content')->customAttr('value');
 use Pure\Core\XML;
 use function Pure\Utils\rawXml;
 
-// ❌ XML tags in strings are stripped
-XML::root('<item>This gets filtered</item>')->toPrint();
-// Output: <root>This gets filtered</root>
+// ✅ XML tags in strings are escaped, not parsed
+XML::root('<item>This stays visible</item>')->toPrint();
+// Output: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
-// ✅ Use rawXml to preserve XML content
+// ✅ Use rawXml to emit XML content
 XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 // Output: <root><item>This is preserved</item></root>
 ```
@@ -272,7 +273,7 @@ XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 - Working with pre-formatted markup
 - Including complex nested structures
 
-Compiled shapes filter static strings the same way; bound data is escaped by
+Both render paths behave the same way; bound data is escaped by
 `Slot::text()` / `Slot::attr()`, and `Slot::raw()` is the verbatim equivalent of
 `rawXml()` when data must keep its markup.
 
