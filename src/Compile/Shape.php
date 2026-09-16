@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Compile;
 
+use Pure\Compile\Internal\ShapeIndex;
 use Pure\Core\ShapeContract;
 use Pure\Core\Tag;
 

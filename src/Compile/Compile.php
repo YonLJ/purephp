@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace Pure\Compile;
 
+use Pure\Compile\Internal\CodeGenerator;
+use Pure\Compile\Internal\RendererCache;
+use Pure\Compile\Internal\ShapeGuard;
+use Pure\Compile\Internal\ShapeIndex;
 use Pure\Core\Tag;
 
 final class Compile
 {
-    /** Bump when the generated-code format or fingerprint composition changes. */
-    public const CACHE_VERSION = 3;
+    /**
+     * Bump when the generated-code format, the fingerprint composition or a
+     * class name referenced by generated code changes.
+     */
+    public const CACHE_VERSION = 4;
 
     private static int $generation = 0;
 

@@ -302,6 +302,6 @@ class CompileCacheTest extends TestCase
         $this->assertCount(1, $warnings);
         $this->assertStringContainsString('static', $warnings[0]);
         $this->assertStringContainsString(__FILE__ . ':', $warnings[0]);
-        $this->assertStringNotContainsString('src/compile/Compile.php', $warnings[0]);
+        $this->assertStringNotContainsString('src/Compile/Compile.php', $warnings[0]);
     }
 }

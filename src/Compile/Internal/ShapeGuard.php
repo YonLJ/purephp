@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pure\Compile;
+namespace Pure\Compile\Internal;
 
 /**
  * Development guard against building shapes on every request.

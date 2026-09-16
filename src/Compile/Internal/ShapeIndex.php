@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pure\Compile;
+namespace Pure\Compile\Internal;
 
 use Closure;
+use Pure\Compile\Compile;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\SlotKind;

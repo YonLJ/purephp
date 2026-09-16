@@ -5,16 +5,14 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Pure\\": "src/",
-            "Pure\\Core\\": "src/core",
-            "Pure\\Compile\\": "src/compile"
+            "Pure\\": "src/"
         },
         "files": [
-            "src/tags/html.php",
-            "src/tags/svg.php",
-            "src/utils/clx.php",
-            "src/utils/sty.php",
-            "src/utils/raw.php"
+            "src/HTML/functions.php",
+            "src/SVG/functions.php",
+            "src/Utils/clx.php",
+            "src/Utils/sty.php",
+            "src/Utils/raw.php"
         ]
     },
     "scripts": {

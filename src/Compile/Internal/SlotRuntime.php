@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pure\Compile;
+namespace Pure\Compile\Internal;
 
 use InvalidArgumentException;
 use Pure\Core\Escaper;
