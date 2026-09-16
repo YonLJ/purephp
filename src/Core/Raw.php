@@ -17,7 +17,11 @@ final class Raw
         return $this->content;
     }
 
-    /** @return array{type: string, content: string} */
+    /**
+     * Return the raw content as an associative array for serialization.
+     *
+     * @return array{type: string, content: string}
+     */
     public function toJSON(): array
     {
         return [

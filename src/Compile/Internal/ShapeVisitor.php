@@ -28,10 +28,14 @@ interface ShapeVisitor
 
     public function attribute(string $key, string|Slot $value, string $slotPath): void;
 
-    /** Attributes are complete and the tag is self-closing. */
+    /**
+     * Attributes are complete and the tag is self-closing.
+     */
     public function tagSelfClose(): void;
 
-    /** Attributes are complete and the tag has children. */
+    /**
+     * Attributes are complete and the tag has children.
+     */
     public function contentStart(): void;
 
     public function tagClose(string $tagName): void;
@@ -40,11 +44,27 @@ interface ShapeVisitor
 
     public function raw(Raw $raw): void;
 
-    /** A slot in child position; its subtree events follow, then slotLeave(). */
+    /**
+     * A slot in child position; its subtree events follow, then slotLeave().
+     *
+     * @param Slot $slot The slot being entered.
+     * @param string $slotPath The dotted path to this slot.
+     * @param string|null $mapKey The map key if a closure map is attached.
+     */
     public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void;
 
-    /** Branch boundary: 0 then / 1 else for Slot::if, the kind string for Slot::eachAny. */
+    /**
+     * Branch boundary: 0 then / 1 else for Slot::if, the kind string for Slot::eachAny.
+     *
+     * @param string|int $label The branch label (0, 1 or a kind string).
+     */
     public function slotBranch(string|int $label): void;
 
+    /**
+     * A slot in child position has finished; its subtree events are complete.
+     *
+     * @param Slot $slot The slot that was left.
+     * @param string $slotPath The dotted path to this slot.
+     */
     public function slotLeave(Slot $slot, string $slotPath): void;
 }

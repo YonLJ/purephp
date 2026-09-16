@@ -8,6 +8,7 @@ namespace Pure\Utils;
  * Join style declarations into an inline style attribute value.
  *
  * @param array<array-key, mixed>|null $list
+ * @return string|null The joined style string, or null if empty.
  */
 function sty(array|null $list): string|null
 {

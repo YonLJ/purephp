@@ -6,7 +6,12 @@ namespace Pure\Core;
 
 class XML extends Tag
 {
-    /** @param array<int, mixed> $children */
+    /**
+     * Factory method for creating XML elements via static method calls.
+     *
+     * @param string $tag The tag name.
+     * @param array<int, mixed> $children
+     */
     public static function __callStatic(string $tag, array $children): XML
     {
         return new XML($tag, $children);

@@ -28,7 +28,12 @@ const SELF_CLOSE_SVG_TAGS = [
 
 class SVG extends XML
 {
-    /** @param array<int, mixed> $children */
+    /**
+     * Initialize an SVG element. Self-closing tags are detected automatically.
+     *
+     * @param string $tagName The SVG tag name.
+     * @param array<int, mixed> $children
+     */
     public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
@@ -39,7 +44,12 @@ class SVG extends XML
         }
     }
 
-    /** @param array<int, mixed> $children */
+    /**
+     * Factory method for creating SVG elements via static method calls.
+     *
+     * @param string $tag The tag name.
+     * @param array<int, mixed> $children
+     */
     public static function __callStatic(string $tag, array $children): SVG
     {
         return new SVG($tag, $children);

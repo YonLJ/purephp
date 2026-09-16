@@ -20,7 +20,12 @@ final class Escaper
     /** Encoding shared with the compiled renderer's value coercion. */
     public const ENCODING = 'UTF-8';
 
-    /** Escape text content. Already-escaped entities are left intact. */
+    /**
+     * Escape text content. Already-escaped entities are left intact.
+     *
+     * @param string $value The value to escape.
+     * @return string The escaped value.
+     */
     public static function text(string $value): string
     {
         return htmlspecialchars($value, self::FLAGS, self::ENCODING, false);
@@ -29,6 +34,9 @@ final class Escaper
     /**
      * Escape an attribute value. Entity double-encoding is enabled, as
      * attribute values can legitimately contain `&` sequences.
+     *
+     * @param string $value The value to escape.
+     * @return string The escaped attribute value.
      */
     public static function attr(string $value): string
     {
@@ -40,6 +48,10 @@ final class Escaper
      *
      * Shared by the string renderer (Tag) and slot attribute serialization
      * (Pure\Compile\Internal\SlotRuntime::attrOpen).
+     *
+     * @param string $key The attribute name.
+     * @param string $value The attribute value.
+     * @return string The serialized attribute chunk.
      */
     public static function attribute(string $key, string $value): string
     {

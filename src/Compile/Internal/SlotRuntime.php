@@ -23,6 +23,10 @@ final class SlotRuntime
      * Escaper::text() is locked by CompileTest::testLiteralAndSlotEscapingStayByteIdentical.
      * Scalars and null take the inline branch, skipping the stringify() call;
      * other values are validated there.
+     *
+     * @param mixed $value The slot value.
+     * @param string $path The slot path for error messages.
+     * @return string The escaped text content.
      */
     public static function text(mixed $value, string $path): string
     {
@@ -33,7 +37,13 @@ final class SlotRuntime
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING, false);
     }
 
-    /** Coerce a slot value to an escaped attribute value (see text() on the inlined call). */
+    /**
+     * Coerce a slot value to an escaped attribute value (see text() on the inlined call).
+     *
+     * @param mixed $value The slot value.
+     * @param string $path The slot path for error messages.
+     * @return string The escaped attribute value.
+     */
     public static function attr(mixed $value, string $path): string
     {
         if (is_scalar($value) || $value === null) {
@@ -43,7 +53,13 @@ final class SlotRuntime
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING);
     }
 
-    /** Coerce a slot value to verbatim output. */
+    /**
+     * Coerce a slot value to verbatim output.
+     *
+     * @param mixed $value The slot value.
+     * @param string $path The slot path for error messages.
+     * @return string The verbatim output.
+     */
     public static function raw(mixed $value, string $path): string
     {
         if (is_scalar($value) || $value === null) {
@@ -59,6 +75,11 @@ final class SlotRuntime
      * Mirrors Tag::setAttr(): a null value leaves the attribute unset, `false`
      * omits it and `true` renders the name as its own value (`disabled`);
      * scalars take the inline branch.
+     *
+     * @param string $name The attribute name.
+     * @param mixed $value The attribute value.
+     * @param string $path The slot path for error messages.
+     * @return string The serialized attribute chunk, or empty string if null.
      */
     public static function attrOpen(string $name, mixed $value, string $path): string
     {
@@ -80,7 +101,10 @@ final class SlotRuntime
     /**
      * Ensure a sub-template value is an array usable as a nested data scope.
      *
+     * @param mixed $value The slot value.
+     * @param string $path The slot path for error messages.
      * @return array<array-key, mixed>
+     * @throws InvalidArgumentException When the value is not an array.
      */
     public static function sub(mixed $value, string $path): array
     {
@@ -94,7 +118,10 @@ final class SlotRuntime
     /**
      * Ensure a list slot value is iterable.
      *
+     * @param mixed $value The slot value.
+     * @param string $path The slot path for error messages.
      * @return iterable<array-key, mixed>
+     * @throws InvalidArgumentException When the value is not iterable.
      */
     public static function items(mixed $value, string $path): iterable
     {
@@ -108,7 +135,12 @@ final class SlotRuntime
     /**
      * Validate a heterogeneous list item and return its discriminator.
      *
+     * @param mixed $item The list item to validate.
+     * @param string $kindKey The key used to dispatch items by kind.
+     * @param string $path The slot path for error messages.
      * @param array<int, string> $allowed
+     * @return string The validated kind discriminator.
+     * @throws InvalidArgumentException When the item is invalid.
      */
     public static function kind(mixed $item, string $kindKey, string $path, array $allowed): string
     {
@@ -128,7 +160,12 @@ final class SlotRuntime
         return $kind;
     }
 
-    /** @param array<int, string> $allowed */
+    /**
+     * Format allowed kind values for error messages.
+     *
+     * @param array<int, string> $allowed
+     * @return string The formatted list string.
+     */
     private static function listKinds(array $allowed): string
     {
         return implode(', ', array_map(static fn (string $kind): string => "'{$kind}'", $allowed));

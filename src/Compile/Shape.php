@@ -24,7 +24,12 @@ final class Shape implements ShapeContract
     {
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * Render the compiled shape with the given data.
+     *
+     * @param array<string, mixed> $data
+     * @return string The rendered output.
+     */
     public function __invoke(array $data): string
     {
         return ($this->compile())($data);
@@ -61,13 +66,21 @@ final class Shape implements ShapeContract
         return ShapeIndex::of($this->tree)->id();
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * Render and output the compiled shape directly to stdout.
+     *
+     * @param array<string, mixed> $data
+     */
     public function print(array $data): void
     {
         echo ($this->compile())($data);
     }
 
-    /** @internal */
+    /**
+     * @internal
+     *
+     * @return Tag The underlying shape tree.
+     */
     public function tree(): Tag
     {
         return $this->tree;

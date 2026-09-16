@@ -23,31 +23,49 @@ final class Renderer
     ) {
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param array<string, mixed> $data The rendering data.
+     * @return string The rendered output.
+     */
     public function __invoke(array $data): string
     {
         return ($this->closure)($data, $this->maps);
     }
 
-    /** Structure fingerprint shared by the shape and its cached renderer. */
+    /**
+     * Structure fingerprint shared by the shape and its cached renderer.
+     *
+     * @return string The fingerprint.
+     */
     public function id(): string
     {
         return $this->id;
     }
 
-    /** Generated PHP source, for debugging. */
+    /**
+     * Generated PHP source, for debugging.
+     *
+     * @return string The source code.
+     */
     public function source(): string
     {
         return $this->source;
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param array<string, mixed> $data The rendering data.
+     */
     public function print(array $data): void
     {
         echo $this->__invoke($data);
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * @param string $path The file path to save to.
+     * @param array<string, mixed> $data The rendering data.
+     * @param string $header Optional document header to prepend.
+     * @return int|false The number of bytes written, or false on failure.
+     */
     public function save(string $path, array $data, string $header = ''): int|false
     {
         return file_put_contents($path, $header . $this->__invoke($data));
