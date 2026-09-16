@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pure\Compile;
+namespace Pure\Compile\Internal;
 
+use Pure\Compile\CompileException;
 use Pure\Core\Raw;
 use Pure\Core\ShapeContract;
 use Pure\Core\Slot;

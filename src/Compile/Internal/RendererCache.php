@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Pure\Compile;
+namespace Pure\Compile\Internal;
 
 use Closure;
 use InvalidArgumentException;
+use Pure\Compile\Compile;
+use Pure\Compile\Renderer;
 use Throwable;
 
 /**
