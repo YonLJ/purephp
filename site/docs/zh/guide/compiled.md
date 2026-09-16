@@ -176,15 +176,18 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 ## 性能
 
-在 PHP 8.4 上实测（603 个元素的页面，200 行数据）：
+在 PHP 8.4 上实测（604 个元素的页面，200 行数据；可用 `php bench/compare.php` 复现）：
 
 | 路径 | 每次渲染耗时 |
 | --- | --- |
-| 构建树 + `render()` | ~200–650 µs |
-| 编译形状 + 数据 | ~150 µs |
+| 构建树 + `render()` | ~700–750 µs |
+| 仅渲染（复用同一棵树） | ~220–230 µs |
+| 编译形状 + 数据 | ~120 µs |
 | 编译静态树（字面量） | < 1 µs |
 
-bootstrap features 示例的渲染速度比经典的构建加渲染路径快约 8 倍。复现方式：
+bootstrap features 示例使用编译路径后渲染约快 10 倍。
+
+复现方式：
 
 ```bash
 php bench/compare.php

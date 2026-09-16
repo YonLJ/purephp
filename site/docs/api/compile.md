@@ -184,15 +184,17 @@ contain slots, because there is no data to bind. `toJSON()` describes slots as
 
 ## Performance
 
-Measured on PHP 8.4 (603-element page, 200 rows):
+Measured on PHP 8.4 (604-element page, 200 rows; reproduce with
+`php bench/compare.php`):
 
 | Path | Time per render |
 | --- | --- |
-| build tree + `render()` | ~200–650 µs |
-| compiled shape + data | ~150 µs |
+| build tree + `render()` | ~700–750 µs |
+| render only (same tree reused) | ~220–230 µs |
+| compiled shape + data | ~120 µs |
 | compiled static tree (literal) | < 1 µs |
 
-The bootstrap features example renders about 8× faster with the compiled path.
+The bootstrap features example renders about 10× faster with the compiled path.
 
 Benchmarks are manual, not part of CI:
 
