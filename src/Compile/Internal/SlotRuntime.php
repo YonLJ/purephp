@@ -18,11 +18,12 @@ final class SlotRuntime
     /**
      * Coerce a slot value to escaped text content.
      *
-     * htmlspecialchars is called inline with the Escaper flags/encoding: the
-     * extra userland hop costs ~10% of a compiled render. Byte-identity with
-     * Escaper::text() is locked by CompileTest::testLiteralAndSlotEscapingStayByteIdentical.
-     * Scalars and null take the inline branch, skipping the stringify() call;
-     * other values are validated there.
+     * Generated renderers inline this call for scalar values (see
+     * CodeGenerator::valueExpr()) and only fall back here for null, Stringable
+     * and invalid values, so the documented empty-null behaviour and the
+     * path-bearing InvalidArgumentException stay in one place. Byte-identity
+     * with Escaper::text() is locked by
+     * CompileTest::testLiteralAndSlotEscapingStayByteIdentical.
      *
      * @param mixed $value The slot value.
      * @param string $path The slot path for error messages.
@@ -30,27 +31,7 @@ final class SlotRuntime
      */
     public static function text(mixed $value, string $path): string
     {
-        if (is_scalar($value) || $value === null) {
-            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING, false);
-        }
-
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING, false);
-    }
-
-    /**
-     * Coerce a slot value to an escaped attribute value (see text() on the inlined call).
-     *
-     * @param mixed $value The slot value.
-     * @param string $path The slot path for error messages.
-     * @return string The escaped attribute value.
-     */
-    public static function attr(mixed $value, string $path): string
-    {
-        if (is_scalar($value) || $value === null) {
-            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING);
-        }
-
-        return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING);
     }
 
     /**
@@ -62,10 +43,6 @@ final class SlotRuntime
      */
     public static function raw(mixed $value, string $path): string
     {
-        if (is_scalar($value) || $value === null) {
-            return (string)$value;
-        }
-
         return self::stringify($value, $path);
     }
 
@@ -73,8 +50,12 @@ final class SlotRuntime
      * Build one `name="value"` attribute chunk, omitting it for null values.
      *
      * Mirrors Tag::setAttr(): a null value leaves the attribute unset, `false`
-     * omits it and `true` renders the name as its own value (`disabled`);
-     * scalars take the inline branch.
+     * omits it and `true` renders the name as its own value (`disabled`).
+     *
+     * The scalar branch is deliberately separate: attribute slots inside
+     * `Slot::each()` loops run once per item, and merging it into stringify()
+     * costs ~8% of a list-heavy page's render (measured on the 604-element
+     * benchmark page).
      *
      * @param string $name The attribute name.
      * @param mixed $value The attribute value.
