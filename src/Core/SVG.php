@@ -4,26 +4,31 @@ declare(strict_types=1);
 
 namespace Pure\Core;
 
+/**
+ * Self-closing SVG elements, keyed as a set for O(1) membership tests.
+ *
+ * @var array<string, true>
+ */
 const SELF_CLOSE_SVG_TAGS = [
-    'animate',
-    'animateMotion',
-    'circle',
-    'ellipse',
-    'feBlend',
-    'feColorMatrix',
-    'feDisplacementMap',
-    'feDropShadow',
-    'feGaussianBlur',
-    'feImage',
-    'image',
-    'line',
-    'mpath',
-    'path',
-    'polygon',
-    'polyline',
-    'rect',
-    'stop',
-    'use',
+    'animate' => true,
+    'animateMotion' => true,
+    'circle' => true,
+    'ellipse' => true,
+    'feBlend' => true,
+    'feColorMatrix' => true,
+    'feDisplacementMap' => true,
+    'feDropShadow' => true,
+    'feGaussianBlur' => true,
+    'feImage' => true,
+    'image' => true,
+    'line' => true,
+    'mpath' => true,
+    'path' => true,
+    'polygon' => true,
+    'polyline' => true,
+    'rect' => true,
+    'stop' => true,
+    'use' => true,
 ];
 
 class SVG extends XML
@@ -37,9 +42,9 @@ class SVG extends XML
     public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
-        // SVG element names are case-sensitive (feBlend, animateMotion); compare
-        // exactly so the camelCase entries in SELF_CLOSE_SVG_TAGS can match.
-        if (in_array($tagName, SELF_CLOSE_SVG_TAGS, true)) {
+        // SVG element names are case-sensitive (feBlend, animateMotion), so the
+        // set lookup is exact and the camelCase entries can match.
+        if (isset(SELF_CLOSE_SVG_TAGS[$tagName])) {
             $this->setSelfClose(true);
         }
     }
