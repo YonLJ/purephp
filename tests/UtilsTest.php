@@ -52,6 +52,22 @@ class UtilsTest extends TestCase
         $this->assertSame('0', clx(['0']));
     }
 
+    public function testClxDropsNonStringArrayEntries(): void
+    {
+        // List entries: only non-empty strings and numbers survive.
+        $this->assertNull(clx([true, null, ['nested'], '']));
+        $this->assertSame('1 2.5', clx([1, 2.5]));
+        $this->assertSame('0', clx([0]));
+        $this->assertSame('0', clx([0.0]));
+        $this->assertSame('zero 5', clx([0 => 'zero', 5]));
+
+        // Map entries: the key survives only for truthy, non-empty-string values,
+        // and a numeric-string key has already become an int key.
+        $this->assertNull(clx(['zero' => 0, 'strict-zero' => '0', 'empty' => '', 'false' => false, 'none' => null]));
+        $this->assertNull(clx(['0' => true]));
+        $this->assertSame('a b', clx(['a' => 'yes', 'b' => 1]));
+    }
+
     public function testSty(): void
     {
         $this->assertEquals('background-color: red; height: 36px; border: 1px solid #fff;', sty([

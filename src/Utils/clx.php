@@ -16,37 +16,15 @@ namespace Pure\Utils;
  */
 function clx(array|bool|int|float|string|null ...$args): string|null
 {
-    if ($args === []) {
-        return null;
-    }
-
     $classList = [];
+
     foreach ($args as $className) {
-        if (is_bool($className)) {
-            continue;
-        }
-
-        if (is_string($className)) {
-            if ($className !== '') {
-                $classList[] = $className;
-            }
-
-            continue;
-        }
-
-        if (is_int($className) || is_float($className)) {
-            $classList[] = (string)$className;
-
-            continue;
-        }
-
         if (is_array($className)) {
             foreach ($className as $key => $value) {
                 if (is_int($key)) {
-                    if (is_string($value)) {
-                        if ($value !== '') {
-                            $classList[] = $value;
-                        }
+                    // List entry: keep non-empty strings and numbers.
+                    if (is_string($value) && $value !== '') {
+                        $classList[] = $value;
                     } elseif (is_int($value) || is_float($value)) {
                         $classList[] = (string)$value;
                     }
@@ -54,11 +32,20 @@ function clx(array|bool|int|float|string|null ...$args): string|null
                     continue;
                 }
 
+                // Map entry: a truthy value keeps the key as a class name.
                 if ($key !== '' && !empty($value)) {
                     $classList[] = $key;
                 }
             }
+
+            continue;
         }
+
+        if (is_bool($className) || $className === null || $className === '') {
+            continue;
+        }
+
+        $classList[] = is_string($className) ? $className : (string)$className;
     }
 
     return $classList === [] ? null : implode(' ', $classList);
