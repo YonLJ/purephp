@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 require_once '../../vendor/autoload.php';
 
+use Pure\Compile\Compile;
+
 use function Pure\HTML\a;
 use function Pure\HTML\body;
 use function Pure\HTML\div;
@@ -18,7 +20,8 @@ use function Pure\HTML\title;
 use function Pure\HTML\link;
 use function Pure\HTML\style;
 
-html(
+$page = Compile::shape(
+    html(
     head(
         meta()->charset('utf-8'),
         meta()->name('viewport')->content('width=device-width, initial-scale=1'),
@@ -119,4 +122,6 @@ html(
             )->class('mt-auto text-white-50')
         )->class('cover-container d-flex w-100 h-100 p-3 mx-auto flex-column')
     )->class('d-flex h-100 text-center text-bg-dark')
-)->lang('en')->class('h-100')->toPrint();
+)->lang('en')->class('h-100'));
+
+$page->print([]);

@@ -1,6 +1,10 @@
 <?php declare(strict_types=1);
+
 require_once '../../vendor/autoload.php';
 
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Slot;
 use Pure\Core\XML;
 
 $data = [
@@ -23,27 +27,31 @@ $data = [
     ]
 ];
 
-function Address(array $props)
+/**
+ * Address shape: fields follow the data key order; `city` is optional and
+ * rendered only when the record provides it.
+ */
+function AddressShape(): Shape
 {
-    extract($props);
+    static $shape;
 
-    return (
+    return $shape ??= Compile::shape(
         XML::address(
-            array_map(fn($x) => call_user_func("\Pure\Core\XML::$x", $props[$x]), array_keys($props))
+            XML::street(Slot::text('street')),
+            Slot::if('city', Compile::shape(XML::city(Slot::text('city')))),
+            XML::state(Slot::text('state')),
+            XML::zip(Slot::text('zip'))
         )
     );
 }
 
-/**
- * @var XML
- */
-$xml = (
+$page = Compile::shape(
     XML::customers(
         XML::customer(
             XML::name('Charter Group'),
-            array_map(fn($x) => Address($x), $data)
+            Slot::each('addresses', AddressShape())
         )->id('55000')
     )
 );
 
-$xml->toSave('./example.xml');
+$page->compile()->save('./example.xml', ['addresses' => $data], '<?xml version="1.0"?>');

@@ -1,15 +1,25 @@
 <?php declare(strict_types=1);
 
-use Pure\Core\HTML;
+require_once __DIR__ . '/ColLogo.php';
+require_once __DIR__ . '/ColLinks.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Slot;
 
 use function Pure\HTML\div;
 use function Pure\HTML\footer;
 
-function PageFooter(...$children): HTML
+function PageFooterShape(): Shape
 {
-    return footer(
-        div(
-            ...$children
-        )->class('row'),
-    )->class('pt-4 my-md-5 pt-md-5 border-top');
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        footer(
+            div(
+                Slot::sub('logo', ColLogoShape()),
+                Slot::each('links', ColLinksShape())
+            )->class('row'),
+        )->class('pt-4 my-md-5 pt-md-5 border-top')
+    );
 }

@@ -2,12 +2,17 @@
 
 require_once __DIR__ . '/Card.php';
 
-use Pure\Core\HTML;
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Slot;
+
 use function Pure\HTML\div;
 
-function CardDeck($cards): HTML
+function CardDeckShape(): Shape
 {
-    return div(
-        array_map(fn($data) => Card($data), $cards)
-    )->class('card-deck mb-3 text-center');
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(Slot::each('cards', CardShape()))->class('card-deck mb-3 text-center')
+    );
 }
