@@ -27,7 +27,8 @@ final class RendererCache
     /**
      * Validate an existing cache directory, creating it with 0700 when missing.
      *
-     * @return string the normalized directory path
+     * @param string $dir The directory path to validate or create.
+     * @return string The normalized directory path
      */
     public static function prepare(string $dir): string
     {
@@ -51,7 +52,12 @@ final class RendererCache
         return rtrim($dir, '/\\');
     }
 
-    /** Delete the renderer files written by this library. */
+    /**
+     * Delete the renderer files written by this library.
+     *
+     * @param string $dir The cache directory.
+     * @return int The number of files removed.
+     */
     public static function clear(string $dir): int
     {
         $removed = 0;
@@ -76,7 +82,12 @@ final class RendererCache
         return $removed;
     }
 
-    /** @param array<string, Closure> $maps */
+    /**
+     * @param string $file The cache file path.
+     * @param string $id The expected fingerprint.
+     * @param array<string, Closure> $maps
+     * @return Renderer|null The cached renderer, or null if invalid or missing.
+     */
     public static function load(string $file, string $id, array $maps): ?Renderer
     {
         $contents = @file_get_contents($file);
@@ -120,6 +131,14 @@ final class RendererCache
         return new Renderer($closure, $body, $id, array_values($maps));
     }
 
+    /**
+     * Write a compiled renderer to the on-disk cache.
+     *
+     * @param string $file The cache file path.
+     * @param string $source The generated PHP source code.
+     * @param string $id The shape fingerprint.
+     * @param int $mapCount The number of closures in $maps.
+     */
     public static function write(string $file, string $source, string $id, int $mapCount): void
     {
         $contents = self::HEADER_PREFIX . "id={$id} maps={$mapCount} v=" . Compile::CACHE_VERSION

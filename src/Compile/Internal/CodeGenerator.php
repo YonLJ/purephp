@@ -279,7 +279,11 @@ final class CodeGenerator implements ShapeVisitor
         }
     }
 
-    /** @return array{slot: Slot, slotPath: string, mapKey: ?string} */
+    /**
+     * Return the current slot stack context.
+     *
+     * @return array{slot: Slot, slotPath: string, mapKey: ?string}
+     */
     private function currentContext(): array
     {
         $context = end($this->slotStack);

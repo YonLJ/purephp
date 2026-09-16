@@ -22,7 +22,12 @@ const SELF_CLOSE_HTML_TAGS = [
 
 class HTML extends Tag
 {
-    /** @param array<int, mixed> $children */
+    /**
+     * Initialize an HTML element. Self-closing tags are detected automatically.
+     *
+     * @param string $tagName The HTML tag name.
+     * @param array<int, mixed> $children
+     */
     public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
@@ -31,7 +36,12 @@ class HTML extends Tag
         }
     }
 
-    /** @param array<int, mixed> $children */
+    /**
+     * Factory method for creating HTML elements via static method calls.
+     *
+     * @param string $tag The tag name.
+     * @param array<int, mixed> $children
+     */
     public static function __callStatic(string $tag, array $children): HTML
     {
         return new HTML($tag, $children);

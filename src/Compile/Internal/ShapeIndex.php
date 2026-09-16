@@ -51,7 +51,11 @@ final class ShapeIndex implements ShapeVisitor
         return $this->id;
     }
 
-    /** @return array<string, Closure> */
+    /**
+     * Return the closure maps collected during traversal.
+     *
+     * @return array<string, Closure>
+     */
     public function maps(): array
     {
         return $this->maps;

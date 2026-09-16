@@ -25,7 +25,10 @@ abstract class Tag
 
     private bool $selfClose = false;
 
-    /** @param array<int, mixed> $children */
+    /**
+     * @param string $tagName The HTML tag name.
+     * @param array<int, mixed> $children
+     */
     public function __construct(string $tagName, array $children = [])
     {
         $this->tagName = $tagName;
@@ -43,6 +46,8 @@ abstract class Tag
      * Attribute values and text children are escaped while rendering; Raw
      * children are emitted verbatim. Trees containing slots must be compiled
      * with Pure\Compile\Compile::shape() before rendering.
+     *
+     * @return string The rendered HTML string.
      */
     public function render(): string
     {
@@ -117,7 +122,13 @@ abstract class Tag
         return $attrs;
     }
 
-    /** @param array<int, mixed> $args */
+    /**
+     * Magic method for fluent attribute setting via unknown method names.
+     *
+     * @param string $key The attribute name.
+     * @param array<int, mixed> $args
+     * @return self
+     */
     public function __call(string $key, array $args): self
     {
         if (count($args) !== 1) {
@@ -129,13 +140,23 @@ abstract class Tag
         return $this;
     }
 
-    /** @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args */
+    /**
+     * Set the class attribute. Alias of class().
+     *
+     * @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args
+     * @return self
+     */
     public function className(array|bool|int|float|string|Slot|null ...$args): self
     {
         return $this->class(...$args);
     }
 
-    /** @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args */
+    /**
+     * Set the class attribute. Accepts strings, arrays, or Slot values.
+     *
+     * @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args
+     * @return self
+     */
     public function class(array|bool|int|float|string|Slot|null ...$args): self
     {
         if (count($args) === 1) {
@@ -162,7 +183,14 @@ abstract class Tag
         return $this->setAttr('class', clx(...$classes));
     }
 
-    /** @param string|array<string, mixed>|Slot|null $value */
+    /**
+     * Set the style attribute.
+     *
+     * Accepts a string, an array of style declarations, or a Slot.
+     *
+     * @param string|array<string, mixed>|Slot|null $value
+     * @return self
+     */
     public function style(string|array|Slot|null $value): self
     {
         if ($value instanceof Slot) {
@@ -176,11 +204,22 @@ abstract class Tag
         return $this->setAttr('style', $value);
     }
 
+    /**
+     * Check whether this tag is marked as self-closing.
+     *
+     * @return bool Whether the tag is self-closing.
+     */
     public function getSelfClose(): bool
     {
         return $this->selfClose;
     }
 
+    /**
+     * Set whether this tag is self-closing.
+     *
+     * @param bool $value Whether the tag should be self-closing.
+     * @return self
+     */
     public function setSelfClose(bool $value): self
     {
         if ($value && !empty($this->children)) {
@@ -192,30 +231,53 @@ abstract class Tag
         return $this;
     }
 
+    /**
+     * Get the tag name.
+     *
+     * @return string The tag name.
+     */
     public function getTagName(): string
     {
         return $this->tagName;
     }
 
-    /** @return array<string, string|Slot> */
+    /**
+     * Get all attributes.
+     *
+     * @return array<string, string|Slot>
+     */
     public function getAttrs(): array
     {
         return $this->attrs;
     }
 
-    /** Returns null when the attribute is not set. */
+    /**
+     * Get an attribute by key. Returns null when the attribute is not set.
+     *
+     * @param string $key The normalized attribute key.
+     * @return string|Slot|null The attribute value, or null if not set.
+     */
     public function getAttr(string $key): string|Slot|null
     {
         return $this->attrs[self::normalizeAttrKey($key)] ?? null;
     }
 
-    /** @return array<int, mixed> */
+    /**
+     * Get all children.
+     *
+     * @return array<int, mixed>
+     */
     public function getChildren(): array
     {
         return $this->children;
     }
 
-    /** @param array<string, mixed> $attrs */
+    /**
+     * Create a Tag instance and set multiple attributes at once.
+     *
+     * @param array<string, mixed> $attrs
+     * @return self
+     */
     public function setAttrs(array $attrs): self
     {
         if (empty($attrs)) {
@@ -233,6 +295,10 @@ abstract class Tag
      * Transform an attribute value with a callback. A null result removes the
      * attribute, a Slot result stores the slot, anything else is stringified.
      * A missing attribute passes null to the callback.
+     *
+     * @param string $key The attribute name.
+     * @param callable(mixed|null): (string|Slot|null) $callback
+     * @return self
      */
     public function setAttrByCb(string $key, callable $callback): self
     {
@@ -285,6 +351,9 @@ abstract class Tag
     /**
      * Attribute names are stored with hyphens; `className` is an alias of
      * `class`, so get/set round-trip like `__call` does.
+     *
+     * @param string $key The attribute key to normalize.
+     * @return string The normalized attribute key.
      */
     private static function normalizeAttrKey(string $key): string
     {
@@ -293,7 +362,17 @@ abstract class Tag
         return $key === 'className' ? 'class' : $key;
     }
 
-    /** Attribute values must be scalar, bool, Stringable, Slot or null. */
+    /**
+     * Validate and stringify an attribute value.
+     *
+     * Attribute values must be scalar, bool, Stringable, Slot or null.
+     *
+     * @param string $tagName The element tag name, for error messages.
+     * @param string $key The attribute name, for error messages.
+     * @param mixed $value The value to stringify.
+     * @return string The stringified value.
+     * @throws InvalidArgumentException When the value is not valid.
+     */
     private static function stringifyAttrValue(string $tagName, string $key, mixed $value): string
     {
         if (is_scalar($value) || $value instanceof Stringable) {
@@ -306,7 +385,11 @@ abstract class Tag
         );
     }
 
-    /** @param array<int, mixed> $children */
+    /**
+     * Append children to this tag.
+     *
+     * @param array<int, mixed> $children
+     */
     private function appendChildren(array $children): void
     {
         if (empty($children)) {
@@ -375,12 +458,21 @@ abstract class Tag
     /**
      * Write the rendered tree to a file. Subclasses provide their default
      * document header; pass $header to override it.
+     *
+     * @param string $path The file path to write to.
+     * @param string|null $header Optional document header to prepend.
+     * @return int|false The number of bytes written, or false on failure.
      */
     public function toSave(string $path, ?string $header = null): int|false
     {
         return file_put_contents($path, ($header ?? $this->defaultHeader()) . $this->render());
     }
 
+    /**
+     * Get the default document header. Override in subclasses.
+     *
+     * @return string The default document header (empty for the base class).
+     */
     protected function defaultHeader(): string
     {
         return '';

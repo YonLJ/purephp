@@ -29,6 +29,9 @@ final class Compile
      * a component function), never on every request. The tree is read live on
      * every (re)compile, so mutating it after rendering has no effect until
      * Compile::flush() is called.
+     *
+     * @param Tag $shape The shape tree to compile.
+     * @return Shape The compiled shape wrapper.
      */
     public static function shape(Tag $shape): Shape
     {
@@ -42,19 +45,27 @@ final class Compile
      *
      * The directory must be a private directory owned by the current user and
      * not writable by group or others (0700 is created when missing).
+     *
+     * @param string|null $dir The cache directory path, or null to disable.
      */
     public static function cachePath(?string $dir): void
     {
         self::$cachePath = $dir === null ? null : RendererCache::prepare($dir);
     }
 
-    /** Delete cached renderer files written by this library. Returns the number removed. */
+    /**
+     * Delete cached renderer files written by this library. Returns the number removed.
+     *
+     * @return int The number of cache files removed.
+     */
     public static function clearCache(): int
     {
         return self::$cachePath === null ? 0 : RendererCache::clear(self::$cachePath);
     }
 
-    /** Invalidate in-memory renderers so every shape recompiles on next use. */
+    /**
+     * Invalidate in-memory renderers so every shape recompiles on next use.
+     */
     public static function flush(): void
     {
         self::$generation++;
@@ -63,19 +74,30 @@ final class Compile
     /**
      * Warn once per call site when Compile::shape() is called repeatedly from
      * the same place, which usually means the shape is rebuilt per request.
+     *
+     * @param bool $enabled Whether to enable the warning (default true).
      */
     public static function guard(bool $enabled = true): void
     {
         ShapeGuard::enable($enabled);
     }
 
-    /** @internal */
+    /**
+     * @internal
+     *
+     * @return int The current compile generation counter.
+     */
     public static function generation(): int
     {
         return self::$generation;
     }
 
-    /** @internal */
+    /**
+     * @internal
+     *
+     * @param Tag $tree The shape tree to compile.
+     * @return Renderer The compiled renderer.
+     */
     public static function renderer(Tag $tree): Renderer
     {
         // A fresh index per compile keeps the fingerprint and the generated
