@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Pure\Core;
 
-use ErrorException;
-use Exception;
+use BadMethodCallException;
+use InvalidArgumentException;
 use LogicException;
 
 use function Pure\Utils\clx;
 use function Pure\Utils\sty;
+
+use Stringable;
 
 abstract class Tag
 {
@@ -103,29 +105,23 @@ abstract class Tag
             return '';
         }
 
-        $parts = [];
+        $attrs = '';
         foreach ($this->attrs as $key => $value) {
             if ($value instanceof Slot) {
                 throw new LogicException(self::slotError());
             }
 
-            $parts[] = "{$key}=\"" . Escaper::attr($value) . "\"";
+            $attrs .= Escaper::attribute($key, $value);
         }
 
-        return ' ' . implode(' ', $parts);
+        return $attrs;
     }
 
     /** @param array<int, mixed> $args */
     public function __call(string $key, array $args): self
     {
-        if (empty($args)) {
-            throw new ErrorException("'{$key}()' accepts one parameter. '{$this->tagName}()->{$key}() is invalid.'");
-        }
-
         if (count($args) !== 1) {
-            $argsStr = join(',', $args);
-
-            throw new Exception("'{$key}()' only accepts one parameter. '{$this->tagName}()->{$key}({$argsStr}) is invalid.'");
+            throw new BadMethodCallException("'{$key}()' accepts exactly one parameter, " . count($args) . ' given.');
         }
 
         $this->setAttr($key, $args[0]);
@@ -133,25 +129,27 @@ abstract class Tag
         return $this;
     }
 
-    /** @param array<int, string|array<int|string, mixed>|Slot|null> $args */
-    public function className(string|array|Slot|null ...$args): self
+    /** @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args */
+    public function className(array|bool|int|float|string|Slot|null ...$args): self
     {
         return $this->class(...$args);
     }
 
-    /** @param array<int, string|array<int|string, mixed>|Slot|null> $args */
-    public function class(string|array|Slot|null ...$args): self
+    /** @param array<int, array<int|string, mixed>|bool|int|float|string|Slot|null> $args */
+    public function class(array|bool|int|float|string|Slot|null ...$args): self
     {
         if (count($args) === 1) {
             $arg = $args[0];
-            if (is_string($arg) || is_null($arg) || $arg instanceof Slot) {
+            if ($arg instanceof Slot) {
                 return $this->setAttr('class', $arg);
             }
 
+            // Single strings go through clx too, so class('') behaves like
+            // class(null) and class(['']) instead of emitting class="".
             return $this->setAttr('class', clx($arg));
         }
 
-        /** @var array<int, string|array<int|string, mixed>|null> $classes */
+        /** @var array<int, array<int|string, mixed>|bool|int|float|string|null> $classes */
         $classes = [];
         foreach ($args as $arg) {
             if ($arg instanceof Slot) {
@@ -186,7 +184,7 @@ abstract class Tag
     public function setSelfClose(bool $value): self
     {
         if ($value && !empty($this->children)) {
-            throw new ErrorException("Self-closing element '{$this->tagName}' cannot have child elements.");
+            throw new LogicException("Self-closing element '{$this->tagName}' cannot have child elements.");
         }
 
         $this->selfClose = $value;
@@ -205,13 +203,10 @@ abstract class Tag
         return $this->attrs;
     }
 
-    public function getAttr(string $key): string|Slot
+    /** Returns null when the attribute is not set. */
+    public function getAttr(string $key): string|Slot|null
     {
-        if ($key === 'className') {
-            $key = 'class';
-        }
-
-        return $this->attrs[$key];
+        return $this->attrs[self::normalizeAttrKey($key)] ?? null;
     }
 
     /** @return array<int, mixed> */
@@ -234,15 +229,21 @@ abstract class Tag
         return $this;
     }
 
+    /**
+     * Transform an attribute value with a callback. A null result removes the
+     * attribute, a Slot result stores the slot, anything else is stringified.
+     * A missing attribute passes null to the callback.
+     */
     public function setAttrByCb(string $key, callable $callback): self
     {
-        $value = $callback($this->attrs[$key]);
+        $key = self::normalizeAttrKey($key);
+        $value = $callback($this->attrs[$key] ?? null);
         if (is_null($value)) {
             unset($this->attrs[$key]);
         } elseif ($value instanceof Slot) {
             $this->attrs[$key] = $value;
         } else {
-            $this->attrs[$key] = (string)$value;
+            $this->attrs[$key] = self::stringifyAttrValue($this->tagName, $key, $value);
         }
 
         return $this;
@@ -255,13 +256,13 @@ abstract class Tag
         }
 
         if (is_numeric($key)) {
-            throw new ErrorException("Element '{$this->tagName}' attribute name cannot be numbers '{$key}'.");
+            throw new InvalidArgumentException("Element '{$this->tagName}' attribute name cannot be numbers '{$key}'.");
         }
         if (empty($key)) {
-            throw new ErrorException("Element '{$this->tagName}' attribute name cannot be empty '{$key}'.");
+            throw new InvalidArgumentException("Element '{$this->tagName}' attribute name cannot be empty '{$key}'.");
         }
 
-        $key = str_replace('_', '-', $key);
+        $key = self::normalizeAttrKey((string)$key);
 
         if ($value instanceof Slot) {
             $this->attrs[$key] = $value;
@@ -276,9 +277,33 @@ abstract class Tag
             $value = $key;
         }
 
-        $this->attrs[$key] = (string)$value;
+        $this->attrs[$key] = self::stringifyAttrValue($this->tagName, $key, $value);
 
         return $this;
+    }
+
+    /**
+     * Attribute names are stored with hyphens; `className` is an alias of
+     * `class`, so get/set round-trip like `__call` does.
+     */
+    private static function normalizeAttrKey(string $key): string
+    {
+        $key = str_replace('_', '-', $key);
+
+        return $key === 'className' ? 'class' : $key;
+    }
+
+    /** Attribute values must be scalar, bool, Stringable, Slot or null. */
+    private static function stringifyAttrValue(string $tagName, string $key, mixed $value): string
+    {
+        if (is_scalar($value) || $value instanceof Stringable) {
+            return (string)$value;
+        }
+
+        throw new InvalidArgumentException(
+            "Element '{$tagName}' attribute '{$key}' must be a scalar, Stringable, Slot or null, "
+            . get_debug_type($value) . ' given; use class()/style() for arrays.'
+        );
     }
 
     /** @param array<int, mixed> $children */
@@ -306,13 +331,7 @@ abstract class Tag
             return;
         }
 
-        if (is_string($child)) {
-            $this->children[] = strip_tags($child);
-
-            return;
-        }
-
-        if ($child instanceof Raw || $child instanceof Tag || $child instanceof Slot) {
+        if (is_string($child) || $child instanceof Raw || $child instanceof Tag || $child instanceof Slot) {
             $this->children[] = $child;
 
             return;
@@ -321,7 +340,12 @@ abstract class Tag
         $this->children[] = (string)$child;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Structural snapshot: tag name, attributes and children. Attributes live
+     * under their own key so they cannot collide with the structural keys.
+     *
+     * @return array{tagName: string, attrs: array<string, mixed>, children: array<int, mixed>}
+     */
     public function toJSON(): array
     {
         $attrs = [];
@@ -329,8 +353,9 @@ abstract class Tag
             $attrs[$key] = $value instanceof Slot ? ['slot' => $value->name] : $value;
         }
 
-        return array_merge([
+        return [
             'tagName' => $this->tagName,
+            'attrs' => $attrs,
             'children' => array_map(
                 fn ($child) => match (true) {
                     $child instanceof Slot => ['slot' => $child->name],
@@ -339,7 +364,7 @@ abstract class Tag
                 },
                 $this->children
             ),
-        ], $attrs);
+        ];
     }
 
     public function toPrint(): void
@@ -347,5 +372,17 @@ abstract class Tag
         echo $this->__toString();
     }
 
-    abstract public function toSave(string $path): int|false;
+    /**
+     * Write the rendered tree to a file. Subclasses provide their default
+     * document header; pass $header to override it.
+     */
+    public function toSave(string $path, ?string $header = null): int|false
+    {
+        return file_put_contents($path, ($header ?? $this->defaultHeader()) . $this->render());
+    }
+
+    protected function defaultHeader(): string
+    {
+        return '';
+    }
 }

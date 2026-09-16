@@ -4,52 +4,62 @@ declare(strict_types=1);
 
 namespace Pure\Utils;
 
-/** @param array<int|string, mixed>|string|null ...$args */
-function clx(array|string|null ...$args): string|null
+/**
+ * Join class name arguments into a class attribute value.
+ *
+ * Kept: non-empty strings (including the string "0") and numbers.
+ * Dropped: null, booleans, and empty strings. Arrays contribute their
+ * string/number list entries, or their keys for map entries with a truthy
+ * value.
+ *
+ * @param array<int|string, mixed>|bool|int|float|string|null ...$args
+ */
+function clx(array|bool|int|float|string|null ...$args): string|null
 {
-    if (empty($args)) {
+    if ($args === []) {
         return null;
     }
 
     $classList = [];
     foreach ($args as $className) {
-        if (is_string($className) && !empty($className)) {
-            $classList[] = $className;
+        if (is_bool($className)) {
+            continue;
+        }
+
+        if (is_string($className)) {
+            if ($className !== '') {
+                $classList[] = $className;
+            }
+
+            continue;
+        }
+
+        if (is_int($className) || is_float($className)) {
+            $classList[] = (string)$className;
 
             continue;
         }
 
         if (is_array($className)) {
-            $classList = array_merge($classList, filterClassList($className));
+            foreach ($className as $key => $value) {
+                if (is_int($key)) {
+                    if (is_string($value)) {
+                        if ($value !== '') {
+                            $classList[] = $value;
+                        }
+                    } elseif (is_int($value) || is_float($value)) {
+                        $classList[] = (string)$value;
+                    }
+
+                    continue;
+                }
+
+                if ($key !== '' && !empty($value)) {
+                    $classList[] = $key;
+                }
+            }
         }
     }
 
-    if (empty($classList)) {
-        return null;
-    }
-
-    return join(' ', $classList);
-}
-
-/**
- * @param array<int|string, mixed> $classList
- * @return string[]
- */
-function filterClassList(array $classList): array
-{
-    /** @var string[] */
-    $classes = [];
-    foreach ($classList as $key => $val) {
-        if (is_int($key) && is_string($val) && !empty($val)) {
-            $classes[] = $val;
-
-            continue;
-        }
-
-        if (is_string($key) && !empty($key) && !empty($val)) {
-            $classes[] = $key;
-        }
-    }
-
-    return $classes;
+    return $classList === [] ? null : implode(' ', $classList);
 }

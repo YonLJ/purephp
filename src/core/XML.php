@@ -12,16 +12,8 @@ class XML extends Tag
         return new XML($tag, $children);
     }
 
-    public function toSave(string $path, string $header = '<?xml version="1.0"?>'): int|false
+    protected function defaultHeader(): string
     {
-        $handle = fopen($path, 'w');
-        if ($handle === false) {
-            return false;
-        }
-
-        $result = fwrite($handle, $header . $this->render());
-        fclose($handle);
-
-        return $result;
+        return '<?xml version="1.0"?>';
     }
 }

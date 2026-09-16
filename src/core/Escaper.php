@@ -26,9 +26,23 @@ final class Escaper
         return htmlspecialchars($value, self::FLAGS, self::ENCODING, false);
     }
 
-    /** Escape an attribute value. Already-escaped entities are re-encoded. */
+    /**
+     * Escape an attribute value. Entity double-encoding is enabled, as
+     * attribute values can legitimately contain `&` sequences.
+     */
     public static function attr(string $value): string
     {
         return htmlspecialchars($value, self::FLAGS, self::ENCODING);
+    }
+
+    /**
+     * Serialize one `key="value"` attribute, including its leading space.
+     *
+     * Shared by the string renderer (Tag) and slot attribute serialization
+     * (Pure\Compile\Internal\SlotRuntime::attrOpen).
+     */
+    public static function attribute(string $key, string $value): string
+    {
+        return ' ' . $key . '="' . self::attr($value) . '"';
     }
 }

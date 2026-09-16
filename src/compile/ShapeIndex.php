@@ -28,22 +28,32 @@ final class ShapeIndex implements ShapeVisitor
     /** @var array<string, Closure> */
     private array $maps = [];
 
+    private string $id = '';
+
     private function __construct()
     {
     }
 
-    /** @return array{id: string, maps: array<string, Closure>} */
-    public static function of(Tag $tree): array
+    public static function of(Tag $tree): self
     {
         $index = new self();
         (new ShapeWalker($index))->walk($tree);
 
         $salt = Compile::CACHE_VERSION . "\x00" . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        $index->id = sha1(implode("\x00", $index->parts) . "\x00" . $salt);
 
-        return [
-            'id' => sha1(implode("\x00", $index->parts) . "\x00" . $salt),
-            'maps' => $index->maps,
-        ];
+        return $index;
+    }
+
+    public function id(): string
+    {
+        return $this->id;
+    }
+
+    /** @return array<string, Closure> */
+    public function maps(): array
+    {
+        return $this->maps;
     }
 
     /**

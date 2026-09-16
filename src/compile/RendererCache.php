@@ -1,0 +1,142 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Pure\Compile;
+
+use Closure;
+use InvalidArgumentException;
+use Throwable;
+
+/**
+ * On-disk storage for compiled renderers.
+ *
+ * Cache files are content-addressed by the shape fingerprint, written
+ * atomically and validated by a header before they are included. Directory
+ * permissions are the trust boundary: the directory must be private and owned
+ * by the current user.
+ *
+ * @internal
+ */
+final class RendererCache
+{
+    private const HEADER_PREFIX = "<?php\n// purephp-shape ";
+
+    /**
+     * Validate an existing cache directory, creating it with 0700 when missing.
+     *
+     * @return string the normalized directory path
+     */
+    public static function prepare(string $dir): string
+    {
+        if (!is_dir($dir) && !@mkdir($dir, 0o700, true) && !is_dir($dir)) {
+            throw new InvalidArgumentException("compile cache directory '{$dir}' could not be created.");
+        }
+
+        $perms = @fileperms($dir);
+        if ($perms !== false && ($perms & 0o022) !== 0) {
+            throw new InvalidArgumentException("compile cache directory '{$dir}' must not be writable by group or others; use a private directory such as 0700.");
+        }
+
+        if (function_exists('posix_geteuid') && ($owner = @fileowner($dir)) !== false && $owner !== posix_geteuid()) {
+            throw new InvalidArgumentException("compile cache directory '{$dir}' is not owned by the current user.");
+        }
+
+        if (!is_writable($dir)) {
+            throw new InvalidArgumentException("compile cache directory '{$dir}' is not writable.");
+        }
+
+        return rtrim($dir, '/\\');
+    }
+
+    /** Delete the renderer files written by this library. */
+    public static function clear(string $dir): int
+    {
+        $removed = 0;
+        foreach (glob($dir . '/*.php') ?: [] as $file) {
+            $handle = @fopen($file, 'rb');
+            if ($handle === false) {
+                continue;
+            }
+
+            $header = (string)fread($handle, strlen(self::HEADER_PREFIX));
+            fclose($handle);
+
+            if ($header !== self::HEADER_PREFIX) {
+                continue;
+            }
+
+            if (@unlink($file)) {
+                $removed++;
+            }
+        }
+
+        return $removed;
+    }
+
+    /** @param array<string, Closure> $maps */
+    public static function load(string $file, string $id, array $maps): ?Renderer
+    {
+        $contents = @file_get_contents($file);
+        if ($contents === false) {
+            return null;
+        }
+
+        $pattern = '/\A<\?php\n\/\/ purephp-shape id=([0-9a-f]{40}) maps=(\d+) v=(\d+) php=([0-9]+\.[0-9]+)\n/';
+        if (preg_match($pattern, $contents, $matches) !== 1
+            || $matches[1] !== $id
+            || (int)$matches[2] !== count($maps)
+            || (int)$matches[3] !== Compile::CACHE_VERSION
+            || $matches[4] !== PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
+        ) {
+            @unlink($file);
+
+            return null;
+        }
+
+        try {
+            $closure = (static function (string $path): mixed {
+                return require $path;
+            })($file);
+        } catch (Throwable) {
+            @unlink($file);
+
+            return null;
+        }
+
+        if (!$closure instanceof Closure) {
+            @unlink($file);
+
+            return null;
+        }
+
+        $body = trim(substr($contents, strlen($matches[0])));
+        if (str_starts_with($body, 'return ') && str_ends_with($body, ';')) {
+            $body = substr($body, 7, -1);
+        }
+
+        return new Renderer($closure, $body, $id, array_values($maps));
+    }
+
+    public static function write(string $file, string $source, string $id, int $mapCount): void
+    {
+        $contents = self::HEADER_PREFIX . "id={$id} maps={$mapCount} v=" . Compile::CACHE_VERSION
+            . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\nreturn {$source};\n";
+
+        $tmp = @tempnam(dirname($file), 'shape-');
+        if ($tmp === false) {
+            return;
+        }
+
+        if (@file_put_contents($tmp, $contents) !== strlen($contents)) {
+            @unlink($tmp);
+
+            return;
+        }
+
+        @chmod($tmp, 0o600);
+        if (!@rename($tmp, $file)) {
+            @unlink($tmp);
+        }
+    }
+}

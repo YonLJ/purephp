@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Pure\Utils;
 
-/** @param array<string, mixed>|null $list */
+/**
+ * Join style declarations into an inline style attribute value.
+ *
+ * @param array<array-key, mixed>|null $list
+ */
 function sty(array|null $list): string|null
 {
     if (empty($list)) {
@@ -14,7 +18,6 @@ function sty(array|null $list): string|null
     /** @var string[] */
     $styleList = [];
     foreach ($list as $key => $val) {
-        // @phpstan-ignore function.alreadyNarrowedType
         if (is_string($key) && (is_string($val) || is_numeric($val))) {
             $styleList[] = "$key: $val";
         }

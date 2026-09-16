@@ -6,6 +6,7 @@ namespace Pure\Core;
 
 use Closure;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * Placeholder for data bound at render time by a compiled shape.
@@ -107,23 +108,50 @@ final class Slot
         return new self(SlotKind::EachAny, $name, null, true, null, $map, null, $shapes, $kindKey);
     }
 
-    /** Mark the slot as optional. Ignored by condition slots. */
+    /** Mark the slot as optional. */
     public function required(bool $required = true): self
     {
         if ($this->kind === SlotKind::If) {
-            return $this;
+            throw new LogicException("slot '{$this->name}' is a condition slot; required() does not apply.");
         }
 
         return new self($this->kind, $this->name, $this->shape, $required, $this->default, $this->map, $this->else, $this->variants, $this->kindKey);
     }
 
-    /** Provide a fallback value, making the slot optional. Ignored by condition slots. */
+    /**
+     * Provide a fallback value, making the slot optional.
+     *
+     * Defaults are inlined into the compiled renderer, so they must be value
+     * types: null, a scalar, or an array of value types.
+     */
     public function default(mixed $value): self
     {
         if ($this->kind === SlotKind::If) {
-            return $this;
+            throw new LogicException("slot '{$this->name}' is a condition slot; default() does not apply.");
+        }
+
+        if (!self::isValueType($value)) {
+            throw new InvalidArgumentException(
+                "slot '{$this->name}' default must be null, a scalar or an array of value types, "
+                . get_debug_type($value) . ' given.'
+            );
         }
 
         return new self($this->kind, $this->name, $this->shape, false, $value, $this->map, $this->else, $this->variants, $this->kindKey);
+    }
+
+    private static function isValueType(mixed $value): bool
+    {
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (!self::isValueType($item)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return is_scalar($value) || $value === null;
     }
 }
