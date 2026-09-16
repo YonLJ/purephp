@@ -63,3 +63,14 @@ per-process startup either way.
 
 ## Notes
 
+- Per-request note: function statics reset under standard PHP-FPM, so the
+  compiled-path win in these tables applies to long-running workers, or to
+  PHP-FPM with `Compile::cachePath()` loading a warm cache. A fresh process
+  pays the shape build plus compile cost on every request.
+- The compiled path is byte-identical to `render()`; `compare.php` and the
+  example benchmark assert it.
+- Subtrees without slots are folded into literals at compile time, which is
+  why fully static trees render in well under a microsecond.
+- The bootstrap page has many dynamic slots, so its per-render cost is
+  dominated by slot binding, not by static markup; the plan's ≤15 µs target for
+  it was not reached (~22 µs), while the fully static case is effectively free.
