@@ -10,7 +10,6 @@
 
 require_once '../../vendor/autoload.php';
 require_once '../../bench/fixtures/bootstrap-features/page.php';
-require_once './data.php';
 require_once './shapes.php';
 
 function bench(string $label, int $iters, callable $fn): float
@@ -28,9 +27,16 @@ function bench(string $label, int $iters, callable $fn): float
 }
 
 $iters = (int)($argv[1] ?? 2000);
+$data = require __DIR__ . '/data.php';
 $bindings = require __DIR__ . '/bindings.php';
 
-$classic = fn (): string => classicFeaturesPage($columnsData, $hangingData, $cardsData, $gridData, $featuresData)->render();
+$classic = fn (): string => classicFeaturesPage(
+    $data['columns'],
+    $data['hanging'],
+    $data['cards'],
+    $data['grid'],
+    $data['features']
+)->render();
 
 $shapeBuildStart = hrtime(true);
 $page = FeaturePageShape();

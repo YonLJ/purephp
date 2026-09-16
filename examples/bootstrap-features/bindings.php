@@ -5,27 +5,27 @@
  * slot names of shapes.php.
  */
 
-require_once __DIR__ . '/data.php';
+$data = require __DIR__ . '/data.php';
 
 return [
     'columns' => [
         'title' => 'Columns with icons',
-        'contents' => $columnsData,
+        'contents' => $data['columns'],
     ],
     'hanging' => [
         'title' => 'Hanging icons',
-        'contents' => $hangingData,
+        'contents' => $data['hanging'],
     ],
     'cards' => [
         'title' => 'Custom cards',
         'contents' => array_map(
             static fn (array $card): array => $card + ['style' => "background-image: url('{$card['bgImg']}');"],
-            $cardsData
+            $data['cards']
         ),
     ],
     'grid' => [
         'title' => 'Icon grid',
-        'contents' => $gridData,
+        'contents' => $data['grid'],
     ],
     'features' => [
         'title' => 'Features with title',
@@ -35,6 +35,6 @@ return [
             'link' => '#',
             'linkText' => 'Primary button',
         ],
-        'features' => $featuresData,
+        'features' => $data['features'],
     ],
 ];
