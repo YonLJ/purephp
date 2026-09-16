@@ -214,13 +214,6 @@ class CompileTest extends TestCase
         div(Slot::text('title'))->render();
     }
 
-    public function testSlotTreesCannotBeConvertedToDom(): void
-    {
-        $this->expectException(LogicException::class);
-
-        div(Slot::text('title'))->toDom();
-    }
-
     public function testToJsonDescribesSlots(): void
     {
         /** @var array{children: array<int, mixed>, class: mixed, tagName: string} $json */

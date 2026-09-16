@@ -103,7 +103,7 @@ $compiled->id();                  // stable sha1 of the generated source
 
 ## Trees with Slots Cannot Use Other Output Paths
 
-`render()`, `toDom()`, `toPrint()` and `toSave()` throw a `LogicException` for trees that
+`render()`, `toPrint()` and `toSave()` throw a `LogicException` for trees that
 contain slots, because there is no data to bind. `toJSON()` describes slots as
 `['slot' => 'name']`.
 

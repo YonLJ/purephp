@@ -98,7 +98,7 @@ $compiled->id();                  // 生成源码的稳定 sha1
 
 ## 含槽位的树不能用其它出口
 
-含槽位的树调用 `render()`、`toDom()`、`toPrint()`、`toSave()` 会抛 `LogicException`（没有可绑定
+含槽位的树调用 `render()`、`toPrint()`、`toSave()` 会抛 `LogicException`（没有可绑定
 的数据）；`toJSON()` 会把槽位描述为 `['slot' => 'name']`。
 
 ## 性能

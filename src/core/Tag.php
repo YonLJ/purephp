@@ -76,30 +76,6 @@ abstract class Tag
     }
 
     /**
-     * Reject slot placeholders on the paths that cannot bind data.
-     *
-     * @internal
-     */
-    public function assertNoSlots(): void
-    {
-        foreach ($this->attrs as $value) {
-            if ($value instanceof Slot) {
-                throw new LogicException(self::slotError());
-            }
-        }
-
-        foreach ($this->children as $child) {
-            if ($child instanceof Slot) {
-                throw new LogicException(self::slotError());
-            }
-
-            if ($child instanceof Tag) {
-                $child->assertNoSlots();
-            }
-        }
-    }
-
-    /**
      * Structural snapshot used by the compiled renderer.
      *
      * @internal
@@ -364,13 +340,6 @@ abstract class Tag
                 $this->children
             ),
         ], $attrs);
-    }
-
-    public function toDom(): Dom
-    {
-        $this->assertNoSlots();
-
-        return new Dom($this);
     }
 
     public function toPrint(): void

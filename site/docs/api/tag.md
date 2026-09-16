@@ -224,19 +224,6 @@ $element = div('Content')->class('container');
 echo (string)$element; // Output: <div class="container">Content</div>
 ```
 
-### `toDom(): Dom`
-
-Converts the element to Dom object (based on DOMDocument).
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-$element = div('Content');
-$dom = $element->toDom();
-```
-
 ### `toPrint(): void`
 
 Directly outputs the element's HTML string.
