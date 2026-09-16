@@ -122,7 +122,9 @@ $performant = new HTML('div', ['Performance content']);
 
 ### 1. String Content vs Raw Content
 
-⚠️ **Important**: When passing string content that contains HTML/XML tags, the tags will be automatically stripped for security:
+String children are always escaped, so they are safe for user input and never
+lose data: comparison text such as `2<3` or `a<b` stays visible. Markup-looking
+strings are shown as text instead of being parsed:
 
 ```php
 <?php
@@ -130,19 +132,19 @@ $performant = new HTML('div', ['Performance content']);
 use function Pure\HTML\div;
 use function Pure\Utils\rawHtml;
 
-// ❌ HTML tags in strings are stripped
-div('<p>This will be filtered</p>')->toPrint();
-// Output: <div>This will be filtered</div>
+// ✅ String content is escaped, not parsed
+div('<p>This is shown as text</p>')->toPrint();
+// Output: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
-// ✅ Use rawHtml to preserve HTML content
-div(rawHtml('<p>This will be preserved</p>'))->toPrint();
-// Output: <div><p>This will be preserved</p></div>
+// ✅ Use rawHtml to emit trusted markup
+div(rawHtml('<p>This is preserved</p>'))->toPrint();
+// Output: <div><p>This is preserved</p></div>
 ```
 
 **Why this matters:**
-- **Security**: Prevents XSS attacks from user input
-- **Predictability**: Ensures consistent behavior
-- **Intentionality**: Forces explicit choice for raw content
+- **Security**: Escaping neutralizes XSS in user input
+- **No data loss**: Text that merely looks like markup is kept verbatim
+- **Intentionality**: Emitting markup requires an explicit rawHtml()/rawXml() wrapper
 
 **When to use rawHtml/rawXml:**
 - Including pre-formatted HTML/XML content

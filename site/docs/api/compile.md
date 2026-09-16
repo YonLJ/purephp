@@ -81,6 +81,7 @@ Modifiers:
 
 - `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
+- `Slot::if()` rejects both modifiers with a `LogicException`.
 - `Slot::sub($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
   `Slot::eachAny(..., $map)` — derive the nested scope with a closure instead
   of reading `$data[$name]`; this is how a component maps its own props to a

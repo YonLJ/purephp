@@ -58,9 +58,9 @@ $br = new HTML('br');
 
 ## 保存方法
 
-### `toSave(string $path, string $header = '<!DOCTYPE html>'): int|false`
+### `toSave(string $path, ?string $header = null): int|false`
 
-将 HTML 元素保存到文件。
+将 HTML 元素保存到文件。省略 `$header` 时会先写入 `<!DOCTYPE html>`。
 
 ```php
 <?php

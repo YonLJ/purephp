@@ -62,9 +62,11 @@ input()->type('checkbox')->checked(true);  // checked="checked"
 input()->type('checkbox')->checked(false); // no checked attribute
 ```
 
+`Slot::attr()` 在渲染时遵循同样的规则，因此静态属性与动态属性不会出现语义偏差：绑定的 `false` 省略该属性，绑定的 `true` 渲染为 `checked="checked"`。
+
 ## 动态 props
 
-动态属性值使用 `Slot::attr()`。`null` 值会在渲染时省略该属性，条件属性也是以此实现的：
+动态属性值使用 `Slot::attr()`。`null` 值会在渲染时省略该属性（绑定的 `false` 行为相同），条件属性也是以此实现的：
 
 ```php
 <?php
@@ -103,8 +105,8 @@ Slot::text('subtitle')->default('—');       // 键缺失时的回退值
 ```
 
 - `required(false)` 使槽位可选；此时其值按 `??` 语义读取（缺失时为 `null`）。
-- `default($value)` 为缺失的键提供回退值，并使槽位可选。
-- `Slot::if()` 会忽略这两个修饰符：它的条件是真值判断，回退为 `false`。
+- `default($value)` 为缺失的键提供回退值，并使槽位可选。回退值会被内联进编译后的渲染器，因此必须是值类型：`null`、标量或由值类型组成的数组。
+- `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符：它的条件是真值判断，回退为 `false`。
 
 ## 值转换与转义
 

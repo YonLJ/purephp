@@ -44,9 +44,10 @@ $customer = (new XML('customer', [
 
 ## Save Methods
 
-### `toSave(string $path, string $header = '<?xml version="1.0"?>'): int|false`
+### `toSave(string $path, ?string $header = null): int|false`
 
-Saves the XML element to a file.
+Saves the XML element to a file. When `$header` is omitted,
+`<?xml version="1.0"?>` is written first.
 
 ```php
 <?php

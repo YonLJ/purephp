@@ -4,19 +4,20 @@
 
 ## Why Raw Content is Important
 
-By default, PurePHP automatically filters HTML/XML tags from string content for security reasons:
+String content is always escaped, so markup-looking text is displayed instead of
+being parsed:
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-// String content with HTML tags gets filtered
+// String content is escaped
 div('<p>Hello <strong>World</strong></p>')->toPrint();
-// Output: <div>Hello World</div> (tags are stripped)
+// Output: <div>&lt;p&gt;Hello &lt;strong&gt;World&lt;/strong&gt;&lt;/p&gt;</div>
 ```
 
-The Raw class allows you to bypass this filtering when you need to include trusted HTML/XML content:
+The Raw class emits content verbatim when you need trusted HTML/XML markup:
 
 ```php
 <?php
@@ -215,10 +216,9 @@ use function Pure\Utils\rawHtml;
 $userInput = $_POST['content']; // Could contain malicious scripts
 $dangerous = div(rawHtml($userInput));
 
-// ✅ SAFE - Sanitize user input first
+// ✅ SAFE - String children are escaped automatically
 $userInput = $_POST['content'];
-$sanitized = htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
-$safe = div($sanitized); // This will be automatically escaped
+$safe = div($userInput);
 
 // ✅ SAFE - Use Raw only for trusted content
 $trustedHtml = '<strong>Admin Message</strong>';

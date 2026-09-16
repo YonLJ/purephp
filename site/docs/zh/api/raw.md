@@ -4,19 +4,19 @@
 
 ## 为什么原始内容很重要
 
-默认情况下，PurePHP 出于安全考虑会自动过滤字符串内容中的 HTML/XML 标签：
+字符串内容一律会被转义，因此形似标记的文本会显示出来，而不会被解析：
 
 ```php
 <?php
 
 use function Pure\HTML\div;
 
-// 包含 HTML 标签的字符串内容会被过滤
+// 字符串内容被转义
 div('<p>你好 <strong>世界</strong></p>')->toPrint();
-// 输出: <div>你好 世界</div> (标签被过滤)
+// 输出: <div>&lt;p&gt;你好 &lt;strong&gt;世界&lt;/strong&gt;&lt;/p&gt;</div>
 ```
 
-Raw 类允许您在需要包含可信的 HTML/XML 内容时绕过这种过滤：
+Raw 类用于在需要可信 HTML/XML 标记时按原样输出：
 
 ```php
 <?php
@@ -215,10 +215,9 @@ use function Pure\Utils\rawHtml;
 $userInput = $_POST['content']; // 可能包含恶意脚本
 $dangerous = div(rawHtml($userInput));
 
-// ✅ 安全 - 首先清理用户输入
+// ✅ 安全 - 字符串子节点会自动转义
 $userInput = $_POST['content'];
-$sanitized = htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
-$safe = div($sanitized); // 这将被自动转义
+$safe = div($userInput);
 
 // ✅ 安全 - 仅对可信内容使用 Raw
 $trustedHtml = '<strong>管理员消息</strong>';
