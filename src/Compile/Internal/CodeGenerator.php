@@ -44,8 +44,8 @@ final class CodeGenerator implements ShapeVisitor
     /** @var list<string> */
     private array $dataStack = ['$v'];
 
-    /** @var WeakMap<Tag, bool>|null */
-    private ?WeakMap $slotCache = null;
+    /** @var WeakMap<Tag, bool> */
+    private WeakMap $slotCache;
 
     private string $literal = '';
 
@@ -53,6 +53,7 @@ final class CodeGenerator implements ShapeVisitor
 
     private function __construct()
     {
+        $this->slotCache = new WeakMap();
     }
 
     public static function compile(Tag $tree, ShapeIndex $index): Renderer
@@ -103,6 +104,9 @@ final class CodeGenerator implements ShapeVisitor
                 throw CompileException::slotInAttributePosition($value->kind, $slotPath);
             }
 
+            // Attribute slots keep the runtime helper: the ` name="value"` chunk
+            // format belongs to Escaper::attribute(), and duplicating it in
+            // generated code would split the escaping format across two places.
             $this->expression(
                 '\Pure\Compile\Internal\SlotRuntime::attrOpen(' . var_export($key, true) . ', '
                 . $this->valueAccess($value, $this->data(), $slotPath) . ', '
@@ -347,14 +351,31 @@ final class CodeGenerator implements ShapeVisitor
 
     private function valueExpr(string $kind, Slot $slot, string $dataVar, string $slotPath): string
     {
-        return '\Pure\Compile\Internal\SlotRuntime::' . $kind . '(' . $this->valueAccess($slot, $dataVar, $slotPath) . ', ' . var_export($slotPath, true) . ')';
+        $access = $this->valueAccess($slot, $dataVar, $slotPath);
+
+        if ($kind === 'text') {
+            // Scalars (the common case) are escaped inline with the shared
+            // Escaper constants. Everything else keeps the SlotRuntime::text()
+            // call, so null stays silent, Stringable values are coerced and
+            // arrays keep the InvalidArgumentException with the slot path.
+            return '(is_scalar($text = ' . $access . ')'
+                . ' ? htmlspecialchars((string)$text, \Pure\Core\Escaper::FLAGS, \Pure\Core\Escaper::ENCODING, false)'
+                . ' : \Pure\Compile\Internal\SlotRuntime::text($text, ' . var_export($slotPath, true) . '))';
+        }
+
+        return '\Pure\Compile\Internal\SlotRuntime::' . $kind . '(' . $access . ', ' . var_export($slotPath, true) . ')';
     }
 
+    /**
+     * Whether the subtree contains any slot.
+     *
+     * Memoized per tag: without the cache this walks every descendant again for
+     * each ancestor and compile time turns quadratic (depth 800: ~32 ms vs
+     * ~1.5 ms memoized).
+     */
     private function hasSlots(Tag $tag): bool
     {
-        /** @var WeakMap<Tag, bool> $cache */
-        $cache = $this->slotCache ?? new WeakMap();
-        $this->slotCache = $cache;
+        $cache = $this->slotCache;
 
         if (isset($cache[$tag])) {
             return $cache[$tag];

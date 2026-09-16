@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
+use Pure\Compile\Internal\SlotRuntime;
 use Pure\Core\HTML;
 use Pure\Core\MissingSlotException;
 use Pure\Core\Slot;
@@ -71,6 +72,33 @@ class CompileTest extends TestCase
         $this->assertSame('<div></div>', $shape(['value' => null]));
     }
 
+    public function testNullTextSlotDoesNotEmitDeprecations(): void
+    {
+        $shape = Compile::shape(div(Slot::text('value')));
+
+        set_error_handler(static function (int $severity, string $message): bool {
+            throw new ErrorException($message, 0, $severity);
+        });
+
+        try {
+            $this->assertSame('<div></div>', $shape(['value' => null]));
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    public function testScalarTextSlotValuesMatchTheRuntimeHelper(): void
+    {
+        $shape = Compile::shape(div(Slot::text('value')));
+        $cases = [[0, '0'], [1, '1'], [-3, '-3'], [2.5, '2.5'], [true, '1'], [false, ''], ['', ''], ['0', '0'], ['a & b', 'a &amp; b']];
+
+        foreach ($cases as [$value, $expected]) {
+            $this->assertSame('<div>' . $expected . '</div>', $shape(['value' => $value]));
+            // The inline scalar path must stay byte-identical to the helper.
+            $this->assertSame('<div>' . SlotRuntime::text($value, 'value') . '</div>', $shape(['value' => $value]));
+        }
+    }
+
     public function testNullAttributeSlotOmitsTheAttribute(): void
     {
         $shape = Compile::shape(div('x')->class(Slot::attr('cls')));
@@ -101,7 +129,23 @@ class CompileTest extends TestCase
             }
         };
 
-        $this->assertSame('<div>a &amp; b</div>', Compile::shape(div(Slot::text('value')))(['value' => $value]));
+        $shape = Compile::shape(div(Slot::text('value')));
+
+        $this->assertSame('<div>a &amp; b</div>', $shape(['value' => $value]));
+        // The non-scalar fallback must render exactly like its string form.
+        $this->assertSame($shape(['value' => 'a & b']), $shape(['value' => $value]));
+    }
+
+    public function testTextSlotEscapingUsesTheSharedEscaperConstants(): void
+    {
+        $source = Compile::shape(div(Slot::text('title')))->compile()->source();
+
+        // Escaping config stays owned by Escaper: generated code references the
+        // shared constants instead of copying the flag values. Whether the
+        // scalar path is inlined is a benchmark concern, not a unit-test
+        // contract; the behaviour tests above cover the runtime fallback.
+        $this->assertStringContainsString('\Pure\Core\Escaper::FLAGS', $source);
+        $this->assertStringContainsString('\Pure\Core\Escaper::ENCODING', $source);
     }
 
     public function testTagLikeTextIsEscapedOnBothPaths(): void

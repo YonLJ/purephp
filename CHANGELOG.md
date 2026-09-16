@@ -65,8 +65,12 @@ First public version. No tag has been cut yet.
   `htmlspecialchars` call for speed (byte-identity locked by a cross-path
   test). A single-consumer visitor adapter and single-use exception factories
   were dropped to keep the abstraction surface minimal.
-  `Compile::CACHE_VERSION` is now 3: fingerprints changed, so cached renderers
-  written by earlier versions are discarded and regenerated.
+  `Compile::CACHE_VERSION` was bumped for the new fingerprints, so cached
+  renderers written by earlier versions are discarded and regenerated.
+- `SELF_CLOSE_HTML_TAGS` and `SELF_CLOSE_SVG_TAGS` are keyed sets
+  (`['br' => true]`) instead of lists, so membership is an `isset()` lookup
+  rather than a linear `in_array()` scan; constructing a tag is ~10% faster
+  (shape building happens once per process, so this is a compile-time win).
 - Renamed the compiled renderer `Pure\Compile\Compiled` to
   `Pure\Compile\Renderer`; the internal code generator is now
   `Pure\Compile\Internal\CodeGenerator` (previously `Compiler`).
@@ -90,6 +94,13 @@ First public version. No tag has been cut yet.
 - `SlotRuntime` value coercion takes an inline fast path for scalars and null,
   and `Slot::attr()` handles booleans like `Tag::setAttr()`; compiled rendering
   is ~12% faster on the 600-element benchmark page (139–144 µs → 124–125 µs).
+- Generated renderers escape scalar text slots inline with the shared
+  `Escaper::FLAGS` / `Escaper::ENCODING` constants and keep
+  `SlotRuntime::text()` as the fallback for null, `Stringable` and invalid
+  values, so the documented empty-null and `InvalidArgumentException`
+  behaviour is unchanged; compiled rendering is another ~5% faster
+  (124 µs → 118 µs with opcache). `Compile::CACHE_VERSION` is now 5 because
+  the generated code and the layout both changed.
 - `Tag::toSave()` and `Renderer::save()` write with `file_put_contents()`, so a
   long document is always written in full.
 - Source directories now mirror the namespaces one to one —
@@ -99,8 +110,8 @@ First public version. No tag has been cut yet.
   `"Pure\\": "src/"` rule. The `@internal` machinery moved to
   `Pure\Compile\Internal\*` so the frozen surface (`Compile`, `Shape`,
   `Renderer`, `CompileException`) is visible in the tree. Generated renderers
-  reference `Pure\Compile\Internal\SlotRuntime`, so `Compile::CACHE_VERSION`
-  is now 4 and caches written by earlier versions are discarded and rebuilt.
+  reference `Pure\Compile\Internal\SlotRuntime`, so caches written by earlier
+  versions are discarded and rebuilt.
 
 ### Removed
 
