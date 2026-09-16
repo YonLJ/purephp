@@ -122,20 +122,16 @@ class XMLTest extends TestCase
         $this->assertCount(2, $xml->getChildren());
     }
 
-    public function testStringTagsAreFiltered(): void
+    public function testStringChildrenAreEscapedNotFiltered(): void
     {
-        // Test that string XML tags in children are filtered out
-        $xml = XML::root('<item>This should be filtered</item>', '<data>This too</data>');
+        // String children are text: XML-looking content is escaped, not
+        // dropped. Use rawXml() to emit trusted markup.
+        $xml = XML::root('<item>This stays visible</item>', 'a<b');
 
-        $output = (string)$xml;
-
-        // The XML tags should be stripped, only text content remains
-        $this->assertStringNotContainsString('<item>', $output);
-        $this->assertStringNotContainsString('</item>', $output);
-        $this->assertStringNotContainsString('<data>', $output);
-        $this->assertStringNotContainsString('</data>', $output);
-        $this->assertStringContainsString('This should be filtered', $output);
-        $this->assertStringContainsString('This too', $output);
+        $this->assertSame(
+            '<root>&lt;item&gt;This stays visible&lt;/item&gt;a&lt;b</root>',
+            (string)$xml
+        );
     }
 
     public function testRawXmlPreservesContent(): void

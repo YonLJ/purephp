@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pure\Compile;
 
-use Closure;
 use Pure\Core\ShapeContract;
 use Pure\Core\Tag;
 
@@ -18,9 +17,6 @@ final class Shape implements ShapeContract
 {
     private ?Renderer $renderer = null;
 
-    /** @var array{id: string, maps: array<string, Closure>}|null */
-    private ?array $index = null;
-
     private int $generation = -1;
 
     public function __construct(private readonly Tag $tree)
@@ -33,21 +29,35 @@ final class Shape implements ShapeContract
         return ($this->compile())($data);
     }
 
+    /**
+     * Compile the live tree, memoized per generation.
+     *
+     * The structure index is rebuilt from the live tree on every compile, so
+     * the id and the generated (or cached) code always describe the same tree
+     * state, even if the tree was mutated after a previous id() call.
+     */
     public function compile(): Renderer
     {
         $generation = Compile::generation();
         if ($this->renderer === null || $this->generation !== $generation) {
-            $this->renderer = Compile::renderer($this->tree, $this->index());
+            $this->renderer = Compile::renderer($this->tree);
             $this->generation = $generation;
         }
 
         return $this->renderer;
     }
 
-    /** Structure fingerprint, available without compiling the shape. */
+    /**
+     * Structure fingerprint of the current tree, available without compiling.
+     *
+     * Computed from the live tree on every call; a mutation is therefore
+     * reflected here immediately, while an already compiled renderer (and its
+     * cache file) keeps describing the tree state it was compiled from until
+     * Compile::flush() is called.
+     */
     public function id(): string
     {
-        return $this->index()['id'];
+        return ShapeIndex::of($this->tree)->id();
     }
 
     /** @param array<string, mixed> $data */
@@ -60,11 +70,5 @@ final class Shape implements ShapeContract
     public function tree(): Tag
     {
         return $this->tree;
-    }
-
-    /** @return array{id: string, maps: array<string, Closure>} */
-    private function index(): array
-    {
-        return $this->index ??= ShapeIndex::of($this->tree);
     }
 }

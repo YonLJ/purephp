@@ -32,7 +32,9 @@ class SVG extends XML
     public function __construct(string $tagName, array $children = [])
     {
         parent::__construct($tagName, $children);
-        if (in_array(strtolower($tagName), SELF_CLOSE_SVG_TAGS)) {
+        // SVG element names are case-sensitive (feBlend, animateMotion); compare
+        // exactly so the camelCase entries in SELF_CLOSE_SVG_TAGS can match.
+        if (in_array($tagName, SELF_CLOSE_SVG_TAGS, true)) {
             $this->setSelfClose(true);
         }
     }

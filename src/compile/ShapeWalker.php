@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pure\Compile;
 
-use LogicException;
 use Pure\Core\Raw;
 use Pure\Core\ShapeContract;
 use Pure\Core\Slot;
@@ -139,7 +138,7 @@ final class ShapeWalker
     private static function shapeTree(?ShapeContract $shape, string $slotPath): Tag
     {
         if ($shape === null) {
-            throw new LogicException("slot '{$slotPath}' is missing a shape.");
+            throw CompileException::missingShape($slotPath);
         }
 
         return $shape->tree();

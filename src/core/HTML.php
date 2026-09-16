@@ -37,16 +37,8 @@ class HTML extends Tag
         return new HTML($tag, $children);
     }
 
-    public function toSave(string $path, string $header = '<!DOCTYPE html>'): int|false
+    protected function defaultHeader(): string
     {
-        $handle = fopen($path, 'w');
-        if ($handle === false) {
-            return false;
-        }
-
-        $result = fwrite($handle, $header . $this->render());
-        fclose($handle);
-
-        return $result;
+        return '<!DOCTYPE html>';
     }
 }

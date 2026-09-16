@@ -143,6 +143,42 @@ class CompileCacheTest extends TestCase
         $this->assertStringContainsString('<?php', (string)file_get_contents($file));
     }
 
+    public function testMutatingATreeAfterCompileCannotPoisonTheCache(): void
+    {
+        $tree = div(span(Slot::text('v')))->class('c');
+        $shape = Compile::shape($tree);
+
+        $this->assertSame('<div class="c"><span>a</span></div>', $shape(['v' => 'a']));
+
+        Compile::clearCache();
+        $tree->class('late');
+        Compile::flush();
+
+        $this->assertSame('<div class="late"><span>a</span></div>', $shape(['v' => 'a']));
+
+        $fresh = Compile::shape(div(span(Slot::text('v')))->class('c'));
+
+        $this->assertNotSame($shape->id(), $fresh->id());
+        $this->assertSame('<div class="c"><span>a</span></div>', $fresh(['v' => 'a']));
+    }
+
+    public function testIdFollowsTreeMutationWithoutPoisoningTheCache(): void
+    {
+        $tree = div(span(Slot::text('v')));
+        $shape = Compile::shape($tree);
+        $idBefore = $shape->id();
+
+        $tree->class('late');
+
+        $this->assertNotSame($idBefore, $shape->id());
+        $this->assertSame('<div class="late"><span>a</span></div>', $shape(['v' => 'a']));
+
+        $fresh = Compile::shape(div(span(Slot::text('v'))));
+
+        $this->assertNotSame($shape->id(), $fresh->id());
+        $this->assertSame('<div><span>a</span></div>', $fresh(['v' => 'a']));
+    }
+
     public function testMapCountMismatchIsRegenerated(): void
     {
         $item = Compile::shape(li(Slot::text('label')));

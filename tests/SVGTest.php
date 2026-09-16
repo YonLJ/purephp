@@ -66,6 +66,26 @@ class SVGTest extends TestCase
         $this->assertTrue($rect->getSelfClose());
     }
 
+    public function testCamelCaseSelfClosingTagsAreRecognized(): void
+    {
+        foreach (['animateMotion', 'feBlend', 'feColorMatrix', 'feDisplacementMap', 'feDropShadow', 'feGaussianBlur', 'feImage'] as $name) {
+            $this->assertTrue((new SVG($name))->getSelfClose(), "SVG '{$name}' should be self-closing.");
+        }
+
+        // Element names are case-sensitive: a name outside the list stays a
+        // container, and an unknown casing is not folded into the list.
+        $this->assertFalse((new SVG('feComponentTransfer'))->getSelfClose());
+        $this->assertFalse((new SVG('FEBLEND'))->getSelfClose());
+    }
+
+    public function testCamelCaseSelfClosingTagOutput(): void
+    {
+        $this->assertSame(
+            '<feBlend in="SourceGraphic" />',
+            (string)(new SVG('feBlend'))->in('SourceGraphic')
+        );
+    }
+
     public function testAttributeValuesAreEscaped(): void
     {
         $circle = SVG::circle()

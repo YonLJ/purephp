@@ -13,30 +13,52 @@ use Stringable;
  *
  * @internal
  */
-final class Values
+final class SlotRuntime
 {
-    /** Coerce a slot value to escaped text content. */
+    /**
+     * Coerce a slot value to escaped text content.
+     *
+     * htmlspecialchars is called inline with the Escaper flags/encoding: the
+     * extra userland hop costs ~10% of a compiled render. Byte-identity with
+     * Escaper::text() is locked by CompileTest::testLiteralAndSlotEscapingStayByteIdentical.
+     * Scalars and null take the inline branch, skipping the stringify() call;
+     * other values are validated there.
+     */
     public static function text(mixed $value, string $path): string
     {
+        if (is_scalar($value) || $value === null) {
+            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING, false);
+        }
+
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING, false);
     }
 
-    /** Coerce a slot value to an escaped attribute value. */
+    /** Coerce a slot value to an escaped attribute value (see text() on the inlined call). */
     public static function attr(mixed $value, string $path): string
     {
+        if (is_scalar($value) || $value === null) {
+            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING);
+        }
+
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING);
     }
 
     /** Coerce a slot value to verbatim output. */
     public static function raw(mixed $value, string $path): string
     {
+        if (is_scalar($value) || $value === null) {
+            return (string)$value;
+        }
+
         return self::stringify($value, $path);
     }
 
     /**
      * Build one `name="value"` attribute chunk, omitting it for null values.
      *
-     * Mirrors Tag::setAttr(), where a null value leaves the attribute unset.
+     * Mirrors Tag::setAttr(): a null value leaves the attribute unset, `false`
+     * omits it and `true` renders the name as its own value (`disabled`);
+     * scalars take the inline branch.
      */
     public static function attrOpen(string $name, mixed $value, string $path): string
     {
@@ -44,7 +66,15 @@ final class Values
             return '';
         }
 
-        return ' ' . $name . '="' . self::attr($value, $path) . '"';
+        if (is_bool($value)) {
+            return $value ? Escaper::attribute($name, $name) : '';
+        }
+
+        if (is_scalar($value)) {
+            return Escaper::attribute($name, (string)$value);
+        }
+
+        return Escaper::attribute($name, self::stringify($value, $path));
     }
 
     /**
@@ -73,12 +103,6 @@ final class Values
         }
 
         return $value;
-    }
-
-    /** Coerce a condition value using PHP truthiness; missing keys arrive as false. */
-    public static function truthy(mixed $value): bool
-    {
-        return (bool)$value;
     }
 
     /**

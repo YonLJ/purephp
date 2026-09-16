@@ -129,20 +129,18 @@ class HTMLTest extends TestCase
         $this->assertSame(['Custom Content'], $tag->getChildren());
     }
 
-    public function testStringTagsAreFiltered(): void
+    public function testStringChildrenAreEscapedNotFiltered(): void
     {
-        // Test that string HTML tags in children are filtered out
-        $tag = HTML::div('<p>This should be filtered</p>', '<strong>This too</strong>');
+        // String children are text: markup-looking content is escaped so no
+        // data is lost. Use rawHtml() to emit trusted markup.
+        $tag = HTML::div('<p>This stays visible</p>', '<strong>This too</strong>', 'a<b');
 
         $output = (string)$tag;
 
-        // The HTML tags should be stripped, only text content remains
-        $this->assertStringNotContainsString('<p>', $output);
-        $this->assertStringNotContainsString('</p>', $output);
-        $this->assertStringNotContainsString('<strong>', $output);
-        $this->assertStringNotContainsString('</strong>', $output);
-        $this->assertStringContainsString('This should be filtered', $output);
-        $this->assertStringContainsString('This too', $output);
+        $this->assertSame(
+            '<div>&lt;p&gt;This stays visible&lt;/p&gt;&lt;strong&gt;This too&lt;/strong&gt;a&lt;b</div>',
+            $output
+        );
     }
 
     public function testRawHtmlPreservesContent(): void
@@ -253,254 +251,70 @@ class HTMLTest extends TestCase
 
     public function testToJSON(): void
     {
-        $expected = [
-            'tagName' => 'html',
-            'children' => [
-                [
-                    'tagName' => 'head',
-                    'children' => [
-                        [
-                            'tagName' => 'meta',
-                            'children' => [],
-                            'charset' => 'UTF-8',
-                        ],
-                        [
-                            'tagName' => 'title',
-                            'children' => [
-                                'Complex HTML Code Example',
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'tagName' => 'body',
-                    'children' => [
-                        [
-                            'tagName' => 'div',
-                            'children' => [
-                                [
-                                    'tagName' => 'header',
-                                    'children' => [
-                                        [
-                                            'tagName' => 'h1',
-                                            'children' => [
-                                                'Welcome to My Website',
-                                            ],
-                                        ],
-                                        [
-                                            'tagName' => 'nav',
-                                            'children' => [
-                                                [
-                                                    'tagName' => 'ul',
-                                                    'children' => [
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                [
-                                                                    'tagName' => 'a',
-                                                                    'children' => [
-                                                                        'Home',
-                                                                    ],
-                                                                    'href' => '#',
-                                                                ],
-                                                            ],
-                                                        ],
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                [
-                                                                    'tagName' => 'a',
-                                                                    'children' => [
-                                                                        'About',
-                                                                    ],
-                                                                    'href' => '#',
-                                                                ],
-                                                            ],
-                                                        ],
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                [
-                                                                    'tagName' => 'a',
-                                                                    'children' => [
-                                                                        'Services',
-                                                                    ],
-                                                                    'href' => '#',
-                                                                ],
-                                                            ],
-                                                        ],
-                                                        [
-                                                            'type' => 'HTML',
-                                                            'content' => '<li><a href="#">Contact</a></li>',
-                                                        ],
-                                                    ],
-                                                ],
-                                            ],
-                                            'class' => 'nav',
-                                        ],
-                                    ],
-                                    'class' => 'header',
-                                ],
-                                [
-                                    'tagName' => 'main',
-                                    'children' => [
-                                        [
-                                            'tagName' => 'section',
-                                            'children' => [
-                                                [
-                                                    'tagName' => 'h2',
-                                                    'children' => [
-                                                        'About Us',
-                                                    ],
-                                                ],
-                                                [
-                                                    'tagName' => 'p',
-                                                    'children' => [
-                                                        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam ultrices urna eget sapien ullamcorper, vel efficitur massa semper.',
-                                                    ],
-                                                ],
-                                                [
-                                                    'tagName' => 'a',
-                                                    'children' => [
-                                                        'Learn More',
-                                                    ],
-                                                    'href' => '#',
-                                                    'class' => 'button',
-                                                ],
-                                            ],
-                                            'class' => 'section',
-                                        ],
-                                        [
-                                            'tagName' => 'section',
-                                            'children' => [
-                                                [
-                                                    'tagName' => 'h2',
-                                                    'children' => [
-                                                        'Our Services',
-                                                    ],
-                                                ],
-                                                [
-                                                    'tagName' => 'ul',
-                                                    'children' => [
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                'Service 1',
-                                                            ],
-                                                        ],
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                'Service 2',
-                                                            ],
-                                                        ],
-                                                        [
-                                                            'tagName' => 'li',
-                                                            'children' => [
-                                                                'Service 3',
-                                                            ],
-                                                        ],
-                                                    ],
-                                                ],
-                                            ],
-                                            'class' => 'section',
-                                        ],
-                                        [
-                                            'tagName' => 'section',
-                                            'children' => [
-                                                [
-                                                    'tagName' => 'h2',
-                                                    'children' => [
-                                                        'Contact Us',
-                                                    ],
-                                                ],
-                                                [
-                                                    'tagName' => 'form',
-                                                    'children' => [
-                                                        [
-                                                            'tagName' => 'label',
-                                                            'children' => [
-                                                                'Name:',
-                                                            ],
-                                                            'class' => 'form-label',
-                                                            'for' => 'name',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'input',
-                                                            'children' => [],
-                                                            'type' => 'text',
-                                                            'id' => 'name',
-                                                            'name' => 'name',
-                                                            'class' => 'form-input',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'label',
-                                                            'children' => [
-                                                                'Email:',
-                                                            ],
-                                                            'class' => 'form-label',
-                                                            'for' => 'email',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'input',
-                                                            'children' => [],
-                                                            'type' => 'email',
-                                                            'id' => 'email',
-                                                            'name' => 'email',
-                                                            'class' => 'form-input',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'label',
-                                                            'children' => [
-                                                                'Message:',
-                                                            ],
-                                                            'class' => 'form-label',
-                                                            'for' => 'message',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'textarea',
-                                                            'children' => [],
-                                                            'id' => 'message',
-                                                            'name' => 'message',
-                                                            'class' => 'form-input',
-                                                        ],
-                                                        [
-                                                            'tagName' => 'button',
-                                                            'children' => [
-                                                                'Submit',
-                                                            ],
-                                                            'type' => 'submit',
-                                                            'class' => 'button',
-                                                        ],
-                                                    ],
-                                                ],
-                                            ],
-                                            'class' => 'section',
-                                        ],
-                                    ],
-                                ],
-                                [
-                                    'tagName' => 'footer',
-                                    'children' => [
-                                        [
-                                            'tagName' => 'p',
-                                            'children' => [
-                                                '&copy; 2023 My Website. All rights reserved.',
-                                            ],
-                                        ],
-                                    ],
-                                    'class' => 'footer',
-                                ],
-                            ],
-                            'class' => 'container',
-                        ],
-                    ],
-                ],
-            ],
-            'lang' => 'en',
-        ];
+        $expected = self::node('html', ['lang' => 'en'], [
+            self::node('head', [], [
+                self::node('meta', ['charset' => 'UTF-8']),
+                self::node('title', [], ['Complex HTML Code Example']),
+            ]),
+            self::node('body', [], [
+                self::node('div', ['class' => 'container'], [
+                    self::node('header', ['class' => 'header'], [
+                        self::node('h1', [], ['Welcome to My Website']),
+                        self::node('nav', ['class' => 'nav'], [
+                            self::node('ul', [], [
+                                self::node('li', [], [self::node('a', ['href' => '#'], ['Home'])]),
+                                self::node('li', [], [self::node('a', ['href' => '#'], ['About'])]),
+                                self::node('li', [], [self::node('a', ['href' => '#'], ['Services'])]),
+                                rawHtml('<li><a href="#">Contact</a></li>')->toJSON(),
+                            ]),
+                        ]),
+                    ]),
+                    self::node('main', [], [
+                        self::node('section', ['class' => 'section'], [
+                            self::node('h2', [], ['About Us']),
+                            self::node('p', [], ['Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam ultrices urna eget sapien ullamcorper, vel efficitur massa semper.']),
+                            self::node('a', ['href' => '#', 'class' => 'button'], ['Learn More']),
+                        ]),
+                        self::node('section', ['class' => 'section'], [
+                            self::node('h2', [], ['Our Services']),
+                            self::node('ul', [], [
+                                self::node('li', [], ['Service 1']),
+                                self::node('li', [], ['Service 2']),
+                                self::node('li', [], ['Service 3']),
+                            ]),
+                        ]),
+                        self::node('section', ['class' => 'section'], [
+                            self::node('h2', [], ['Contact Us']),
+                            self::node('form', [], [
+                                self::node('label', ['class' => 'form-label', 'for' => 'name'], ['Name:']),
+                                self::node('input', ['type' => 'text', 'id' => 'name', 'name' => 'name', 'class' => 'form-input']),
+                                self::node('label', ['class' => 'form-label', 'for' => 'email'], ['Email:']),
+                                self::node('input', ['type' => 'email', 'id' => 'email', 'name' => 'email', 'class' => 'form-input']),
+                                self::node('label', ['class' => 'form-label', 'for' => 'message'], ['Message:']),
+                                self::node('textarea', ['id' => 'message', 'name' => 'message', 'class' => 'form-input']),
+                                self::node('button', ['type' => 'submit', 'class' => 'button'], ['Submit']),
+                            ]),
+                        ]),
+                    ]),
+                    self::node('footer', ['class' => 'footer'], [
+                        self::node('p', [], ['&copy; 2023 My Website. All rights reserved.']),
+                    ]),
+                ]),
+            ]),
+        ]);
 
         $this->assertSame($expected, $this->html->toJSON());
+    }
+
+    /**
+     * @param array<string, mixed> $attrs
+     * @param array<int, mixed> $children
+     *
+     * @return array{tagName: string, attrs: array<string, mixed>, children: array<int, mixed>}
+     */
+    private static function node(string $tagName, array $attrs = [], array $children = []): array
+    {
+        return ['tagName' => $tagName, 'attrs' => $attrs, 'children' => $children];
     }
 
     public function testToString(): void

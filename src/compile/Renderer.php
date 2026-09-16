@@ -50,14 +50,6 @@ final class Renderer
     /** @param array<string, mixed> $data */
     public function save(string $path, array $data, string $header = ''): int|false
     {
-        $handle = fopen($path, 'w');
-        if ($handle === false) {
-            return false;
-        }
-
-        $result = fwrite($handle, $header . $this->__invoke($data));
-        fclose($handle);
-
-        return $result;
+        return file_put_contents($path, $header . $this->__invoke($data));
     }
 }
