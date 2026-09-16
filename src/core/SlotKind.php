@@ -11,4 +11,6 @@ enum SlotKind
     case Raw;
     case Sub;
     case Each;
+    case If;
+    case EachAny;
 }

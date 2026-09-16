@@ -9,6 +9,7 @@ use Pure\Core\MissingSlotException;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
+use function Pure\HTML\a;
 use function Pure\HTML\div;
 use function Pure\HTML\h1;
 use function Pure\HTML\li;
@@ -233,10 +234,11 @@ class CompileTest extends TestCase
 
     public function testCompiledSourceContainsStaticMarkup(): void
     {
-        $compiled = Compile::shape(div(span('static'))->class('x'))->compile();
+        $shape = Compile::shape(div(span('static'))->class('x'));
+        $compiled = $shape->compile();
 
         $this->assertStringContainsString("'<div class=\"x\"><span>static</span></div>'", $compiled->source());
-        $this->assertSame(sha1($compiled->source()), $compiled->id());
+        $this->assertSame($shape->id(), $compiled->id());
     }
 
     public function testCompiledPrintWritesOutput(): void
@@ -259,5 +261,223 @@ class CompileTest extends TestCase
         $this->assertSame('<!DOCTYPE html><div><item>x</item></div>', file_get_contents($path));
 
         unlink($path);
+    }
+
+    public function testStaticSubtreesAreFoldedFromRender(): void
+    {
+        $shape = Compile::shape(div(
+            Slot::text('title'),
+            div(span('static & more < 10'))->class('note')
+        ));
+
+        $this->assertSame(
+            '<div>t<div class="note"><span>static &amp; more &lt; 10</span></div></div>',
+            $shape(['title' => 't'])
+        );
+    }
+
+    public function testSlotFreeShapeCompilesToASingleLiteral(): void
+    {
+        $source = Compile::shape(div(span('static & more < 10'))->class('note'))->compile()->source();
+
+        $this->assertStringNotContainsString('Values::', $source);
+        $this->assertSame(1, substr_count($source, '$out .='));
+    }
+
+    public function testStaticSubShapeStillValidatesItsSlot(): void
+    {
+        $shape = Compile::shape(div(Slot::sub('child', Compile::shape(span('static')))));
+
+        $this->assertSame('<div><span>static</span></div>', $shape(['child' => []]));
+
+        try {
+            $shape([]);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame("slot 'child' is required but was not provided.", $e->getMessage());
+        }
+    }
+
+    public function testStaticEachItemStillValidatesItems(): void
+    {
+        $shape = Compile::shape(ul(Slot::each('items', Compile::shape(li('x')))));
+
+        $this->assertSame('<ul><li>x</li><li>x</li></ul>', $shape(['items' => [[], []]]));
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $shape(['items' => 'nope']);
+    }
+
+    public function testIfRendersThenOrElseBranch(): void
+    {
+        $shape = Compile::shape(div(
+            Slot::if('admin', Compile::shape(span('admin')), Compile::shape(span('guest')))
+        ));
+
+        $this->assertSame('<div><span>admin</span></div>', $shape(['admin' => true]));
+        $this->assertSame('<div><span>guest</span></div>', $shape(['admin' => false]));
+        $this->assertSame('<div><span>guest</span></div>', $shape([]));
+    }
+
+    public function testIfWithoutElseRendersNothingWhenFalsy(): void
+    {
+        $shape = Compile::shape(div('a', Slot::if('show', Compile::shape(span('!'))), 'b'));
+
+        $this->assertSame('<div>ab</div>', $shape([]));
+        $this->assertSame('<div>a<span>!</span>b</div>', $shape(['show' => 1]));
+    }
+
+    public function testIfBranchesShareTheCurrentScope(): void
+    {
+        $shape = Compile::shape(div(
+            Slot::if('admin', Compile::shape(span(Slot::text('name'))))
+        ));
+
+        $this->assertSame('<div><span>Tom</span></div>', $shape(['admin' => true, 'name' => 'Tom']));
+    }
+
+    public function testIfInsideEachUsesItemScope(): void
+    {
+        $item = Compile::shape(li(Slot::text('name'), Slot::if('admin', Compile::shape(span('(a)')))));
+        $shape = Compile::shape(ul(Slot::each('items', $item)));
+
+        $this->assertSame(
+            '<ul><li>Tom<span>(a)</span></li><li>Ann</li></ul>',
+            $shape(['items' => [['name' => 'Tom', 'admin' => true], ['name' => 'Ann']]])
+        );
+    }
+
+    public function testIfModifiersAreNoOps(): void
+    {
+        $slot = Slot::if('show', Compile::shape(span('x')))->default(true)->required(false);
+        $shape = Compile::shape(div($slot));
+
+        $this->assertSame('<div></div>', $shape([]));
+    }
+
+    public function testEachAnyDispatchesByKind(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'text' => Compile::shape(p(Slot::text('value'))),
+            'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
+        ])));
+
+        $this->assertSame(
+            '<div><p>hi</p><a href="#x">go</a></div>',
+            $shape(['items' => [
+                ['kind' => 'text', 'value' => 'hi'],
+                ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
+            ]])
+        );
+    }
+
+    public function testEachAnySupportsACustomKindKey(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'a' => Compile::shape(span('A')),
+        ], 'type')));
+
+        $this->assertSame('<div><span>A</span></div>', $shape(['items' => [['type' => 'a']]]));
+    }
+
+    public function testEachAnyAppliesTheMapPerItem(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'x' => Compile::shape(span(Slot::text('v'))),
+        ], 'kind', static fn (mixed $item): array => ['v' => '#' . (is_array($item) ? (string)$item['n'] : '')])));
+
+        $this->assertSame('<div><span>#1</span></div>', $shape(['items' => [['kind' => 'x', 'n' => 1]]]));
+    }
+
+    public function testEachAnyRejectsUnknownKindWithFullPath(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'text' => Compile::shape(p(Slot::text('value'))),
+        ])));
+
+        try {
+            $shape(['items' => [['kind' => 'video', 'value' => 'x']]]);
+            $this->fail('Expected InvalidArgumentException to be thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString("slot 'items[].kind'", $e->getMessage());
+            $this->assertStringContainsString("'text'", $e->getMessage());
+        }
+    }
+
+    public function testEachAnyRejectsNonArrayAndMissingKind(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'text' => Compile::shape(p(Slot::text('value'))),
+        ])));
+
+        try {
+            $shape(['items' => ['nope']]);
+            $this->fail('Expected InvalidArgumentException to be thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame("slot 'items[]' must be an array, string given.", $e->getMessage());
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("slot 'items[].kind' is required but was not provided.");
+
+        $shape(['items' => [[]]]);
+    }
+
+    public function testEachAnyRequiresAtLeastOneShape(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Slot::eachAny('items', []);
+    }
+
+    public function testIfSlotInAttributePositionIsRejected(): void
+    {
+        $this->expectException(LogicException::class);
+
+        Compile::shape(div('x')->class(Slot::if('on', Compile::shape(span('y')))))->compile();
+    }
+
+    public function testEachAnySlotInAttributePositionIsRejected(): void
+    {
+        $this->expectException(LogicException::class);
+
+        Compile::shape(div('x')->class(Slot::eachAny('items', [
+            'a' => Compile::shape(span('y')),
+        ])))->compile();
+    }
+
+    public function testDuplicateSlotPathsKeepDistinctMaps(): void
+    {
+        $listA = Compile::shape(div(Slot::text('tag')));
+        $listB = Compile::shape(div(Slot::text('tag')));
+
+        $shape = Compile::shape(div(
+            Slot::each('items', $listA, static fn (mixed $item): array => ['tag' => 'mapA']),
+            Slot::each('items', $listB, static fn (mixed $item): array => ['tag' => 'mapB'])
+        ));
+
+        $this->assertSame(
+            '<div><div>mapA</div><div>mapB</div></div>',
+            $shape(['items' => [['tag' => 'orig']]])
+        );
+    }
+
+    public function testIfBranchesKeepDistinctMaps(): void
+    {
+        $card = Compile::shape(span(Slot::text('tag')));
+        $then = Compile::shape(div(Slot::sub('card', $card, static fn (mixed $d): array => ['tag' => 'thenMap'])));
+        $else = Compile::shape(div(Slot::sub('card', $card, static fn (mixed $d): array => ['tag' => 'elseMap'])));
+
+        $shape = Compile::shape(div(Slot::if('flag', $then, $else)));
+
+        $this->assertSame(
+            '<div><div><span>thenMap</span></div></div>',
+            $shape(['flag' => true])
+        );
+        $this->assertSame(
+            '<div><div><span>elseMap</span></div></div>',
+            $shape(['flag' => false])
+        );
     }
 }

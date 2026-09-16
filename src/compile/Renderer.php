@@ -9,15 +9,16 @@ use Closure;
 /**
  * A compiled shape renderer.
  */
-final class Compiled
+final class Renderer
 {
     /**
-     * @param Closure(array<string, mixed>, array<int, Closure>): string $renderer
+     * @param Closure(array<string, mixed>, array<int, Closure>): string $closure
      * @param array<int, Closure> $maps
      */
     public function __construct(
-        private readonly Closure $renderer,
+        private readonly Closure $closure,
         private readonly string $source,
+        private readonly string $id,
         private readonly array $maps = [],
     ) {
     }
@@ -25,12 +26,13 @@ final class Compiled
     /** @param array<string, mixed> $data */
     public function __invoke(array $data): string
     {
-        return ($this->renderer)($data, $this->maps);
+        return ($this->closure)($data, $this->maps);
     }
 
+    /** Structure fingerprint shared by the shape and its cached renderer. */
     public function id(): string
     {
-        return sha1($this->source);
+        return $this->id;
     }
 
     /** Generated PHP source, for debugging. */
