@@ -6,6 +6,7 @@ namespace Pure\Core;
 
 use ErrorException;
 use Exception;
+use LogicException;
 
 use function Pure\Utils\clx;
 use function Pure\Utils\sty;
@@ -14,7 +15,7 @@ abstract class Tag
 {
     private string $tagName;
 
-    /** @var array<string, string> */
+    /** @var array<string, string|Slot> */
     private array $attrs = [];
 
     /** @var array<int, mixed> */
@@ -38,7 +39,8 @@ abstract class Tag
      * Render this subtree to an HTML string, without materializing an intermediate DOM copy.
      *
      * Attribute values and text children are escaped while rendering; Raw
-     * children are emitted verbatim.
+     * children are emitted verbatim. Trees containing slots must be compiled
+     * with Pure\Compile\Compile::shape() before rendering.
      */
     public function render(): string
     {
@@ -55,15 +57,63 @@ abstract class Tag
                 $content .= $child->render();
             } elseif ($child instanceof Raw) {
                 $content .= (string)$child;
+            } elseif ($child instanceof Slot) {
+                throw new LogicException(self::slotError());
             } else {
                 // Escape text children. double_encode=false keeps entities the
                 // caller already escaped (e.g. "&copy;") intact while encoding
                 // bare special characters.
-                $content .= htmlspecialchars((string)$child, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
+                $content .= Escaper::text((string)$child);
             }
         }
 
         return "<{$tagName}{$attrs}>{$content}</{$tagName}>";
+    }
+
+    private static function slotError(): string
+    {
+        return 'Tag trees containing slots cannot be rendered directly; use Pure\Compile\Compile::shape() and render with data.';
+    }
+
+    /**
+     * Reject slot placeholders on the paths that cannot bind data.
+     *
+     * @internal
+     */
+    public function assertNoSlots(): void
+    {
+        foreach ($this->attrs as $value) {
+            if ($value instanceof Slot) {
+                throw new LogicException(self::slotError());
+            }
+        }
+
+        foreach ($this->children as $child) {
+            if ($child instanceof Slot) {
+                throw new LogicException(self::slotError());
+            }
+
+            if ($child instanceof Tag) {
+                $child->assertNoSlots();
+            }
+        }
+    }
+
+    /**
+     * Structural snapshot used by the compiled renderer.
+     *
+     * @internal
+     *
+     * @return array{tagName: string, attrs: array<string, string|Slot>, children: array<int, mixed>, selfClose: bool}
+     */
+    public function export(): array
+    {
+        return [
+            'tagName' => $this->tagName,
+            'attrs' => $this->attrs,
+            'children' => $this->children,
+            'selfClose' => $this->selfClose,
+        ];
     }
 
     /**
@@ -79,7 +129,11 @@ abstract class Tag
 
         $parts = [];
         foreach ($this->attrs as $key => $value) {
-            $parts[] = "{$key}=\"" . htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\"";
+            if ($value instanceof Slot) {
+                throw new LogicException(self::slotError());
+            }
+
+            $parts[] = "{$key}=\"" . Escaper::attr($value) . "\"";
         }
 
         return ' ' . implode(' ', $parts);
@@ -103,25 +157,44 @@ abstract class Tag
         return $this;
     }
 
-    /** @param array<int, string|array<int|string, mixed>|null> $args */
-    public function className(string|array|null ...$args): self
+    /** @param array<int, string|array<int|string, mixed>|Slot|null> $args */
+    public function className(string|array|Slot|null ...$args): self
     {
         return $this->class(...$args);
     }
 
-    /** @param array<int, string|array<int|string, mixed>|null> $args */
-    public function class(string|array|null ...$args): self
+    /** @param array<int, string|array<int|string, mixed>|Slot|null> $args */
+    public function class(string|array|Slot|null ...$args): self
     {
-        $value = count($args) === 1 && is_string($args[0])
-            ? $args[0]
-            : clx(...$args);
+        if (count($args) === 1) {
+            $arg = $args[0];
+            if (is_string($arg) || is_null($arg) || $arg instanceof Slot) {
+                return $this->setAttr('class', $arg);
+            }
 
-        return $this->setAttr('class', $value);
+            return $this->setAttr('class', clx($arg));
+        }
+
+        /** @var array<int, string|array<int|string, mixed>|null> $classes */
+        $classes = [];
+        foreach ($args as $arg) {
+            if ($arg instanceof Slot) {
+                throw new LogicException("Slot values cannot be combined with other 'class' arguments.");
+            }
+
+            $classes[] = $arg;
+        }
+
+        return $this->setAttr('class', clx(...$classes));
     }
 
-    /** @param string|array<string, mixed>|null $value */
-    public function style(string|array|null $value): self
+    /** @param string|array<string, mixed>|Slot|null $value */
+    public function style(string|array|Slot|null $value): self
     {
+        if ($value instanceof Slot) {
+            return $this->setAttr('style', $value);
+        }
+
         if (!is_string($value)) {
             $value = sty($value);
         }
@@ -150,13 +223,13 @@ abstract class Tag
         return $this->tagName;
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|Slot> */
     public function getAttrs(): array
     {
         return $this->attrs;
     }
 
-    public function getAttr(string $key): string
+    public function getAttr(string $key): string|Slot
     {
         if ($key === 'className') {
             $key = 'class';
@@ -190,6 +263,8 @@ abstract class Tag
         $value = $callback($this->attrs[$key]);
         if (is_null($value)) {
             unset($this->attrs[$key]);
+        } elseif ($value instanceof Slot) {
+            $this->attrs[$key] = $value;
         } else {
             $this->attrs[$key] = (string)$value;
         }
@@ -211,6 +286,12 @@ abstract class Tag
         }
 
         $key = str_replace('_', '-', $key);
+
+        if ($value instanceof Slot) {
+            $this->attrs[$key] = $value;
+
+            return $this;
+        }
 
         if (is_bool($value)) {
             if ($value === false) {
@@ -255,7 +336,7 @@ abstract class Tag
             return;
         }
 
-        if ($child instanceof Raw || $child instanceof Tag) {
+        if ($child instanceof Raw || $child instanceof Tag || $child instanceof Slot) {
             $this->children[] = $child;
 
             return;
@@ -267,19 +348,28 @@ abstract class Tag
     /** @return array<string, mixed> */
     public function toJSON(): array
     {
+        $attrs = [];
+        foreach ($this->attrs as $key => $value) {
+            $attrs[$key] = $value instanceof Slot ? ['slot' => $value->name] : $value;
+        }
+
         return array_merge([
             'tagName' => $this->tagName,
             'children' => array_map(
-                fn ($child) => $child instanceof Tag || $child instanceof Raw
-                    ? $child->toJSON()
-                    : $child,
+                fn ($child) => match (true) {
+                    $child instanceof Slot => ['slot' => $child->name],
+                    $child instanceof Tag || $child instanceof Raw => $child->toJSON(),
+                    default => $child,
+                },
                 $this->children
             ),
-        ], $this->attrs);
+        ], $attrs);
     }
 
     public function toDom(): Dom
     {
+        $this->assertNoSlots();
+
         return new Dom($this);
     }
 

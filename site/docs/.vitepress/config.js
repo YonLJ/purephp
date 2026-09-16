@@ -73,7 +73,8 @@ export default {
             { text: 'SVG 类', link: '/zh/api/svg' },
             { text: 'XML 类', link: '/zh/api/xml' },
             { text: 'Raw 类', link: '/zh/api/raw' },
-            { text: 'DOM 类', link: '/zh/api/dom' }
+            { text: 'DOM 类', link: '/zh/api/dom' },
+            { text: '编译渲染', link: '/zh/api/compile' }
           ]
         }
       ],
@@ -122,7 +123,8 @@ export default {
             { text: 'SVG Class', link: '/api/svg' },
             { text: 'XML Class', link: '/api/xml' },
             { text: 'Raw Class', link: '/api/raw' },
-            { text: 'DOM Classes', link: '/api/dom' }
+            { text: 'DOM Classes', link: '/api/dom' },
+            { text: 'Compiled Rendering', link: '/api/compile' }
           ]
         }
       ],

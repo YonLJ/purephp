@@ -24,6 +24,9 @@ Represents raw HTML or XML content that bypasses escaping. Useful for including 
 ### [DOM Classes](/api/dom)
 Dom class provides DOMDocument-based representation for advanced DOM manipulation; string output is rendered directly from the tag tree via `render()` or `(string)`.
 
+### [Compiled Rendering](/api/compile)
+`Pure\Compile\Compile`, `Shape` and `Compiled` compile a data-free shape tree with `Slot` placeholders into a flat PHP renderer. Static markup becomes literals, so rendering is at parity with compiled template engines while keeping the fluent PHP API.
+
 ## Quick Reference
 
 ### Creating Elements
