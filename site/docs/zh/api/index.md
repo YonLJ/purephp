@@ -21,9 +21,6 @@ PurePHP 由几个核心类组成，它们协同工作提供强大的模板系统
 ### [Raw 类](/zh/api/raw)
 表示绕过转义的原始 HTML 或 XML 内容。用于包含预格式化内容或模板。
 
-### [DOM 类](/zh/api/dom)
-Dom 类提供基于 DOMDocument 的表示，用于高级 DOM 操作；字符串输出通过 `render()` 或 `(string)` 直接从标签树渲染。
-
 ### [编译渲染](/zh/api/compile)
 `Pure\Compile\Compile`、`Shape` 与 `Compiled` 把带 `Slot` 占位符的无数据形状树编译成扁平 PHP 渲染器：静态标记变成字面量，渲染速度与编译型模板引擎持平，同时保留流式 PHP API。
 
@@ -70,11 +67,10 @@ $element3 = new HTML('div', ['内容']);
 ```
 Tag (抽象)
 ├── HTML
-├── XML
-│   └── SVG
-└── Raw
+└── XML
+    └── SVG
 
-Dom
+Raw
 ```
 
 ## 下一步

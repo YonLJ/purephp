@@ -224,19 +224,6 @@ $element = div('内容')->class('container');
 echo (string)$element; // 输出: <div class="container">内容</div>
 ```
 
-### `toDom(): Dom`
-
-将元素转换为 Dom 对象（基于 DOMDocument）。
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-$element = div('内容');
-$dom = $element->toDom();
-```
-
 ### `toPrint(): void`
 
 直接输出元素的 HTML 字符串。
