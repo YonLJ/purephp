@@ -2,25 +2,21 @@
 
 require_once __DIR__ . '/Icon.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\h4;
-use function Pure\HTML\p;
+use function Pure\Component\render;
 
-function FeatureTitleShape(): Shape
+/**
+ * One "features with title" item.
+ *
+ * @param array{icon: string, title: string, content: string} $item
+ */
+function FeatureTitle(array $item): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            div(
-                Slot::child('icon', IconShape())
-            )->class('feature-icon-small d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-4 rounded-3'),
-            h4(Slot::text('title'))->class('fw-semibold mb-0'),
-            p(Slot::text('content'))->class('text-muted')
-        )->class('col d-flex flex-column gap-2')
+    return render(
+        __DIR__ . '/FeatureTitle.shape.php',
+        icon: (string)Icon('#' . $item['icon']),
+        title: $item['title'],
+        content: $item['content'],
     );
 }

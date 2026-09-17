@@ -4,10 +4,10 @@
  * Front controller and router of the bootstrap example — one entry, five routes:
  *
  *     /cover             the cover page (static markup, no compile step)
- *     /pure/features     the compiled features artifact (strict slots)
- *     /plain/features    the plain features view, no library at render time
- *     /pure/pricing      the compiled pricing artifact (strict slots)
- *     /plain/pricing     the plain pricing view, no library at render time
+ *     /pure/features     the features page function and component artifacts
+ *     /plain/features    the features plain view, components rendered up front
+ *     /pure/pricing      the pricing page function and component artifacts
+ *     /plain/pricing     the pricing plain view, components rendered up front
  *
  * A request that matches nothing gets a 404 that lists these routes. Static files
  * (style.css, pricing.css) are handed back to the server. Serve it with:
@@ -37,10 +37,10 @@ use function Pure\HTML\ul;
 // The routes of this router, for the 404 map below.
 $pages = [
     '/cover' => 'the cover page: static markup, no compile step',
-    '/pure/features' => 'features: the compiled artifact, strict slots',
-    '/plain/features' => 'features: the plain view, no library at render time',
-    '/pure/pricing' => 'pricing: the compiled artifact, strict slots',
-    '/plain/pricing' => 'pricing: the plain view, no library at render time',
+    '/pure/features' => 'features: the page function and the component artifacts',
+    '/plain/features' => 'features: the plain view, components rendered up front',
+    '/pure/pricing' => 'pricing: the page function and the component artifacts',
+    '/plain/pricing' => 'pricing: the plain view, components rendered up front',
 ];
 
 // A CLI run without a request URL renders the plain features view.

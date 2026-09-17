@@ -10,5 +10,7 @@ require_once __DIR__ . '/CounterData.php';
  */
 function plainIndexController(): string
 {
-    return plain('counter', counterData());
+    $data = counterData();
+
+    return plain('counter', ['initial' => $data['initial']]);
 }

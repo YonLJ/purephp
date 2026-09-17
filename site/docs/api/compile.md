@@ -42,24 +42,64 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
+## Function Components
+
+`Pure\Component\render()` and `Pure\Component\renderPage()` turn a template
+into `Raw` markup in one expression, which is what component and page functions
+are built on:
+
+```php
+<?php
+
+use Pure\Core\Raw;
+use function Pure\Component\render;
+
+function Card(string $title, string $content): Raw
+{
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content);
+}
+```
+
+| Function | Behavior |
+| --- | --- |
+| `render(string $source, mixed ...$data): Raw` | Renders a component template; the binder is cached per path |
+| `renderPage(string $source, array $data): Raw` | Same, prepending the document header of the root tag |
+| `component(Tag\|string $source): Closure` | Returns the `fn (array $data): Raw` binder of a fragment |
+| `page(Tag\|string $source): Closure` | Same, prepending the document header of the root tag |
+
+`render()` takes slot values as named arguments (`render($file, title: $title)`)
+or as an unpacked array with string keys; positional data is rejected with a
+`RuntimeException`. `component()` and `page()` are the lower-level helpers for
+inline trees or when you want to hold the binder in a `static` variable.
+
+A `Tag` source is compiled in place; a string is the path of a `*.shape.php`
+file. For a file, the sibling `*.pure.php` artifact is loaded when it exists and
+is at least as new as the shape file, so production skips building the shape
+tree and computing the fingerprint; otherwise the shape file is compiled (the
+disk cache still applies). Missing files, a template that does not return a
+`Shape` and an artifact that does not return a `Renderer` all raise a
+`RuntimeException` naming the file. Run `pure compile` to build artifacts and
+`pure compile --check` to keep them fresh in CI.
+
 ## Shape vs. Data
 
 A shape is a normal tag tree in which dynamic values are replaced by `Slot`
 placeholders. Shapes must not contain request data, and must be built **once
-per process** — put them in a `static` variable inside a component function,
-never inside a request handler.
+per process** — file-backed templates get that from the per-path binder cache
+in `render()`, inline trees from a `static` variable inside the component
+function, never inside a request handler.
 
-| Classic component | Compiled component |
+| Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function CardShape(): Shape` |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.shape.php` template |
 | `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
-| `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
+| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
+| `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject the joined markup through `Slot::raw()` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` |
+| `<Child($props)>` | call `Child(...)` and inject its `Raw` through `Slot::raw()` |
 
-Static child components need no slot at all — build them inside the shape and
-they are compiled into literals:
+A child component with no props can also be passed straight into the template as
+a child: `Raw` is valid tag content, and the subtree is compiled into literals.
 
 ```php
 $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));

@@ -3,23 +3,27 @@
 require_once __DIR__ . '/ColLogo.php';
 require_once __DIR__ . '/ColLinks.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\footer;
+use function Pure\Component\render;
 
-function PageFooterShape(): Shape
+/**
+ * The page footer: the logo column and the link columns.
+ *
+ * @param array{src: string, width: string, height: string, text: string} $logo
+ * @param list<array{title: string, links: list<array{text: string, href: string}>}> $columns
+ */
+function PageFooter(array $logo, array $columns): Raw
 {
-    static $shape;
+    $links = [];
 
-    return $shape ??= Compile::shape(
-        footer(
-            div(
-                Slot::child('logo', ColLogoShape()),
-                Slot::each('links', ColLinksShape())
-            )->class('row'),
-        )->class('pt-4 my-md-5 pt-md-5 border-top')
+    foreach ($columns as $column) {
+        $links[] = (string)ColLinks($column);
+    }
+
+    return render(
+        __DIR__ . '/PageFooter.shape.php',
+        logo: (string)ColLogo($logo),
+        columns: implode('', $links),
     );
 }

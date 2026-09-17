@@ -1,38 +1,29 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\button;
-use function Pure\HTML\div;
-use function Pure\HTML\h1;
-use function Pure\HTML\h4;
-use function Pure\HTML\li;
-use function Pure\HTML\small;
-use function Pure\HTML\ul;
+use function Pure\Component\render;
 
-function FeatureItemShape(): Shape
+/**
+ * One pricing card: the plan name, its price, the feature bullets and the
+ * button label with its class list.
+ *
+ * @param list<string> $features
+ */
+function Card(string $type, string $price, array $features, string $text, string $class): Raw
 {
-    static $shape;
+    $items = [];
 
-    return $shape ??= Compile::shape(li(Slot::text('value')));
-}
+    foreach ($features as $feature) {
+        $items[] = ['value' => $feature];
+    }
 
-function CardShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            div(
-                h4(Slot::text('type'))->class('my-0 font-weight-normal')
-            )->class('card-header'),
-            div(
-                h1('$', Slot::text('price'), ' ', small('/ mo')->class('text-muted'))->class('card-title pricing-card-title'),
-                ul(Slot::each('features', FeatureItemShape()))->class('list-unstyled mt-3 mb-4'),
-                button(Slot::text('text'))->type('button')->class(Slot::attr('class'))
-            )->class('card-body')
-        )->class('card mb-4 box-shadow')
+    return render(
+        __DIR__ . '/Card.shape.php',
+        type: $type,
+        price: $price,
+        features: $items,
+        text: $text,
+        class: $class,
     );
 }

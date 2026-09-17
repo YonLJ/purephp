@@ -2,16 +2,17 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/PricingData.php';
+require_once __DIR__ . '/../../views/pricing.php';
 
 /**
- * The pricing page controller for the plain view: the same data through
- * views/pricing.plain.php, which is markup and native PHP, so nothing of purephp
- * is called while it renders. The strict semantics stay with the artifact: a
- * missing slot is an undefined variable, a null attribute prints empty.
+ * The pricing page controller for the plain view: the same bindings through
+ * views/pricing.plain.php, which is markup and native PHP, so nothing of
+ * purephp is called while it renders. The component functions run here, before
+ * the view is loaded.
  *
  * @return string The rendered document.
  */
 function plainPricingController(): string
 {
-    return plain('pricing', pricingData());
+    return plain('pricing', pricingBindings(pricingData()));
 }

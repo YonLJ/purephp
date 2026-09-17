@@ -112,20 +112,21 @@ XML 标签同样继承自 `Tag`，因此文档以编译形状构建：树及其�
 
 ### 编译 XML 文档
 
-`AddressShape()` 渲染一条记录；`city` 是可选的，仅在数据提供时才出现：
+`Address()` 渲染一条记录；`city` 是可选的，仅在数据提供时才出现：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-function AddressShape(): Shape
-{
-    static $shape;
+use function Pure\Component\component;
 
-    return $shape ??= Compile::shape(
+function Address(array $address): Raw
+{
+    static $render;
+    $render ??= component(
         XML::address(
             XML::street(Slot::text('street')),
             Slot::if('city', Compile::shape(XML::city(Slot::text('city')))),
@@ -133,29 +134,39 @@ function AddressShape(): Shape
             XML::zip(Slot::text('zip'))
         )
     );
+
+    return $render($address);
 }
 
-$page = Compile::shape(
-    XML::customers(
-        XML::customer(
-            XML::name('Charter Group'),
-            Slot::each('addresses', AddressShape())
-        )->id('55000')
-    )
-);
+function Customers(array $addresses): Raw
+{
+    static $render;
+    $render ??= component(
+        XML::customers(
+            XML::customer(
+                XML::name('Charter Group'),
+                Slot::raw('addresses')
+            )->id('55000')
+        )
+    );
 
-$data = [
-    'addresses' => [
-        ['street' => '100 Main', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
-        ['street' => '720 Prospect', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
-        ['street' => '120 Ridge', 'state' => 'MA', 'zip' => '01760'],
-    ],
-];
+    $html = '';
 
-$page->save('./example.xml', $data);
+    foreach ($addresses as $address) {
+        $html .= (string)Address($address);
+    }
+
+    return $render(['addresses' => $html]);
+}
+
+echo Customers([
+    ['street' => '100 Main', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+    ['street' => '720 Prospect', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+    ['street' => '120 Ridge', 'state' => 'MA', 'zip' => '01760'],
+]);
 ```
 
-`Slot::each()` 为每条记录渲染一个 `AddressShape()`，`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。同一个形状可以用 `$page($data)` 或 `$page->print($data)` 渲染为字符串；`save()` 会补上根标签的文档声明，也可以把自定义声明作为 `Shape::save()` 的第三个参数传入（`Renderer::save()` 同样接受它，但默认不添加任何声明）。
+`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。要把文档写入文件，把渲染后的字符串交给 `file_put_contents()` 即可；底层模板上的 `Renderer::save()` 会补上根标签的文档声明，也可以把自定义声明作为第三个参数传入。
 
 ### 数据驱动的元素
 

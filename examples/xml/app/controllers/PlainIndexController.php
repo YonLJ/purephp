@@ -4,13 +4,13 @@ require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/XmlData.php';
 
 /**
- * The xml page controller for the plain view: the same data through
- * views/xml.plain.php, which is markup and native PHP, so nothing of purephp
- * is called while it renders.
+ * The xml page controller for the plain view.
  *
  * @return string The rendered document.
  */
 function plainIndexController(): string
 {
-    return plain('xml', xmlData());
+    $data = xmlData();
+
+    return plain('xml', ['addresses' => $data['addresses']]);
 }

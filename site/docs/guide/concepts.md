@@ -137,32 +137,33 @@ slot `title` resolves against the current item. Missing required keys throw
 
 ## Components
 
-A component is a function returning a `Shape`. Static props are function
-arguments and dynamic props are slots:
+A component is a function with typed parameters returning `Raw`; its template
+is a `*.shape.php` file the component binds with `render()`:
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// components/Card.shape.php
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 
-use function Pure\HTML\{div, h2, p};
+// components/Card.php
+use Pure\Core\Raw;
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
 ```
 
-See [Compiled Components](/guide/compiled) for lists, conditionals,
-heterogeneous lists, caching and the per-request guard.
+See [Components](/guide/components) for composition and
+[Compiled Components](/guide/compiled) for artifacts, caching and the
+per-request guard.
 
 ## State Management
 
@@ -173,24 +174,17 @@ State is plain PHP: values are passed into the shape as data.
 ```php
 <?php
 
-use Pure\Compile\Compile;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
 use function Pure\HTML\{button, div, p};
+use function Pure\Component\render;
 
-function CounterShape(): \Pure\Compile\Shape
+function Counter(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            p(Slot::text('count')),
-            button('Increment')->onclick('increment()')
-        )
-    );
+    return render(__DIR__ . '/Counter.shape.php', count: $count);
 }
 
-CounterShape()->print(['count' => 0]);
+echo Counter(0);
 ```
 
 ### Global State

@@ -11,6 +11,7 @@
             "Pure\\": "src/"
         },
         "files": [
+            "src/Component/functions.php",
             "src/HTML/functions.php",
             "src/SVG/functions.php",
             "src/Utils/clx.php",

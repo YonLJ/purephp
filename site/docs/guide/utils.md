@@ -168,32 +168,38 @@ are slots:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\button;
 use function Pure\Utils\sty;
 
-function ButtonShape(string $variant = 'primary', string $size = 'medium', bool $loading = false): Shape
-{
-    static $shapes = [];
+function ActionButton(
+    string $text,
+    string $variant = 'primary',
+    string $size = 'medium',
+    bool $loading = false,
+    ?string $style = null
+): Raw {
+    static $renders = [];
 
-    return $shapes["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= component(
         button(Slot::text('text'))
             ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
             ->style(Slot::attr('style'))
             ->disabled(Slot::attr('disabled'))
     );
+
+    return $render([
+        'text' => $text,
+        'style' => $style,
+        'disabled' => null,
+    ]);
 }
 
-// Bindings: render-time values only; a null attribute is omitted.
-$bindings = [
-    'text' => 'Submit',
-    'style' => sty(['opacity' => 1, 'cursor' => 'pointer']),
-    'disabled' => null,
-];
-
-ButtonShape('success', 'large')->print($bindings);
+// Render-time values only; a null attribute is omitted.
+echo ActionButton('Submit', 'success', 'large', false, sty(['opacity' => 1, 'cursor' => 'pointer']));
 ```
 
 ### Responsive Card Component
@@ -203,16 +209,17 @@ The card accepts an HTML child, so its content is bound with `Slot::raw()`:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, h3, p};
 
-function CardShape(string $theme = 'light', bool $featured = false): Shape
+function Card(string $title, Raw $content, string $theme = 'light', bool $featured = false): Raw
 {
-    static $shapes = [];
+    static $renders = [];
 
-    return $shapes["{$theme}|" . (int) $featured] ??= Compile::shape(
+    $render = $renders["{$theme}|" . (int) $featured] ??= component(
         div(
             h3(Slot::text('title'))->class('card-title'),
             p(Slot::raw('content'))->class('card-content')
@@ -225,15 +232,12 @@ function CardShape(string $theme = 'light', bool $featured = false): Shape
             'color' => $theme === 'dark' ? '#fff' : '#333'
         ])
     );
+
+    return $render(['title' => $title, 'content' => $content]);
 }
 
-// Bindings: `content` is trusted HTML, emitted verbatim.
-$bindings = [
-    'title' => 'Featured Card',
-    'content' => '<strong>This is the content</strong> of a featured card',
-];
-
-CardShape('dark', true)->print($bindings);
+// `content` is trusted HTML, emitted verbatim.
+echo Card('Featured Card', Raw::of('<strong>This is the content</strong> of a featured card'), 'dark', true);
 ```
 
 ## Next Steps

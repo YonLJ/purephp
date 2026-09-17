@@ -109,30 +109,31 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 
 ## 组件
 
-组件是返回 `Shape` 的函数。静态 props 是函数参数，动态 props 是槽位：
+组件是带类型化参数、返回 `Raw` 的函数；它的模板是一个 `*.shape.php` 文件，通过
+`render()` 绑定：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// components/Card.shape.php
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 
-use function Pure\HTML\{div, h2, p};
+// components/Card.php
+use Pure\Core\Raw;
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
 ```
 
-列表、条件、异构列表、缓存与每请求守卫请参见[编译组件](/zh/guide/compiled)。
+组合方式见[组件](/zh/guide/components)，产物、缓存与每请求守卫见[编译组件](/zh/guide/compiled)。
 
 ## 状态管理
 
@@ -143,24 +144,17 @@ function CardShape(string $classList = 'card'): Shape
 ```php
 <?php
 
-use Pure\Compile\Compile;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
 use function Pure\HTML\{button, div, p};
+use function Pure\Component\render;
 
-function CounterShape(): \Pure\Compile\Shape
+function Counter(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            p(Slot::text('count')),
-            button('Increment')->onclick('increment()')
-        )
-    );
+    return render(__DIR__ . '/Counter.shape.php', count: $count);
 }
 
-CounterShape()->print(['count' => 0]);
+echo Counter(0);
 ```
 
 ### 全局状态

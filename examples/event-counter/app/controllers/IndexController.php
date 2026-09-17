@@ -2,13 +2,14 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/CounterData.php';
+require_once __DIR__ . '/../../views/counter.php';
 
 /**
- * The counter page controller for the artifact.
+ * The counter page controller.
  *
  * @return string The rendered document.
  */
 function indexController(): string
 {
-    return view('counter.pure', counterData());
+    return (string)counterPage(counterData());
 }

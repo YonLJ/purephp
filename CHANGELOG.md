@@ -11,6 +11,19 @@ First public version. No tag has been cut yet.
 
 ### Added
 
+- `Pure\Component\render()` and `Pure\Component\renderPage()` render a
+  `*.shape.php` template in one expression (`render($file, title: $title)`),
+  caching the binder per path; `renderPage()` prepends the document header.
+  They are the one-liner form of `component()` / `page()`, which remain the
+  lower-level binders for inline trees.
+- `Pure\Component\component()` and `Pure\Component\page()` bind a shape tree
+  or a `*.shape.php` template to a `data → Raw` function, which is what
+  component and page functions are built on. When the sibling `*.pure.php`
+  artifact exists and is at least as new as the shape file, the binder loads it
+  instead of compiling, so production skips building the shape tree and
+  computing the fingerprint; otherwise it compiles the shape file (the disk
+  cache still applies). `page()` prepends the document header, `component()`
+  returns the fragment.
 - Compiled rendering: `Pure\Compile\Compile::shape()` compiles a data-free shape
   tree with `Pure\Core\Slot` placeholders into a flat PHP renderer
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
@@ -67,6 +80,13 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- The examples are function components: each component is a function with typed
+  parameters returning `Raw`, backed by a fixed `*.shape.php` template, and
+  pages are functions too (`featuresPage()`, `pricingPage()`, `counterPage()`,
+  `xmlPage()`, `coverPage()`). Child components are called by their parent and
+  injected through `Slot::raw()`; controllers call the page functions, the
+  example `view()` helper is gone, and the plain controllers pass the same
+  bindings to the dependency-free view file.
 - `Tag::toPrint()` / `Tag::toSave()` are now `Tag::print()` / `Tag::save()`, so
   one verb names one action everywhere: `render()` returns a string, `print()`
   echoes, `save()` writes a file, and `toJSON()` / `$source` expose the

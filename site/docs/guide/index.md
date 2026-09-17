@@ -25,34 +25,37 @@ Describe the page once, bind data at render time:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\page;
 use function Pure\HTML\{div, h1, p};
 
-function PageShape(): Shape
+function pageView(array $data): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= page(
         div(
             h1(Slot::text('heading')),
             p(Slot::text('lead'))
         )->class('container')
     );
+
+    return $render([
+        'heading' => $data['heading'],
+        'lead' => $data['lead'],
+    ]);
 }
 
-PageShape()->print([
-    'heading' => 'Welcome to PurePHP',
-    'lead' => 'A PHP template engine',
-]);
+echo pageView(['heading' => 'Welcome to PurePHP', 'lead' => 'A PHP template engine']);
 ```
 
-The shape is memoized in a `static` variable and compiled once per process —
+The renderer is memoized in a `static` variable and compiled once per process —
 in long-running workers. Under standard PHP-FPM every request starts fresh, so
-enable `Compile::cachePath()` and requests will load the compiled renderer
-instead of rebuilding it. See [Compiled Components](/guide/compiled) for
-components, lists, conditionals and caching.
+enable `Compile::cachePath()` or precompile the template with
+`vendor/bin/pure compile` so requests load the artifact instead of rebuilding
+it. See [Components](/guide/components) and
+[Compiled Components](/guide/compiled) for lists, conditionals and caching.
 
 ## Immediate Rendering
 

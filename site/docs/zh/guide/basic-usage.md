@@ -299,16 +299,16 @@ div(
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, p};
 
-function MessageShape(): Shape
+function Message(bool $isLoggedIn): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             Slot::if(
                 'isLoggedIn',
@@ -317,12 +317,14 @@ function MessageShape(): Shape
             )
         )->class('message')
     );
+
+    return $render(['isLoggedIn' => $isLoggedIn]);
 }
 
-MessageShape()->print(['isLoggedIn' => true]);
+echo Message(true);
 ```
 
-`Slot::if()` 读取当前数据作用域，缺失的键视为 false，形状通过 `static` 记忆化，因此每个进程只构建一次。
+`Slot::if()` 读取当前数据作用域，缺失的键视为 false，renderer 通过 `static` 记忆化，因此每个进程只构建一次。
 
 ## 循环渲染
 
@@ -345,31 +347,30 @@ ul(
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{ul, li};
 
-function FruitsShape(): Shape
+function Fruits(array $items): Raw
 {
-    static $shape;
-    static $item;
-
-    $item ??= Compile::shape(li(Slot::text('name')));
-
-    return $shape ??= Compile::shape(
-        ul(Slot::each('items', $item))->class('fruits')
+    static $render;
+    $render ??= component(
+        ul(Slot::each('items', Compile::shape(li(Slot::text('name')))))->class('fruits')
     );
+
+    return $render(['items' => $items]);
 }
 
-FruitsShape()->print(['items' => [
+echo Fruits([
     ['name' => 'Apple'],
     ['name' => 'Banana'],
     ['name' => 'Orange'],
-]]);
+]);
 ```
 
-每个元素都是一个数组，提供条目形状所使用的槽位名；请求只向已编译好的形状绑定数据。
+每个元素都是一个数组，提供条目形状所使用的槽位名；请求只向已编译好的 renderer 绑定数据。
 
 ## 样式处理
 

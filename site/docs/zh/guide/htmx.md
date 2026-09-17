@@ -26,51 +26,55 @@ composer require yonlj/purephp
 
 ### 2. 创建动态组件
 
-计数器文本是绑定的槽位；端点用新的计数渲染同一个 `CountShape()` 片段：
+计数器文本是绑定的槽位；端点用新的计数渲染同一个 `CounterValue()` 组件。模板是 shape 文件：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// Count.shape.php
+return Compile::shape(
+    p('Current count: ', Slot::text('count'))->id('counter')
+);
 
-use function Pure\HTML\{div, button, p};
+// Counter.shape.php
+return Compile::shape(
+    div(
+        Slot::raw('counter'),
+        button('Increment')
+            ->hxPost('/increment')
+            ->hxTarget('#counter')
+            ->hxSwap('innerHTML')
+    )->class('counter')
+);
+```
 
-function CountShape(): Shape
+```php
+<?php
+
+use Pure\Core\Raw;
+
+use function Pure\HTML\{button, div, p};
+use function Pure\Component\render;
+
+function CounterValue(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        p('Current count: ', Slot::text('count'))->id('counter')
-    );
+    return render(__DIR__ . '/Count.shape.php', count: $count);
 }
 
-function CounterShape(): Shape
+function Counter(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            Slot::child('counter', CountShape()),
-            button('Increment')
-                ->hxPost('/increment')
-                ->hxTarget('#counter')
-                ->hxSwap('innerHTML')
-        )->class('counter')
-    );
+    return render(__DIR__ . '/Counter.shape.php', counter: (string) CounterValue($count));
 }
 
 // 渲染页面
-$bindings = ['counter' => ['count' => 0]];
-
-CounterShape()->print($bindings);
+echo Counter(0);
 
 // 处理 HTMX 请求
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['REQUEST_URI'] === '/increment') {
     $count = (int)($_COOKIE['count'] ?? 0) + 1;
     setcookie('count', $count);
 
-    CountShape()->print(['count' => $count]);
+    echo CounterValue($count);
     exit;
 }
 ```
@@ -106,62 +110,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], '/to
 
 ### 4. 实时搜索
 
-结果列表是一个形状；每个结果标题都用 `Slot::text()` 绑定，端点用搜索结果渲染列表形状：
+结果列表是一个组件；每个结果标题都用 `Slot::text()` 绑定，端点用搜索结果渲染列表组件：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// SearchResult.shape.php
+return Compile::shape(
+    div(Slot::text('title'))->class('search-result')
+);
 
-use function Pure\HTML\{input, div};
+// ResultList.shape.php
+return Compile::shape(div(Slot::raw('results')));
 
-function SearchResultShape(): Shape
+// SearchBox.shape.php
+return Compile::shape(
+    div(
+        input()
+            ->type('text')
+            ->placeholder('Search...')
+            ->hxGet('/search')
+            ->hxTrigger('keyup changed delay:500ms')
+            ->hxTarget('#results'),
+        div(Slot::raw('list'))->id('results')
+    )->class('search-box')
+);
+```
+
+```php
+<?php
+
+use Pure\Core\Raw;
+
+use function Pure\HTML\{div, input};
+use function Pure\Component\render;
+
+function SearchResult(string $title): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(Slot::text('title'))->class('search-result')
-    );
+    return render(__DIR__ . '/SearchResult.shape.php', title: $title);
 }
 
-function ResultListShape(): Shape
+function ResultList(array $results): Raw
 {
-    static $shape;
+    $items = [];
 
-    return $shape ??= Compile::shape(
-        div(Slot::each('results', SearchResultShape()))
-    );
+    foreach ($results as $result) {
+        $items[] = (string) SearchResult($result['title']);
+    }
+
+    return render(__DIR__ . '/ResultList.shape.php', results: implode('', $items));
 }
 
-function SearchBoxShape(): Shape
+function SearchBox(Raw $list): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            input()
-                ->type('text')
-                ->placeholder('Search...')
-                ->hxGet('/search')
-                ->hxTrigger('keyup changed delay:500ms')
-                ->hxTarget('#results'),
-            div(Slot::child('list', ResultListShape()))->id('results')
-        )->class('search-box')
-    );
+    return render(__DIR__ . '/SearchBox.shape.php', list: $list);
 }
 
 // 用空结果列表渲染页面
-$bindings = ['list' => ['results' => []]];
-
-SearchBoxShape()->print($bindings);
+echo SearchBox(ResultList([]));
 
 // 处理 HTMX 请求
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search') {
     $query = $_GET['q'] ?? '';
     $results = searchItems($query); // 搜索项目
 
-    ResultListShape()->print(['results' => $results]);
+    echo ResultList($results);
     exit;
 }
 ```

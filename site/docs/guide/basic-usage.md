@@ -303,16 +303,16 @@ that are bound at render time:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, p};
 
-function MessageShape(): Shape
+function Message(bool $isLoggedIn): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             Slot::if(
                 'isLoggedIn',
@@ -321,9 +321,11 @@ function MessageShape(): Shape
             )
         )->class('message')
     );
+
+    return $render(['isLoggedIn' => $isLoggedIn]);
 }
 
-MessageShape()->print(['isLoggedIn' => true]);
+echo Message(true);
 ```
 
 `Slot::if()` reads the current data scope, a missing key is false, and the
@@ -352,28 +354,27 @@ the value to bind:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{ul, li};
 
-function FruitsShape(): Shape
+function Fruits(array $items): Raw
 {
-    static $shape;
-    static $item;
-
-    $item ??= Compile::shape(li(Slot::text('name')));
-
-    return $shape ??= Compile::shape(
-        ul(Slot::each('items', $item))->class('fruits')
+    static $render;
+    $render ??= component(
+        ul(Slot::each('items', Compile::shape(li(Slot::text('name')))))->class('fruits')
     );
+
+    return $render(['items' => $items]);
 }
 
-FruitsShape()->print(['items' => [
+echo Fruits([
     ['name' => 'Apple'],
     ['name' => 'Banana'],
     ['name' => 'Orange'],
-]]);
+]);
 ```
 
 Each item is an array supplying the slot names used by the item shape; requests

@@ -1,10 +1,6 @@
 <?php declare(strict_types=1);
 
-/**
- * The cover page: static markup through the string renderer — no slots, no
- * compile step. CoverController includes it, and it writes its own doctype the
- * way a hand-written page does.
- */
+use Pure\Core\Raw;
 
 use function Pure\HTML\a;
 use function Pure\HTML\body;
@@ -23,8 +19,17 @@ use function Pure\HTML\title;
 use function Pure\HTML\link;
 use function Pure\HTML\style;
 
-echo '<!DOCTYPE html>';
-echo html(
+/**
+ * The cover page: static markup through the string renderer — no slots, no
+ * compile step. CoverController echoes it, and it writes its own doctype the
+ * way a hand-written page does.
+ */
+function coverPage(): Raw
+{
+    return Raw::of(
+        '<!DOCTYPE html>'
+        . html(
+
     head(
         meta()->charset('utf-8'),
         meta()->name('viewport')->content('width=device-width, initial-scale=1'),
@@ -125,4 +130,6 @@ echo html(
             )->class('mt-auto text-white-50')
         )->class('cover-container d-flex w-100 h-100 p-3 mx-auto flex-column')
     )->class('d-flex h-100 text-center text-bg-dark')
-)->lang('en')->class('h-100');
+        )->lang('en')->class('h-100')->render()
+    );
+}

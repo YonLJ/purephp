@@ -2,17 +2,31 @@
 
 require_once __DIR__ . '/Card.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
+use function Pure\Component\render;
 
-function CardDeckShape(): Shape
+/**
+ * The pricing card deck.
+ *
+ * @param list<array{type: string, price: string, features: list<array{value: string}>, text: string, class: string}> $cards
+ */
+function CardDeck(array $cards): Raw
 {
-    static $shape;
+    $items = [];
 
-    return $shape ??= Compile::shape(
-        div(Slot::each('cards', CardShape()))->class('card-deck mb-3 text-center')
+    foreach ($cards as $card) {
+        $items[] = (string)Card(
+            $card['type'],
+            $card['price'],
+            array_map(static fn (array $feature): string => $feature['value'], $card['features']),
+            $card['text'],
+            $card['class'],
+        );
+    }
+
+    return render(
+        __DIR__ . '/CardDeck.shape.php',
+        cards: implode('', $items),
     );
 }

@@ -2,16 +2,15 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/PricingData.php';
+require_once __DIR__ . '/../../views/pricing.php';
 
 /**
- * The pricing page controller for the artifact: it fills
- * views/pricing.pure.php
- * with data through view(). Slots are validated, so a required slot the data
- * does not provide throws MissingSlotException.
+ * The pricing page controller: the page function binds the data through the
+ * component functions and the precompiled document skeleton.
  *
  * @return string The rendered document.
  */
 function pricingController(): string
 {
-    return view('pricing.pure', pricingData());
+    return (string)pricingPage(pricingData());
 }

@@ -2,29 +2,23 @@
 
 require_once __DIR__ . '/Icon.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\a;
-use function Pure\HTML\div;
-use function Pure\HTML\h3;
-use function Pure\HTML\p;
+use function Pure\Component\render;
 
-function HangingIconShape(): Shape
+/**
+ * One "hanging icons" item.
+ *
+ * @param array{icon: string, title: string, content: string, link: string, linkText: string} $item
+ */
+function HangingIcon(array $item): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            div(
-                Slot::child('icon', IconShape())
-            )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
-            div(
-                h3(Slot::text('title'))->class('fs-2'),
-                p(Slot::text('content')),
-                a(Slot::text('linkText'))->href(Slot::attr('link'))->class('btn btn-primary')
-            )
-        )->class('col d-flex align-items-start')
+    return render(
+        __DIR__ . '/HangingIcon.shape.php',
+        icon: (string)Icon('#' . $item['icon']),
+        title: $item['title'],
+        content: $item['content'],
+        link: $item['link'],
+        linkText: $item['linkText'],
     );
 }

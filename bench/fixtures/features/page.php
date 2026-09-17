@@ -29,25 +29,25 @@ function classicFeaturesPage(array $content): HTML
 {
     return main(
         h1('Features examples')->class('visually-hidden'),
-        Section('Columns with icons', array_map(IconColumn(...), $content['columns']), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        Divider(),
-        Section('Hanging icons', array_map(HangingIcon(...), $content['hanging']), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        Divider(),
-        Section('Custom cards', array_map(CustomCard(...), $content['cards']), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'),
-        Divider(),
-        Section('Icon grid', array_map(CellIcon(...), $content['grid']), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'),
-        Divider(),
-        Section(
+        classicSection('Columns with icons', array_map(classicIconColumn(...), $content['columns']), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
+        classicDivider(),
+        classicSection('Hanging icons', array_map(classicHangingIcon(...), $content['hanging']), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
+        classicDivider(),
+        classicSection('Custom cards', array_map(classicCustomCard(...), $content['cards']), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'),
+        classicDivider(),
+        classicSection('classicIcon grid', array_map(classicCellIcon(...), $content['grid']), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'),
+        classicDivider(),
+        classicSection(
             'Features with title',
             [
-                MainFeature(
+                classicMainFeature(
                     'Left-aligned title explaining these awesome features',
                     "Paragraph of text beneath the heading to explain the heading. We'll add onto it with another sentence and probably just keep going until we run out of words.",
                     '#',
                     'Primary button'
                 ),
                 div(
-                    div(...array_map(FeatureTitle(...), $content['features']))->class('row row-cols-1 row-cols-sm-2 g-4')
+                    div(...array_map(classicFeatureTitle(...), $content['features']))->class('row row-cols-1 row-cols-sm-2 g-4')
                 )->class('col'),
             ],
             'row row-cols-1 row-cols-md-2 align-items-md-center g-5 py-5'

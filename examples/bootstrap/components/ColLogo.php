@@ -1,21 +1,21 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\img;
-use function Pure\HTML\small;
+use function Pure\Component\render;
 
-function ColLogoShape(): Shape
+/**
+ * The footer logo column.
+ *
+ * @param array{src: string, width: string, height: string, text: string} $logo
+ */
+function ColLogo(array $logo): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            img()->class('mb-2')->src(Slot::attr('src'))->width(Slot::attr('width'))->height(Slot::attr('height')),
-            small(Slot::text('text'))->class('d-block mb-3 text-muted')
-        )->class('col-12 col-md')
+    return render(
+        __DIR__ . '/ColLogo.shape.php',
+        src: $logo['src'],
+        width: $logo['width'],
+        height: $logo['height'],
+        text: $logo['text'],
     );
 }

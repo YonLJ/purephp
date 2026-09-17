@@ -6,8 +6,8 @@
  *
  *     /            redirects to /plain
  *     /index.php   redirects to /plain
- *     /pure        the compiled artifact (views/counter.pure.php, strict slots)
- *     /plain       the plain view (views/counter.plain.php, no library at render time)
+ *     /pure        the page function and the counter artifact
+ *     /plain       the plain view (views/counter.plain.php, no library in the view file)
  *
  * A request that matches nothing gets a 404 that lists every route. Static files
  * stay with the server. Serve it with:
@@ -33,8 +33,8 @@ use function Pure\HTML\ul;
 
 // The pages and aliases of this router, for the 404 map below.
 $pages = [
-    '/pure' => 'the compiled artifact, strict slots',
-    '/plain' => 'the plain view, no library at render time',
+    '/pure' => 'the page function and the artifact',
+    '/plain' => 'the plain view, no library in the view file',
 ];
 $redirects = [
     '/' => '/plain',

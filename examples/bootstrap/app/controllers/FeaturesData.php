@@ -3,10 +3,9 @@
 require_once __DIR__ . '/../models/FeaturesContent.php';
 
 /**
- * The view data of the features page, keyed by the slots of
- * views/features.shape.php. Both controllers fill their view with it, so the
- * page is the same whether it renders the artifact or the plain view; the
- * content itself comes from app/models/FeaturesContent.php.
+ * The view data of the features page: the page title and the raw content of
+ * every section. The component functions in views/features-sections.php turn
+ * the section items into markup.
  *
  * @return array<string, mixed>
  */
@@ -14,31 +13,24 @@ function featuresData(): array
 {
     $content = featuresContent();
 
-    // The components read the icon of an item as the nested data of their
-    // IconShape child, so the controller nests it here.
-    $withIcon = static fn (array $item): array => array_merge($item, ['icon' => ['href' => '#' . $item['icon']]]);
-
     return [
         'title' => 'Features · Bootstrap v5.2',
         'content' => [
             'columns' => [
                 'title' => 'Columns with icons',
-                'contents' => array_map($withIcon, $content['columns']),
+                'contents' => $content['columns'],
             ],
             'hanging' => [
                 'title' => 'Hanging icons',
-                'contents' => array_map($withIcon, $content['hanging']),
+                'contents' => $content['hanging'],
             ],
             'cards' => [
                 'title' => 'Custom cards',
-                'contents' => array_map(
-                    static fn (array $card): array => $card + ['style' => "background-image: url('{$card['bgImg']}');"],
-                    $content['cards']
-                ),
+                'contents' => $content['cards'],
             ],
             'grid' => [
                 'title' => 'Icon grid',
-                'contents' => array_map($withIcon, $content['grid']),
+                'contents' => $content['grid'],
             ],
             'features' => [
                 'title' => 'Features with title',
@@ -48,7 +40,7 @@ function featuresData(): array
                     'link' => '#',
                     'linkText' => 'Primary button',
                 ],
-                'features' => array_map($withIcon, $content['features']),
+                'features' => $content['features'],
             ],
         ],
     ];

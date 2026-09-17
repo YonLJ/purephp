@@ -1,8 +1,9 @@
 <?php declare(strict_types=1);
 
 /**
- * Benchmarks the classic renderer, the in-process compiled shape and the
- * precompiled view artifact for this page.
+ * Benchmarks the classic renderer and the function components of this page:
+ * the page function, the precompiled skeleton artifact with precomputed
+ * bindings, and the plain view.
  *
  * The classic baseline lives in bench/fixtures (examples are compiled-only).
  *
@@ -11,9 +12,7 @@
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../bench/fixtures/features/page.php';
-require_once __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/controllers/FeaturesController.php';
-require_once __DIR__ . '/views/features.shape.php';
 
 function bench(string $label, int $iters, callable $fn): float
 {
@@ -32,57 +31,51 @@ function bench(string $label, int $iters, callable $fn): float
 $iters = (int)($argv[1] ?? 2000);
 $data = featuresData();
 
-$classic = fn (): string => classicFeaturesPage(featuresContent())->render();
-
-$shapeBuildStart = hrtime(true);
-$page = FeaturesBodyShape();
-$shapeBuild = (hrtime(true) - $shapeBuildStart) / 1000;
-
-$compileStart = hrtime(true);
-$page->compile();
-$compileTime = (hrtime(true) - $compileStart) / 1000;
+// One-time costs: the page skeleton compiles once per process, the artifact is
+// loaded once, and the component functions compile on their first render.
+$shapeStart = hrtime(true);
+$pageShape = require __DIR__ . '/views/features.shape.php';
+$pageShape->compile();
+$shapeTime = (hrtime(true) - $shapeStart) / 1000;
 
 $requireStart = hrtime(true);
 $renderer = require __DIR__ . '/views/features.pure.php';
 $requireTime = (hrtime(true) - $requireStart) / 1000;
 
-$documentStart = hrtime(true);
-$document = FeaturesPageShape();
-$document->compile();
-$documentTime = (hrtime(true) - $documentStart) / 1000;
+$firstStart = hrtime(true);
+$first = (string)featuresPage($data);
+$firstTime = (hrtime(true) - $firstStart) / 1000;
 
-printf("shape build + compile: %.1f us + %.1f us (once per process)\n", $shapeBuild, $compileTime);
-printf("artifact require: %.1f us (once per process) | document build + compile: %.1f us\n\n", $requireTime, $documentTime);
+printf("page shape + compile: %.1f us (once) | artifact require: %.1f us (once)\n", $shapeTime, $requireTime);
+printf("page function first render (compiles components): %.1f us\n\n", $firstTime);
 
 // A plain view is an include: age the freshly compiled file so opcache serves
 // its cached op_array instead of revalidating a file whose mtime just changed.
 touch(__DIR__ . '/views/features.plain.php', time() - 5);
 
+$bindings = featuresBindings($data);
+$classic = fn (): string => classicFeaturesPage(featuresContent())->render();
+
 $classicTime = bench('classic build + render', $iters, $classic);
-$compiledTime = bench('compiled shape + data', $iters, fn (): string => $page($data['content']));
-$artifactTime = bench('precompiled artifact + data', $iters, fn (): string => $renderer->render($data));
-$plainTime = bench('plain view + data', $iters, fn (): string => plain('features', $data));
+$pageTime = bench('page function (components + artifact)', $iters, fn (): string => (string)featuresPage($data));
+$artifactTime = bench('skeleton artifact + bindings', $iters, fn (): string => $renderer->render($bindings));
+$plainTime = bench('plain view + bindings', $iters, fn (): string => plain('features', $bindings));
 
-$classicOutput = $classic();
-$compiledOutput = $page($data['content']);
+$document = $renderer->header . $renderer->render($bindings);
 printf(
-    "\ncontent identical: %s (%d bytes) | compiled speedup: %.1fx\n",
-    $classicOutput === $compiledOutput ? 'yes' : 'NO',
-    strlen($compiledOutput),
-    $classicTime / $compiledTime
-);
-
-$artifactOutput = $renderer->render($data);
-printf(
-    "artifact identical: %s | id match: %s | %d bytes | artifact vs compiled: %.2fx\n",
-    $artifactOutput === $document($data) ? 'yes' : 'NO',
-    $renderer->id === $document->id() ? 'yes' : 'NO',
-    strlen($artifactOutput),
-    $artifactTime / $compiledTime
+    "\npage identical: %s (%d bytes) | page vs classic: %.2fx\n",
+    $first === $document ? 'yes' : 'NO',
+    strlen($first),
+    $classicTime / $pageTime
 );
 printf(
-    "plain identical: %s | %d bytes | plain vs artifact: %.2fx\n",
-    plain('features', $data) === $renderer->header . $artifactOutput ? 'yes' : 'NO',
-    strlen($artifactOutput) + strlen($renderer->header),
+    "skeleton identical: %s | %d bytes | artifact vs page: %.2fx\n",
+    $renderer->render($bindings) === substr($document, strlen($renderer->header)) ? 'yes' : 'NO',
+    strlen($document),
+    $artifactTime / $pageTime
+);
+printf(
+    "plain identical: %s | plain vs artifact: %.2fx\n",
+    plain('features', $bindings) === $document ? 'yes' : 'NO',
     $plainTime / $artifactTime
 );

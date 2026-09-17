@@ -157,56 +157,63 @@ div('Content')->style($styles)->print();
 
 ### 动态按钮组件
 
-静态配置是函数参数；标签文本和按钮状态则是槽位：
+静态配置决定 renderer 的键；标签文本等每次请求的值则是槽位：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\button;
 use function Pure\Utils\sty;
 
-function ButtonShape(string $variant = 'primary', string $size = 'medium', bool $loading = false): Shape
-{
-    static $shapes = [];
+function ActionButton(
+    string $text,
+    string $variant = 'primary',
+    string $size = 'medium',
+    bool $loading = false,
+    ?string $style = null
+): Raw {
+    static $renders = [];
 
-    return $shapes["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= component(
         button(Slot::text('text'))
             ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
             ->style(Slot::attr('style'))
             ->disabled(Slot::attr('disabled'))
     );
+
+    return $render([
+        'text' => $text,
+        'style' => $style,
+        'disabled' => null,
+    ]);
 }
 
-// 绑定数据：仅为渲染时的值；为 null 的属性会被省略。
-$bindings = [
-    'text' => 'Submit',
-    'style' => sty(['opacity' => 1, 'cursor' => 'pointer']),
-    'disabled' => null,
-];
-
-ButtonShape('success', 'large')->print($bindings);
+// 仅为渲染时的值；为 null 的属性会被省略。
+echo ActionButton('Submit', 'success', 'large', false, sty(['opacity' => 1, 'cursor' => 'pointer']));
 ```
 
 ### 响应式卡片组件
 
-卡片接受 HTML 子内容，因此其内容使用 `Slot::raw()` 绑定：
+卡片接受已渲染的 HTML 子内容，因此其内容使用 `Slot::raw()` 绑定：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, h3, p};
 
-function CardShape(string $theme = 'light', bool $featured = false): Shape
+function Card(string $title, Raw $content, string $theme = 'light', bool $featured = false): Raw
 {
-    static $shapes = [];
+    static $renders = [];
 
-    return $shapes["{$theme}|" . (int) $featured] ??= Compile::shape(
+    $render = $renders["{$theme}|" . (int) $featured] ??= component(
         div(
             h3(Slot::text('title'))->class('card-title'),
             p(Slot::raw('content'))->class('card-content')
@@ -219,15 +226,12 @@ function CardShape(string $theme = 'light', bool $featured = false): Shape
             'color' => $theme === 'dark' ? '#fff' : '#333'
         ])
     );
+
+    return $render(['title' => $title, 'content' => $content]);
 }
 
-// 绑定数据：`content` 是可信 HTML，将原样输出。
-$bindings = [
-    'title' => 'Featured Card',
-    'content' => '<strong>This is the content</strong> of a featured card',
-];
-
-CardShape('dark', true)->print($bindings);
+// `content` 是可信 HTML，将原样输出。
+echo Card('Featured Card', Raw::of('<strong>This is the content</strong> of a featured card'), 'dark', true);
 ```
 
 ## 下一步

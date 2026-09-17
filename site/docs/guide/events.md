@@ -210,16 +210,16 @@ values flow through slots:
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, button, p};
 
-function ChildShape(): Shape
+function Child(string $message): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             p('Child Component'),
             button(Slot::text('message'))
@@ -229,29 +229,25 @@ function ChildShape(): Shape
         ->class('child-component')
         ->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;')
     );
+
+    return $render(['message' => $message]);
 }
 
-function ParentShape(): Shape
+function ParentComponent(Raw $child): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             p('Parent Component'),
-            Slot::child('child', ChildShape()),
+            Slot::raw('child'),
             p()->id('parent-output')->style('margin-top: 10px; color: #666;')
         )->class('parent-component')
     );
+
+    return $render(['child' => $child]);
 }
 
-// Bindings for the parent shape; the child renders from `$data['child']`.
-$bindings = [
-    'child' => [
-        'message' => 'Click me from child!',
-    ],
-];
-
-ParentShape()->print($bindings);
+echo ParentComponent(Child('Click me from child!'));
 ?>
 <script>
 function handleChildClick(message) {

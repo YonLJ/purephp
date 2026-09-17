@@ -56,43 +56,56 @@ composer require yonlj/purephp
 
 ### 2. Create Entry File
 
-Create `index.php`:
+Create `page.shape.php`, the page template — static markup plus slots:
+
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1, p};
+
+return Compile::shape(
+    div(
+        h1(Slot::text('heading')),
+        p(Slot::text('lead')),
+        p(Slot::text('body'))
+    )->class('container')
+);
+```
+
+Then `index.php`, the page function that binds the data:
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\{div, h1, p};
+use function Pure\Component\{page, renderPage};
 
-/**
- * The page shape: a data-free tree with Slot placeholders.
- * It is built once per process (in long-running workers; under standard
- * PHP-FPM enable Compile::cachePath() so requests load the compiled
- * renderer instead of rebuilding it).
- */
-function PageShape(): Shape
+function pageView(array $data): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            h1(Slot::text('heading')),
-            p(Slot::text('lead')),
-            p(Slot::text('body'))
-        )->class('container')
-    );
+    return renderPage(__DIR__ . '/page.shape.php', [
+        'heading' => $data['heading'],
+        'lead' => $data['lead'],
+        'body' => $data['body'],
+    ]);
 }
 
-PageShape()->print([
+echo pageView([
     'heading' => 'My First PurePHP Application',
     'lead' => 'Welcome to PurePHP!',
     'body' => 'This is a simple yet powerful PHP template engine.',
 ]);
 ```
+
+`renderPage()` loads the template once per process and appends the document
+header. Under standard PHP-FPM, enable `Compile::cachePath()` so requests load
+the compiled renderer instead of rebuilding it, or precompile the template with
+`vendor/bin/pure compile .` so the binder loads the artifact.
 
 ### 3. Run the Application
 
@@ -115,43 +128,47 @@ Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
 ```
 
 It emits one `E_USER_WARNING` per call site when the same place calls
-`Compile::shape()` too many times in one process, and points at the
-`static $shape ??=` pattern.
+`Compile::shape()` too many times in one process, for example an inline
+`component(...)` rebuilt on every call. File-backed components go through
+`render()`, which caches the binder per template path.
 
 ## Basic Examples
 
 ### Using Components
 
-A component is a function that returns a `Shape`; static props are function
-arguments, dynamic props are slots:
+A component is a function with typed parameters returning `Raw`, backed by its
+own template:
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
 use function Pure\HTML\{div, h2, p};
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
 
 // Render the component with data
-CardShape()->print([
-    'title' => 'Card Title',
-    'content' => 'This is the card content',
-]);
+echo Card('Card Title', 'This is the card content');
+```
+
+```php
+<?php
+
+// Card.shape.php
+
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 ```
 
 ### Setting Attributes

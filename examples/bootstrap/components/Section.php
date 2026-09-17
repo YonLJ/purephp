@@ -1,21 +1,18 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\h2;
+use function Pure\Component\render;
 
-function SectionShape(Shape $item, string $classList): Shape
+/**
+ * One page section: the heading, the grid class list and the rendered items.
+ */
+function Section(string $title, Raw $contents, string $class): Raw
 {
-    static $shapes = [];
-    $key = $classList . '|' . $item->id();
-
-    return $shapes[$key] ??= Compile::shape(
-        div(
-            h2(Slot::text('title'))->class('pb-2 border-bottom'),
-            div(Slot::each('contents', $item))->class($classList)
-        )->class('container px-4 py-5')
+    return render(
+        __DIR__ . '/Section.shape.php',
+        title: $title,
+        contents: $contents,
+        class: $class,
     );
 }
