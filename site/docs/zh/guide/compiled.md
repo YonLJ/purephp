@@ -174,6 +174,137 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 当同一个调用点在一个进程中调用 `Compile::shape()` 次数过多时，PHP 会发出 `E_USER_WARNING`，建议采用 `static $shape ??=` 模式。
 
+## 预编译产物
+
+磁盘缓存仍会在每个请求中重建形状树。若要在部署时完全不构建形状，可以用 `pure` 命令提前编译：
+
+```bash
+vendor/bin/pure compile src/shapes
+```
+
+每个返回 `Shape` 的 `*.shape.php` 文件会被编译成相邻的 `*.pure.php` 产物。产物带有形状指纹并返回一个 `Renderer`，因此既不需要形状树，也不需要编译缓存：
+
+```php
+$page = require __DIR__ . '/page.pure.php';
+
+echo $page->render(['title' => 'Users']);
+$page->save(__DIR__ . '/out.html', ['title' => 'Users']);
+```
+
+- `pure compile <路径>...` 接受文件与目录（递归查找）；`pure compile --check`
+  不写入任何文件，当产物过期或缺失时以退出码 1 结束，适合放在 CI 步骤中。`--plain`
+  会额外写出下文的「无依赖视图」，`--check --plain` 同时校验两种形态。仓库中的示例都带有 `*.shape.php` 文件，`vendor/bin/pure compile examples` 可一次编译全部。
+- 产物的渲染结果与运行时编译器完全一致（测试按逐字节比对断言），并且读起来就像模板：
+  标记仍是标记，动态值写成 `<?= ... ?>`，控制流使用替代语法，闭包只定义一次并导入类的短名。
+  HTML 片段承载的是精确的渲染字节，因此不会被重新缩进。产物的 `Renderer::$source`
+  为空——文件本身就是源码。
+- 动态值通过 `TemplateRuntime` 读取槽位，编译语义集中在一处：必填槽缺失时抛出
+  `MissingSlotException`，`default:` 提供可选槽的编译期默认值，转义与强制转换与平铺渲染器完全一致；
+  仅当槽位路径与键名不同时才出现 `path:`。
+
+```php
+    $pureBody = static function (array $v, array $maps): string {
+        ob_start();
+        try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
+            foreach (TemplateRuntime::items($v, 'items') as $item1):
+                $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
+            endforeach; ?></ul></div><?php
+        } finally {
+            $out = (string)ob_get_clean();
+        }
+
+        return $out;
+    };
+```
+
+`Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`），
+因此请求处理器只需要打印视图。`examples/bootstrap-features` 就是基于它的一小组 MVC 示例：
+
+```php
+// app/controllers/IndexController.php：组装数据并填充编译后的视图
+function indexController(): string
+{
+    return view('index.pure', [
+        'title' => 'Features · Bootstrap v5.2',
+        'content' => [/* … */],
+    ]);
+}
+
+// app/bootstrap.php：index.pure 对应 views/index.pure.php
+function view(string $name, array $data = []): string
+{
+    static $views = [];
+
+    $renderer = $views[$name] ??= require __DIR__ . '/../views/' . $name . '.php';
+
+    return $renderer->header . $renderer->render($data);
+}
+```
+
+它的 `PlainIndexController` 把同一份 `indexData()` 交给 `plain()` 渲染；单一入口
+`public/index.php` 同时提供两条路由：`/` 重定向到 `/plain`、`/pure` 走严格产物、
+`/plain` 走普通视图，开发时可以对照。
+- 请使用与生产环境相同的 PHP 次版本号构建产物：指纹与产物头部都嵌入了 PHP 版本（与缓存一致）。
+- 产物是构建输出：修改形状后需要重新构建。加载时不会校验形状树，因此请用 `--check`
+  发现过期产物。
+- 加载形状文件时产生的输出会被丢弃；`pure compile` 只输出构建信息。
+
+### 无依赖视图
+
+`pure compile --plain` 会在产物旁边额外写出 `*.plain.php`：只有标记与原生 PHP，
+渲染时不需要安装 purephp。加载方式就是经典的视图约定——把数据数组展开成局部变量：
+
+```php
+ob_start();
+extract($data, EXTR_SKIP);
+require 'views/index.plain.php';
+$html = (string)ob_get_clean();
+```
+
+顶层槽读取为普通变量，嵌套槽读取为它所在的数组，转义直接内联，因此它和手写模板一样可移植：
+
+```php
+<title><?= htmlspecialchars((string)$title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></title>
+<h2><?= htmlspecialchars((string)$content['columns']['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h2>
+<?php foreach ($content['columns']['contents'] as $item1): ?><h3><?= htmlspecialchars((string)$item1['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h3><?php endforeach; ?>
+```
+
+常规数据下，无依赖视图与产物输出逐字节一致（测试有断言），而且它是最快的形态：值直接进入
+`htmlspecialchars()`，没有运行时访问器调用。但它是普通视图而非编译组件，严格语义仍由产物提供：
+
+- 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
+- `null` 属性输出为空值，而不是整个属性消失；
+- 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`。
+
+当你需要「视图脱离库运行」时用 `--plain`：例如部署只带 `public/` 与 `views/`，
+或把模板目录交给其他人。视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，
+那是产物唯一更快的场景。
+
+### 产物中的映射
+
+`Slot::child()`、`Slot::each()` 和 `Slot::eachKind()` 的第三个参数（映射闭包）会连同其定义文件的命名空间与导入一起复制进产物：
+
+```php
+$item = Compile::shape(li(Slot::text('label')));
+
+return Compile::shape(
+    ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => '#' . $item]))
+);
+```
+
+闭包必须能够独立复制：
+
+- 不得绑定对象，因此不能有 `$this`，也不能从实例上取一等可调用；
+- 不得捕获变量（`use (...)`，或箭头函数隐式捕获的外部变量）——请通过槽位作用域传递数据；
+- 不得使用 `self`、`parent`、`static::`、`__FILE__`、`__DIR__`、`__LINE__`、
+  `__CLASS__`、`__TRAIT__`——它们的值取决于定义闭包的文件；
+- 不得与另一个闭包共用同一行。
+
+无依赖视图遵循同样的复制规则：若某个闭包带命名空间，整个视图会被放进 `namespace {}`
+块中，使其命名空间与导入依然生效。
+
+具名可调用（`Closure::fromCallable('App\mapItem')`、`mapItem(...)`）会按名称引用；产物渲染时该函数必须已加载。当闭包无法复制时，编译器会报出槽位路径与原因，该形状可以继续使用[缓存](#缓存)。
+
 ## 性能
 
 在 PHP 8.4 上实测（604 个元素的页面，200 行数据；可用 `php bench/compare.php` 复现）：

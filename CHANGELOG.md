@@ -40,6 +40,25 @@ First public version. No tag has been cut yet.
   cannot name a function, so the helper carries the namespace prefix, as
   SVG already does for `<use>` (`svgUse()`) and `<switch>` (`svgSwitch()`);
   the magic static surface (`HTML::var()`) covers the element too.
+- `pure compile --plain` also writes a dependency-free `*.plain.php` view:
+  markup and native PHP (`htmlspecialchars()` with the renderer's flags,
+  ordinary arrays and loops) that renders without purephp installed, loaded by
+  extracting the data into locals. A plain view matches its artifact byte for
+  byte on ordinary data, and gives the strict slot semantics to the artifact
+  (a missing slot is an undefined variable, a `null` attribute prints empty);
+  `--check --plain` reports stale or missing views.
+- `pure compile <path>...` precompiles every `*.shape.php` file that returns a
+  `Shape` into a sibling `*.pure.php` artifact (`bin/pure`). An artifact returns
+  a `Renderer` without building the shape tree and carries the document header
+  of the root tag (`Renderer::$header`), so `require` is all production needs;
+  `--check` reports stale or missing artifacts for CI. Artifacts are written as
+  readable templates (`<?= ... ?>` values, `if (...): ... endif;`,
+  `foreach (...): ... endforeach;`) with the compiled closure defined once and
+  slots read through `TemplateRuntime` accessors, which keep the required-slot,
+  `default:` and escaping semantics in one place while rendering byte-identically
+  to the flat source. Map closures are copied from their source file with its
+  namespace and the imports they use, and closures bound to objects, capturing
+  variables or reading their defining file are reported with their slot path.
 - Compiled guide and API documentation (English and Chinese).
 
 ### Changed

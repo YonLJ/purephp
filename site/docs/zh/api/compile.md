@@ -36,7 +36,7 @@ echo $shape([
 | --- | --- |
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
-| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
+| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = null)`，以及只读属性 `source` / `id` |
 | `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
@@ -114,13 +114,16 @@ $compiled = $shape->compile();
 
 $compiled->render($data);         // 返回 string
 $compiled->save($path, $data);    // 写入文件，返回写入的字节数
-$compiled->source;                // 生成的 PHP 源码，调试时有用
+$compiled->source;                // 生成的 PHP 源码（预编译产物为空）
+$compiled->header;                // 编译期捕获的文档声明
 $compiled->id;                    // 结构指纹（与 Shape::id() 相同）
 ```
 
 `Shape::save($path, $data)` 是面向用户的便捷方法：写出渲染结果，并补上根标签的文档声明
 （例如 `<!DOCTYPE html>` 或 XML 声明），除非你传入自己的声明。
-`Renderer::save()` 是低层形式，不会猜测声明。
+`Renderer::save()` 在 `$header` 为 null 时使用编译期捕获的声明——运行时编译的渲染器为空，
+[预编译产物](/zh/guide/compiled#预编译产物) 则为根标签的声明。`Renderer::$header`
+暴露该声明，因此处理器可以直接输出完整文档：`$renderer->header . $renderer->render($data)`。
 
 ## 磁盘缓存
 

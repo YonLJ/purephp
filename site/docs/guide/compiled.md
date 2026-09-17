@@ -203,6 +203,167 @@ Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
 When the same call site calls `Compile::shape()` too many times in one process,
 PHP emits an `E_USER_WARNING` suggesting the `static $shape ??=` pattern.
 
+## Precompiled Artifacts
+
+The cache still rebuilds the shape tree on every request. To deploy without
+building shapes at all, compile them ahead of time with the `pure` command:
+
+```bash
+vendor/bin/pure compile src/shapes
+```
+
+Every `*.shape.php` file that returns a `Shape` is compiled into a sibling
+`*.pure.php` artifact. An artifact declares the shape fingerprint and returns a
+`Renderer`, so it needs neither the shape tree nor the compile cache:
+
+```php
+$page = require __DIR__ . '/page.pure.php';
+
+echo $page->render(['title' => 'Users']);
+$page->save(__DIR__ . '/out.html', ['title' => 'Users']);
+```
+
+- `pure compile <path>...` accepts files and directories (searched recursively);
+  `pure compile --check` writes nothing and exits with code 1 when an artifact is
+  stale or missing, which fits a CI step. `--plain` also writes the
+  dependency-free view described below, and `--check --plain` covers both
+  flavors. The repository examples ship `*.shape.php` files, so
+  `vendor/bin/pure compile examples` compiles them all.
+- Artifacts render the same output as the runtime compiler (asserted byte for
+  byte by the tests) and read as a template: markup stays markup, values become
+  `<?= ... ?>`, control flow uses the alternative syntax, and the closure is
+  defined once with imported short class names. HTML runs keep the exact
+  rendered bytes, so they are never re-indented. `Renderer::$source` is empty
+  for artifacts — the file itself is the source.
+- Dynamic values read their slot through `TemplateRuntime`, which keeps the
+  compiled semantics in one place: a required slot throws
+  `MissingSlotException`, `default:` supplies the compiled default of an
+  optional slot, and values are escaped or coerced exactly like the flat
+  renderer does. `path:` only appears where the slot path differs from the key.
+
+```php
+    $pureBody = static function (array $v, array $maps): string {
+        ob_start();
+        try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
+            foreach (TemplateRuntime::items($v, 'items') as $item1):
+                $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
+            endforeach; ?></ul></div><?php
+        } finally {
+            $out = (string)ob_get_clean();
+        }
+
+        return $out;
+    };
+```
+
+`Renderer::$header` holds the document header captured at build time (the
+`<!DOCTYPE html>` of an `html()` root), so a request handler only has to print
+the view. `examples/bootstrap-features` is a small MVC setup built on that:
+
+```php
+// app/controllers/IndexController.php: fetch data and fill the compiled view
+function indexController(): string
+{
+    return view('index.pure', [
+        'title' => 'Features · Bootstrap v5.2',
+        'content' => [/* … */],
+    ]);
+}
+
+// app/bootstrap.php: index.pure maps to views/index.pure.php
+function view(string $name, array $data = []): string
+{
+    static $views = [];
+
+    $renderer = $views[$name] ??= require __DIR__ . '/../views/' . $name . '.php';
+
+    return $renderer->header . $renderer->render($data);
+}
+```
+
+Its `PlainIndexController` returns the same `indexData()` through `plain()`
+instead, and a single router (`public/index.php`) serves both: `/` redirects to
+`/plain`, `/pure` renders the artifact and `/plain` the plain view, so you can
+compare the flavors while developing.
+- Build artifacts with the same PHP minor version as production: the fingerprint
+  and the artifact header embed the PHP version, as the cache does.
+- Artifacts are build output: rebuild them after changing a shape. Loading does
+  not verify the shape tree, so `--check` is the way to notice a stale artifact.
+- Output echoed while a shape file loads is discarded; build messages are the
+  only thing `pure compile` writes.
+
+### Dependency-Free Views
+
+`pure compile --plain` also writes a `*.plain.php` view next to the artifact:
+markup and native PHP that renders without purephp installed. Loading it is the
+classic view contract — the data array is extracted into locals:
+
+```php
+ob_start();
+extract($data, EXTR_SKIP);
+require 'views/index.plain.php';
+$html = (string)ob_get_clean();
+```
+
+A root slot reads as an ordinary variable and a nested slot as the array it
+lives in, and escaping is inlined, so the view is exactly as portable as a
+hand-written template:
+
+```php
+<title><?= htmlspecialchars((string)$title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></title>
+<h2><?= htmlspecialchars((string)$content['columns']['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h2>
+<?php foreach ($content['columns']['contents'] as $item1): ?><h3><?= htmlspecialchars((string)$item1['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h3><?php endforeach; ?>
+```
+
+For ordinary data a plain view renders byte-identical output to its artifact
+(the tests assert it), and it is the fastest flavor: values go straight into
+`htmlspecialchars()`, with no runtime accessor call. It is a plain view, not a
+compiled component, so the strict slot semantics stay with the artifact:
+
+- a missing required slot is an undefined variable, not `MissingSlotException`;
+- a `null` attribute prints an empty value instead of disappearing;
+- list slots are not checked for being iterable, and values are stringified by
+  PHP rather than by `SlotRuntime`.
+
+Reach for `--plain` when the views have to run without the library — a
+deployment that ships only `public/` and `views/`, or a template directory
+handed to someone else. Views are includes, so enable opcache: without it every
+render parses the file again, which is the one case where the artifact wins.
+
+### Maps in Artifacts
+
+Map closures (the third argument of `Slot::child()`, `Slot::each()` and
+`Slot::eachKind()`) are copied into the artifact from the file that defines
+them, together with that file's namespace and imports:
+
+```php
+$item = Compile::shape(li(Slot::text('label')));
+
+return Compile::shape(
+    ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => '#' . $item]))
+);
+```
+
+The closure must be copyable on its own:
+
+- it must not be bound to an object, so no `$this` and no tear-offs from
+  instances;
+- it must not capture variables (`use (...)`, or outer variables in an arrow
+  function) — pass data through the slot scope instead;
+- it must not use `self`, `parent`, `static::`, `__FILE__`, `__DIR__`,
+  `__LINE__`, `__CLASS__` or `__TRAIT__`, whose values depend on the file that
+  defines them;
+- it must not share its line with another closure.
+
+The same copying rules apply to plain views: a namespaced closure puts the
+whole view into a `namespace {}` block, so its namespace and imports stay in
+effect there too.
+
+Named callables (`Closure::fromCallable('App\mapItem')`, `mapItem(...)`) are
+referenced by name; the function must be loaded when the artifact renders.
+When a closure cannot be copied, the compiler reports the slot path and the
+reason, and the shape can keep using [Caching](#caching) instead.
+
 ## Performance
 
 Measured on PHP 8.4 (604-element page, 200 rows; reproduce with
