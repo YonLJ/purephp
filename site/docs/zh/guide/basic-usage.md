@@ -312,8 +312,8 @@ function Message(bool $isLoggedIn): Raw
         div(
             Slot::if(
                 'isLoggedIn',
-                Compile::shape(p('Welcome back!')),
-                Compile::shape(p('Please log in'))
+                p('Welcome back!'),
+                p('Please log in')
             )
         )->class('message')
     );
@@ -357,7 +357,7 @@ function Fruits(array $items): Raw
 {
     static $render;
     $render ??= component(
-        ul(Slot::each('items', Compile::shape(li(Slot::text('name')))))->class('fruits')
+        ul(Slot::each('items', li(Slot::text('name'))))->class('fruits')
     );
 
     return $render(['items' => $items]);

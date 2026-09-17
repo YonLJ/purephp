@@ -21,7 +21,7 @@ return Compile::shape(
         )->class('card-header'),
         div(
             h1('$', Slot::text('price'), ' ', small('/ mo')->class('text-muted'))->class('card-title pricing-card-title'),
-            ul(Slot::each('features', Compile::shape(li(Slot::text('value')))))->class('list-unstyled mt-3 mb-4'),
+            ul(Slot::each('features', li(Slot::text('value'))))->class('list-unstyled mt-3 mb-4'),
             button(Slot::text('text'))->type('button')->class(Slot::attr('class'))
         )->class('card-body')
     )->class('card mb-4 box-shadow')

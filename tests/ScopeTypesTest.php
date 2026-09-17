@@ -32,7 +32,7 @@ final class ScopeTypesTest extends TestCase
         $tree = Compile::shape(div(
             Slot::text('title'),
             Slot::text('subtitle')->default('none'),
-            Slot::if('city', Compile::shape(span(Slot::text('city')))),
+            Slot::if('city', span(Slot::text('city'))),
             Slot::text('user-name')
         ))->tree();
 
@@ -50,8 +50,8 @@ final class ScopeTypesTest extends TestCase
     public function testEachKindItemsShareOneFlattenedShape(): void
     {
         $tree = Compile::shape(ul(Slot::eachKind('blocks', [
-            'text' => Compile::shape(li(Slot::text('value'))),
-            'link' => Compile::shape(li(Slot::text('value'))->class(Slot::attr('class'))),
+            'text' => li(Slot::text('value')),
+            'link' => li(Slot::text('value'))->class(Slot::attr('class')),
         ])))->tree();
 
         $this->assertSame(
@@ -65,7 +65,7 @@ final class ScopeTypesTest extends TestCase
     public function testIfBranchesShareTheCurrentScope(): void
     {
         $tree = Compile::shape(div(
-            Slot::if('flag', Compile::shape(span(Slot::text('then'))), Compile::shape(span(Slot::text('else'))))
+            Slot::if('flag', span(Slot::text('then')), span(Slot::text('else')))
         ))->tree();
 
         $this->assertSame(
@@ -81,8 +81,8 @@ final class ScopeTypesTest extends TestCase
     public function testOptionalContainersMayBeNull(): void
     {
         $tree = Compile::shape(div(
-            Slot::child('box', Compile::shape(span('static')))->required(false),
-            Slot::each('list', Compile::shape(li(Slot::text('value'))))->required(false)
+            Slot::child('box', span('static'))->required(false),
+            Slot::each('list', li(Slot::text('value')))->required(false)
         ))->tree();
 
         $this->assertSame(

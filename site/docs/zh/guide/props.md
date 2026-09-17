@@ -147,6 +147,9 @@ $shape = Compile::shape(div(Slot::child('user', $badge)));
 $shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></div>
 ```
 
+嵌套 shape 也可以是裸标签树——`Slot::child('user', span(Slot::text('label')))` 同样可行；
+只有需要单独构建并复用嵌套树时才要写 `Compile::shape()`。
+
 `Slot::each()` 与 `Slot::eachKind()` 同理：每个元素本身就是该项的作用域，所以控制器先把原始行整理成 props 数组列表再渲染。
 
 ## 组件 props 契约

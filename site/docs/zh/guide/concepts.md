@@ -99,8 +99,7 @@ $shape([
 ```php
 <?php
 
-$item = Compile::shape(li(Slot::text('title')));
-$list = Compile::shape(ul(Slot::each('items', $item)));
+$list = Compile::shape(ul(Slot::each('items', li(Slot::text('title')))));
 
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```

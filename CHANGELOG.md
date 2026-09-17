@@ -80,6 +80,14 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- `Slot::child()`, `Slot::each()`, `Slot::if()` and `Slot::eachKind()` accept a
+  bare tag tree: `Tag` implements `ShapeContract` by returning itself, so
+  `Slot::each('items', li(Slot::text('value')))` no longer needs a
+  `Compile::shape()` wrapper (which is still accepted, and still the way to
+  build and memoize a nested tree separately). The examples, tests and guides
+  use the bare form, with one test keeping the wrapped form covered. Generated
+  code and fingerprints are unchanged, so existing artifacts stay current.
+
 - `pure compile` skips the files whose content is already current: the shape is
   still loaded and compiled (so a change in anything it pulls in is picked up),
   but the write, the load-back verification and the rename are skipped and the

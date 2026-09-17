@@ -11,8 +11,11 @@ use LogicException;
  * Placeholder for data bound at render time by a compiled shape.
  *
  * Slots live inside a shape tree built for Pure\Compile\Compile::shape() and
- * cannot be rendered by Tag::render() directly. Shape arguments are typed
- * against ShapeContract so that Pure\Core does not depend on Pure\Compile.
+ * cannot be rendered by Tag::render() directly. Nested shapes are typed against
+ * ShapeContract so that Pure\Core does not depend on Pure\Compile: a bare tag
+ * tree satisfies the contract (a tag is already a data-free tree), so
+ * `Slot::each('items', li(Slot::text('value')))` needs no wrapper, while a
+ * memoized Pure\Compile\Shape is still accepted.
  */
 final class Slot
 {
@@ -72,7 +75,7 @@ final class Slot
      * Child component slot: the nested data scope is `$data[$name]`.
      *
      * @param string $name The slot name.
-     * @param ShapeContract $shape The shape for rendering this slot's content.
+     * @param ShapeContract $shape The shape or bare tag tree rendering this slot's content.
      * @return self
      */
     public static function child(string $name, ShapeContract $shape): self
@@ -85,7 +88,7 @@ final class Slot
      * and each being the nested scope of its item.
      *
      * @param string $name The slot name.
-     * @param ShapeContract $shape The shape for rendering each item.
+     * @param ShapeContract $shape The shape or bare tag tree rendering each item.
      * @return self
      */
     public static function each(string $name, ShapeContract $shape): self
@@ -99,8 +102,8 @@ final class Slot
      * branches share the current data scope.
      *
      * @param string $name The slot name.
-     * @param ShapeContract $then The shape for the truthy branch.
-     * @param ShapeContract|null $else The shape for the falsy branch.
+     * @param ShapeContract $then The shape or bare tag tree of the truthy branch.
+     * @param ShapeContract|null $else The shape or bare tag tree of the falsy branch.
      * @return self
      */
     public static function if(string $name, ShapeContract $then, ?ShapeContract $else = null): self
@@ -117,7 +120,7 @@ final class Slot
      * dispatch, so they are rejected here.
      *
      * @param string $name The slot name.
-     * @param array<array-key, ShapeContract> $shapes
+     * @param array<array-key, ShapeContract> $shapes Shapes or bare tag trees, by kind.
      * @param string $kindKey The key used to dispatch items by kind.
      * @return self
      */

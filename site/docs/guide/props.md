@@ -169,6 +169,10 @@ $shape = Compile::shape(div(Slot::child('user', $badge)));
 $shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></div>
 ```
 
+A nested shape can be a bare tag tree — `Slot::child('user', span(Slot::text('label')))`
+works too; `Compile::shape()` is only needed when the nested tree is built and
+memoized separately.
+
 `Slot::each()` and `Slot::eachKind()` read their items the same way: every item
 is already the item scope, so a controller turns a list of rows into a list of
 prop arrays before handing it to the shape.

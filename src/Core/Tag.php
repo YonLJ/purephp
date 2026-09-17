@@ -13,7 +13,7 @@ use function Pure\Utils\sty;
 
 use Stringable;
 
-abstract class Tag
+abstract class Tag implements ShapeContract
 {
     private string $tagName;
 
@@ -24,6 +24,19 @@ abstract class Tag
     private array $children = [];
 
     private bool $selfClose = false;
+
+    /**
+     * A tag is already a data-free tree, so it satisfies the shape contract by
+     * returning itself: `Slot::each('items', li(Slot::text('value')))` needs no
+     * `Compile::shape()` wrapper. Wrap a tree in a shape when it is built and
+     * memoized separately.
+     *
+     * @internal
+     */
+    public function tree(): Tag
+    {
+        return $this;
+    }
 
     /**
      * @param string $tagName The HTML tag name.
