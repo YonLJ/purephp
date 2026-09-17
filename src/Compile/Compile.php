@@ -127,12 +127,11 @@ final class Compile
         // describe an older tree after a mutation and poison the cache file.
         $index = ShapeIndex::of($tree);
         $id = $index->id();
-        $maps = array_values($index->maps());
         $dir = self::$cachePath;
 
         if ($dir !== null) {
             $file = $dir . '/' . $id . '.php';
-            $cached = RendererCache::load($file, $id, $index->maps());
+            $cached = RendererCache::load($file, $id);
             if ($cached !== null) {
                 self::memoize($id, $cached->source);
 
@@ -142,14 +141,14 @@ final class Compile
 
         $source = self::$sources[$id] ?? null;
         if ($source !== null) {
-            $compiled = CodeGenerator::fromSource($source, $id, $maps);
+            $compiled = CodeGenerator::fromSource($source, $id);
         } else {
             $compiled = CodeGenerator::compile($tree, $index);
             self::memoize($id, $compiled->source);
         }
 
         if ($dir !== null) {
-            RendererCache::write($dir . '/' . $id . '.php', $compiled->source, $id, count($maps));
+            RendererCache::write($dir . '/' . $id . '.php', $compiled->source, $id);
         }
 
         return $compiled;

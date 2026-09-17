@@ -52,25 +52,15 @@ final class PlainGenerator extends TemplateGenerator
      * The plain view body of a tree, with the document header of its root tag.
      *
      * @param Tag $tree The shape tree to compile.
-     * @param ShapeIndex $index The structure index of the tree.
-     * @param bool $namespaced Whether the body is embedded in a `namespace {}`
-     *     block, in which case it ends inside PHP so the block can close.
      * @return string The view source, starting with the header and markup.
      */
-    public static function view(Tag $tree, ShapeIndex $index, bool $namespaced = false): string
+    public static function view(Tag $tree): string
     {
         $generator = new self();
-        self::prepare($generator, $index);
         $generator->level = 0;
 
         (new ShapeWalker($generator))->walk($tree);
         $generator->flushLiteral();
-
-        if ($namespaced) {
-            // The `namespace {}` block the body lives in closes with a brace,
-            // so the body has to end inside PHP.
-            $generator->openPhp();
-        }
 
         $body = $generator->code;
 
@@ -121,29 +111,16 @@ final class PlainGenerator extends TemplateGenerator
         return $this->slotData($dataVar, $slot);
     }
 
-    protected function mapExpression(?string $mapKey): ?string
+    protected function enterChild(Slot $slot, string $slotPath): void
     {
-        return $mapKey === null ? null : '$pureMap' . $this->mapIndex[$mapKey];
+        $this->dataStack[] = $this->slotData($this->data(), $slot);
     }
 
-    protected function enterChild(Slot $slot, string $slotPath, ?string $mapKey): void
-    {
-        if ($mapKey === null) {
-            $this->dataStack[] = $this->slotData($this->data(), $slot);
-
-            return;
-        }
-
-        $childVar = $this->childVar();
-        $this->statement($childVar . ' = ' . $this->mapExpression($mapKey) . '(' . $this->data() . ');');
-        $this->dataStack[] = $childVar;
-    }
-
-    protected function enterEach(Slot $slot, string $slotPath, ?string $mapKey): void
+    protected function enterEach(Slot $slot, string $slotPath): void
     {
         $itemVar = $this->itemVar();
         $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
-        $this->dataStack[] = $this->itemScope($this->childVar(), $itemVar, $mapKey);
+        $this->dataStack[] = $itemVar;
     }
 
     protected function enterEachKind(Slot $slot, string $slotPath): void
@@ -162,28 +139,14 @@ final class PlainGenerator extends TemplateGenerator
         $this->statement('if ((bool)' . $this->slotData($this->data(), $slot) . ') {');
     }
 
-    protected function eachScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    protected function eachScope(string $childVar, string $itemVar, string $scopePath): string
     {
-        return $this->itemScope($childVar, $itemVar, $mapKey);
+        return $itemVar;
     }
 
-    protected function branchScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    protected function branchScope(string $childVar, string $itemVar, string $scopePath): string
     {
-        return $this->itemScope($childVar, $itemVar, $mapKey);
-    }
-
-    /**
-     * The scope of one list item: the item itself, or its mapped data.
-     */
-    private function itemScope(string $childVar, string $itemVar, ?string $mapKey): string
-    {
-        if ($mapKey === null) {
-            return $itemVar;
-        }
-
-        $this->statement($childVar . ' = ' . $this->mapExpression($mapKey) . '(' . $itemVar . ');');
-
-        return $childVar;
+        return $itemVar;
     }
 
     /**
@@ -208,9 +171,10 @@ final class PlainGenerator extends TemplateGenerator
 
     /**
      * The local variable of a root slot, or null when the slot name cannot be
-     * an ordinary view variable.
+     * an ordinary view variable. Shared with ScopeTypes, which decides whether
+     * an `@var` annotation names a local or a `$data` offset.
      */
-    private static function local(string $name): ?string
+    public static function local(string $name): ?string
     {
         if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name) !== 1) {
             return null;

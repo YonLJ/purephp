@@ -49,9 +49,8 @@ interface ShapeVisitor
      *
      * @param Slot $slot The slot being entered.
      * @param string $slotPath The dotted path to this slot.
-     * @param string|null $mapKey The map key if a closure map is attached.
      */
-    public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void;
+    public function slotEnter(Slot $slot, string $slotPath): void;
 
     /**
      * Branch boundary: 0 then / 1 else for Slot::if, the kind string for Slot::eachKind.

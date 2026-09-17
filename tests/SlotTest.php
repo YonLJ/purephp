@@ -118,15 +118,6 @@ class SlotTest extends TestCase
         $this->assertSame('<div><span>A</span></div>', $shape(['items' => [['type' => 'a']]]));
     }
 
-    public function testEachKindAppliesTheMapPerItem(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'x' => Compile::shape(span(Slot::text('v'))),
-        ], 'kind', static fn (mixed $item): array => ['v' => '#' . (is_array($item) ? (string)$item['n'] : '')])));
-
-        $this->assertSame('<div><span>#1</span></div>', $shape(['items' => [['kind' => 'x', 'n' => 1]]]));
-    }
-
     public function testEachKindRejectsUnknownKindWithFullPath(): void
     {
         $shape = Compile::shape(div(Slot::eachKind('items', [
@@ -213,37 +204,4 @@ class SlotTest extends TestCase
         ])))->compile();
     }
 
-    public function testDuplicateSlotPathsKeepDistinctMaps(): void
-    {
-        $listA = Compile::shape(div(Slot::text('tag')));
-        $listB = Compile::shape(div(Slot::text('tag')));
-
-        $shape = Compile::shape(div(
-            Slot::each('items', $listA, static fn (mixed $item): array => ['tag' => 'mapA']),
-            Slot::each('items', $listB, static fn (mixed $item): array => ['tag' => 'mapB'])
-        ));
-
-        $this->assertSame(
-            '<div><div>mapA</div><div>mapB</div></div>',
-            $shape(['items' => [['tag' => 'orig']]])
-        );
-    }
-
-    public function testIfBranchesKeepDistinctMaps(): void
-    {
-        $card = Compile::shape(span(Slot::text('tag')));
-        $then = Compile::shape(div(Slot::child('card', $card, static fn (mixed $d): array => ['tag' => 'thenMap'])));
-        $else = Compile::shape(div(Slot::child('card', $card, static fn (mixed $d): array => ['tag' => 'elseMap'])));
-
-        $shape = Compile::shape(div(Slot::if('flag', $then, $else)));
-
-        $this->assertSame(
-            '<div><div><span>thenMap</span></div></div>',
-            $shape(['flag' => true])
-        );
-        $this->assertSame(
-            '<div><div><span>elseMap</span></div></div>',
-            $shape(['flag' => false])
-        );
-    }
 }

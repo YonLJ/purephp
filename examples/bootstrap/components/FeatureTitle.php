@@ -17,7 +17,7 @@ function FeatureTitleShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape())
             )->class('feature-icon-small d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-4 rounded-3'),
             h4(Slot::text('title'))->class('fw-semibold mb-0'),
             p(Slot::text('content'))->class('text-muted')

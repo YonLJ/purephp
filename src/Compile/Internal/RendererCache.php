@@ -85,22 +85,20 @@ final class RendererCache
     /**
      * @param string $file The cache file path.
      * @param string $id The expected fingerprint.
-     * @param array<string, Closure> $maps
      * @return Renderer|null The cached renderer, or null if invalid or missing.
      */
-    public static function load(string $file, string $id, array $maps): ?Renderer
+    public static function load(string $file, string $id): ?Renderer
     {
         $contents = @file_get_contents($file);
         if ($contents === false) {
             return null;
         }
 
-        $pattern = '/\A<\?php\n\/\/ purephp-shape id=([0-9a-f]{40}) maps=(\d+) v=(\d+) php=([0-9]+\.[0-9]+)\n/';
+        $pattern = '/\A<\?php\n\/\/ purephp-shape id=([0-9a-f]{40}) v=(\d+) php=([0-9]+\.[0-9]+)\n/';
         if (preg_match($pattern, $contents, $matches) !== 1
             || $matches[1] !== $id
-            || (int)$matches[2] !== count($maps)
-            || (int)$matches[3] !== Compile::CACHE_VERSION
-            || $matches[4] !== PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
+            || (int)$matches[2] !== Compile::CACHE_VERSION
+            || $matches[3] !== PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
         ) {
             @unlink($file);
 
@@ -128,7 +126,7 @@ final class RendererCache
             $body = substr($body, 7, -1);
         }
 
-        return new Renderer($closure, $body, $id, array_values($maps));
+        return new Renderer($closure, $body, $id);
     }
 
     /**
@@ -137,11 +135,10 @@ final class RendererCache
      * @param string $file The cache file path.
      * @param string $source The generated PHP source code.
      * @param string $id The shape fingerprint.
-     * @param int $mapCount The number of closures in $maps.
      */
-    public static function write(string $file, string $source, string $id, int $mapCount): void
+    public static function write(string $file, string $source, string $id): void
     {
-        $contents = self::HEADER_PREFIX . "id={$id} maps={$mapCount} v=" . Compile::CACHE_VERSION
+        $contents = self::HEADER_PREFIX . "id={$id} v=" . Compile::CACHE_VERSION
             . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\nreturn {$source};\n";
 
         $tmp = @tempnam(dirname($file), 'shape-');

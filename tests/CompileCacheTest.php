@@ -71,52 +71,25 @@ class CompileCacheTest extends TestCase
         $this->assertSame($source, $reloaded->compile()->source);
     }
 
-    public function testCacheReloadsShapesWithMapsByteIdentically(): void
-    {
-        $item = Compile::shape(li(Slot::text('label')));
-        $shape = $this->mappedListShape($item);
-        $first = $shape(['items' => ['a', 'b']]);
-        $source = $shape->compile()->source;
-        $file = $this->dir . '/' . $shape->id() . '.php';
-
-        $this->assertFileExists($file);
-
-        Compile::flush();
-
-        $reloaded = $this->mappedListShape($item);
-
-        $this->assertSame($shape->id(), $reloaded->id());
-        $this->assertSame($first, $reloaded(['items' => ['a', 'b']]));
-        $this->assertSame($source, $reloaded->compile()->source);
-        $this->assertSame('<ul><li>A</li><li>B</li></ul>', $first);
-    }
-
     public function testCacheHitUsesTheStoredRenderer(): void
     {
         $item = Compile::shape(li(Slot::text('label')));
-        $shape = $this->mappedListShape($item);
-        $shape(['items' => ['a']]);
+        $build = static fn (): \Pure\Compile\Shape => Compile::shape(ul(Slot::each('items', $item)));
+        $shape = $build();
+        $shape(['items' => [['label' => 'a']]]);
 
         $id = $shape->id();
         $file = $this->dir . '/' . $id . '.php';
         file_put_contents(
             $file,
-            "<?php\n// purephp-shape id={$id} maps=1 v=" . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
-            . "\nreturn static function (array \$v, array \$maps): string { return 'CACHED'; };\n"
+            "<?php\n// purephp-shape id={$id} v=" . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
+            . "\nreturn static function (array \$v): string { return 'CACHED'; };\n"
         );
 
         Compile::flush();
         clearstatcache();
 
-        $this->assertSame('CACHED', $this->mappedListShape($item)(['items' => ['a']]));
-    }
-
-    /** Keeps the map closure on one source line so both builds share an id. */
-    private function mappedListShape(\Pure\Compile\Shape $item): \Pure\Compile\Shape
-    {
-        return Compile::shape(ul(
-            Slot::each('items', $item, static fn (mixed $item): array => ['label' => strtoupper((string)$item)])
-        ));
+        $this->assertSame('CACHED', $build()(['items' => [['label' => 'a']]]));
     }
 
     public function testCorruptedCacheIsRegenerated(): void
@@ -125,7 +98,7 @@ class CompileCacheTest extends TestCase
         $shape->compile();
         $file = $this->dir . '/' . $shape->id() . '.php';
 
-        file_put_contents($file, "<?php\n// purephp-shape id={$shape->id()} maps=0 v=" . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\nreturn 42;\n");
+        file_put_contents($file, "<?php\n// purephp-shape id={$shape->id()} v=" . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\nreturn 42;\n");
 
         $reloaded = Compile::shape(div(span('x')));
         $this->assertSame('<div><span>x</span></div>', $reloaded([]));
@@ -178,23 +151,6 @@ class CompileCacheTest extends TestCase
 
         $this->assertNotSame($shape->id(), $fresh->id());
         $this->assertSame('<div><span>a</span></div>', $fresh(['v' => 'a']));
-    }
-
-    public function testMapCountMismatchIsRegenerated(): void
-    {
-        $item = Compile::shape(li(Slot::text('label')));
-        $build = static fn (): \Pure\Compile\Shape => Compile::shape(ul(
-            Slot::each('items', $item, static fn (mixed $item): array => ['label' => (string)$item])
-        ));
-
-        $shape = $build();
-        $shape(['items' => ['a']]);
-        $file = $this->dir . '/' . $shape->id() . '.php';
-
-        $contents = (string)file_get_contents($file);
-        file_put_contents($file, (string)preg_replace('/maps=\d+/', 'maps=0', $contents, 1));
-
-        $this->assertSame('<ul><li>a</li></ul>', $build()(['items' => ['a']]));
     }
 
     public function testClearCacheRemovesOnlyOwnFiles(): void

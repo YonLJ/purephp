@@ -134,15 +134,16 @@ ButtonShape()->print([
 ]);
 ```
 
-When a child component needs a different data shape than its parent, pass a map
-closure as the third argument; it derives the child scope from the parent data:
+When a child component needs a different data shape than its parent, derive the
+child scope in the data layer: a child slot reads `$data[$name]`, so the binding
+carries the nested array the child expects.
 
 ```php
 <?php
 
-Slot::child('user', BadgeShape(), static fn (array $data): array => [
-    'label' => strtoupper((string)$data['name']),
-]);
+Slot::child('user', BadgeShape()); // reads $data['user']
+
+$shape(['user' => ['label' => 'ADA']]);
 ```
 
 ## Lists

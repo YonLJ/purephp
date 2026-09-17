@@ -17,7 +17,7 @@ First public version. No tag has been cut yet.
   subtrees without slots are folded into literals.
 - Slot types `Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::child()`,
   `Slot::each()`, `Slot::if()` and `Slot::eachKind()`, with `required(false)`
-  and `default()` modifiers and optional map closures for derived scopes.
+  and `default()` modifiers.
 - `Pure\Core\MissingSlotException` with full slot paths for missing data, and
   `InvalidArgumentException` for non-stringable values and list contract
   violations.
@@ -56,10 +56,14 @@ First public version. No tag has been cut yet.
   `foreach (...): ... endforeach;`) with the compiled closure defined once and
   slots read through `TemplateRuntime` accessors, which keep the required-slot,
   `default:` and escaping semantics in one place while rendering byte-identically
-  to the flat source. Map closures are copied from their source file with its
-  namespace and the imports they use, and closures bound to objects, capturing
-  variables or reading their defining file are reported with their slot path.
+  to the flat source.
 - Compiled guide and API documentation (English and Chinese).
+- Plain views declare their root slots with `@var` annotations derived from the
+  shape tree, so static analyzers read the extracted locals without an
+  exclusion and without configuration: value slots are
+  `scalar|null|\Stringable`, condition slots `mixed`, child and list scopes
+  become array shapes and iterables of them, and odd slot names are declared on
+  the loader's `$data` shape. The annotations add no output bytes.
 
 ### Changed
 
@@ -76,8 +80,7 @@ First public version. No tag has been cut yet.
   name, so `->class(Slot::attr('classList'))` reports `classList`.
 - Generated sources are memoized per fingerprint in memory (on top of the
   on-disk cache), so a tree rebuilt in the same process is re-evaluated instead
-  of regenerated; map closures stay live, so a rebuilt shape binds its own
-  closures. The memo is bounded by a byte budget (oldest sources are dropped
+  of regenerated. The memo is bounded by a byte budget (oldest sources are dropped
   first), so a structure that varies per request cannot grow it without limit;
   `PURE_COMPILE_MEMO_BYTES` changes the budget and `0` disables the memo, and
   `Compile::flush()` clears it.
@@ -144,9 +147,7 @@ First public version. No tag has been cut yet.
   `Pure\Compile\Internal\CodeGenerator` (previously `Compiler`).
 - Shape-tree traversal now lives in a single
   `Pure\Compile\Internal\ShapeWalker` consumed by both the structure fingerprint
-  and the code generator, so paths, ordering and map keys cannot drift apart;
-  map keys include the path occurrence so duplicate paths (siblings,
-  `Slot::if` branches) keep distinct closures.
+  and the code generator, so paths and ordering cannot drift apart.
 - `Pure\Core\Slot` types shape arguments against the new
   `Pure\Core\ShapeContract` (implemented by `Pure\Compile\Shape`), so
   `Pure\Core` no longer depends on `Pure\Compile`.
@@ -188,6 +189,14 @@ First public version. No tag has been cut yet.
 
 ### Removed
 
+- The `$map` third argument of `Slot::child()`, `Slot::each()` and
+  `Slot::eachKind()`, along with the closure-copying machinery that carried maps
+  into artifacts (`Pure\Compile\Internal\ClosureSource`, namespace blocks and
+  imported-name splitting in generated files). A nested scope now always reads
+  `$data[$name]`, and bindings carry the nested array the shape expects, so the
+  adaptation lives in the data layer where it is explicit and testable. The
+  `$maps` parameter of the `Renderer` constructor and the `maps=` field of cache
+  and artifact headers are gone with it.
 - `Pure\Core\Dom`, `PDom` and `NDom`, and `Tag::toDom()` in favor of string
   rendering and the compiled path.
 - `Pure\Core\RawType`, `Raw::toJSON()`, and the `Pure\Utils\rawHtml()` /

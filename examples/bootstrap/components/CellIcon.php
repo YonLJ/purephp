@@ -16,7 +16,7 @@ function CellIconShape(): Shape
 
     return $shape ??= Compile::shape(
         div(
-            Slot::child('icon', IconShape('bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'), static fn (array $data): array => ['href' => '#' . $data['icon']]),
+            Slot::child('icon', IconShape('bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em')),
             div(
                 h3(Slot::text('title'))->class('fw-bold mb-0 fs-4'),
                 p(Slot::text('content'))

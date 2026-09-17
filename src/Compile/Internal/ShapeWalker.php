@@ -15,20 +15,13 @@ use Pure\Core\Tag;
  * The single traversal of shape trees.
  *
  * Both the structure fingerprint (ShapeIndex) and the code generator
- * (CodeGenerator) consume this walk, so paths, traversal order and map keys
- * stay aligned by construction.
- *
- * Map keys combine the slot path with the occurrence of that path, because
- * duplicate paths are legal (siblings, if branches) and must keep distinct
- * closures.
+ * (CodeGenerator) consume this walk, so paths and traversal order stay
+ * aligned by construction.
  *
  * @internal
  */
 final class ShapeWalker
 {
-    /** @var array<string, int> */
-    private array $mapCounts = [];
-
     public function __construct(private readonly ShapeVisitor $visitor)
     {
     }
@@ -89,9 +82,8 @@ final class ShapeWalker
     private function slot(Slot $slot, string $path): void
     {
         $slotPath = self::slotPath($path, $slot->name);
-        $mapKey = $this->mapKey($slot, $slotPath);
 
-        $this->visitor->slotEnter($slot, $slotPath, $mapKey);
+        $this->visitor->slotEnter($slot, $slotPath);
 
         switch ($slot->kind) {
             case SlotKind::Child:
@@ -125,18 +117,6 @@ final class ShapeWalker
         }
 
         $this->visitor->slotLeave($slot, $slotPath);
-    }
-
-    private function mapKey(Slot $slot, string $slotPath): ?string
-    {
-        if ($slot->map === null) {
-            return null;
-        }
-
-        $mapPath = $slot->kind === SlotKind::Child ? $slotPath : $slotPath . '[]';
-        $occurrence = $this->mapCounts[$mapPath] = ($this->mapCounts[$mapPath] ?? 0) + 1;
-
-        return $mapPath . '#' . $occurrence;
     }
 
     private static function shapeTree(?ShapeContract $shape, string $slotPath): Tag

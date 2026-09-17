@@ -56,7 +56,7 @@ never inside a request handler.
 | `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` or a component map |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` |
 
 Static child components need no slot at all — build them inside the shape and
 they are compiled into literals:
@@ -82,10 +82,6 @@ Modifiers:
 - `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
-- `Slot::child($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
-  `Slot::eachKind(..., $map)` — derive the nested scope with a closure instead
-  of reading `$data[$name]`; this is how a component maps its own props to a
-  child component (for example `fn (array $d) => ['href' => '#' . $d['icon']]`).
 
 Values must be stringable: `null`, scalars, and `Stringable` are accepted;
 arrays and other objects raise an `InvalidArgumentException` naming the full
@@ -106,9 +102,9 @@ $shape = Compile::shape(div(Header(), Slot::text('title')));
 ## Structure Fingerprint
 
 `Shape::id()` is a sha1 fingerprint of the shape's structure: tag names,
-attributes, slot kinds and names, defaults, nested shapes, map closures (file
-and line) and a library cache version. It is computed without compiling and is
-used as the cache file name and as a component cache key:
+attributes, slot kinds and names, defaults, nested shapes and a library cache
+version. It is computed without compiling and is used as the cache file name
+and as a component cache key:
 
 ```php
 $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
@@ -148,15 +144,12 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 - Cache files are named by `Shape::id()`, written atomically (temp file +
   rename) and contain plain PHP returning the compiled closure, so opcache can
   serve them.
-- A cache entry whose header does not match the expected id, map count, cache
-  version or PHP version is discarded and regenerated.
-- Renderers that reference component maps stay valid because the map closures
-  live in the shape; only the generated code is cached.
+- A cache entry whose header does not match the expected id, cache version or
+  PHP version is discarded and regenerated.
 - `Compile::clearCache()` deletes the files written by the library.
 - Generated sources are memoized per fingerprint in memory as well, so building
   the same tree again in one process re-evaluates the cached source instead of
-  regenerating it; map closures stay live, so a rebuilt shape binds its own
-  closures. The memo is bounded by a byte budget (the oldest sources are dropped
+  regenerating it. The memo is bounded by a byte budget (the oldest sources are dropped
   first and a source larger than the budget is not kept), so a structure that
   varies per request cannot grow it without limit. Set the environment variable
   `PURE_COMPILE_MEMO_BYTES` to change the budget (`0` disables the memo).
@@ -167,9 +160,7 @@ The directory must be private: owned by the PHP user and not writable by group
 or others (`cachePath()` creates missing directories with 0700 and rejects
 loose or foreign-owned ones), and it should live outside the web root. Do not
 point it at a shared location such as `/tmp` itself. Delete the cache between
-deploys only if you want to force regeneration; edits to map closures do not
-change the fingerprint, so either clear the cache or bump
-`Compile::CACHE_VERSION`.
+deploys only if you want to force regeneration.
 
 ## Per-Request Guard
 
@@ -236,5 +227,3 @@ php examples/bootstrap/bench.php
 - Compiled renderers trade compilation for speed: compiling a shape that is
   rendered once per process is slower than `render()`. Compile pages and
   components that are rendered repeatedly.
-- Map closures are fingerprinted by file and line; editing a closure body in
-  place does not invalidate the cache.

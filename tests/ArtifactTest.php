@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
-use Pure\Compile\CompileException;
 use Pure\Compile\Internal\ArtifactCommand;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Internal\CodeGenerator;
@@ -59,7 +58,6 @@ class ArtifactTest extends TestCase
 
         $this->assertSame($this->dir . '/page.pure.php', $artifact);
         $this->assertFileExists($artifact);
-        $this->assertStringContainsString('maps=0', (string)file_get_contents($artifact));
 
         $shape = self::load($file);
         $renderer = self::load($artifact);
@@ -122,7 +120,7 @@ class ArtifactTest extends TestCase
                     Slot::text('subtitle')->default('none'),
                     Slot::if('flag', Compile::shape(em('on')), Compile::shape(em('off'))),
                     Slot::if('absent', Compile::shape(em('never'))),
-                    ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => '#', 'class' => 'x'])),
+                    ul(Slot::each('items', $item)),
                     ul(Slot::eachKind('mixed', [
                         'a' => Compile::shape(li('A')),
                         'b' => Compile::shape(li('B')),
@@ -149,11 +147,7 @@ class ArtifactTest extends TestCase
         $this->assertStringNotContainsString('array_key_exists', $contents);
 
         $index = ShapeIndex::of($shape->tree());
-        $flat = CodeGenerator::fromSource(
-            CodeGenerator::source($shape->tree(), $index),
-            $index->id(),
-            array_values($index->maps())
-        );
+        $flat = CodeGenerator::fromSource(CodeGenerator::source($shape->tree()), $index->id());
         $template = self::load($artifact);
 
         $this->assertInstanceOf(Renderer::class, $template);
@@ -165,7 +159,7 @@ class ArtifactTest extends TestCase
                 'meta' => ['label' => 'M'],
                 'flag' => true,
                 'cardClass' => 'c1',
-                'items' => [['label' => 'one', 'class' => 'i1'], ['label' => 'two']],
+                'items' => [['label' => 'one', 'class' => 'i1'], ['label' => 'two', 'class' => 'i2']],
                 'mixed' => [['kind' => 'a'], ['kind' => 'b']],
             ],
             [
@@ -182,209 +176,6 @@ class ArtifactTest extends TestCase
         foreach ($sets as $set) {
             $this->assertSame($flat->render($set), $template->render($set));
         }
-    }
-
-    public function testInlinesMapClosuresWithTheirFileContext(): void
-    {
-        $file = $this->shapeFile('list.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            namespace App\Lists;
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-            use function Pure\Utils\clx;
-
-            function label(mixed $item): array
-            {
-                return ['label' => '#' . $item];
-            }
-
-            $item = Compile::shape(li(Slot::text('label')));
-
-            return Compile::shape(
-                ul(
-                    Slot::each('items', $item, static fn (mixed $item): array => label($item)),
-                    Slot::each('classes', $item, static fn (mixed $item): array => ['label' => clx('x', (string)$item)])
-                )
-            );
-            PHP);
-
-        $artifact = ArtifactCompiler::write($file);
-        $contents = (string)file_get_contents($artifact);
-
-        $this->assertStringContainsString('maps=2', $contents);
-        $this->assertStringContainsString('namespace App\Lists {', $contents);
-        $this->assertStringContainsString('$pureMap0 = static fn (mixed $item): array => label($item);', $contents);
-        $this->assertStringContainsString('use function Pure\Utils\clx;', $contents);
-        $this->assertStringNotContainsString('use Pure\Compile\Compile;', $contents);
-        $this->assertStringNotContainsString('use function Pure\HTML\li;', $contents);
-
-        $renderer = self::load($artifact);
-
-        $this->assertInstanceOf(Renderer::class, $renderer);
-        $this->assertSame(
-            '<ul><li>#a</li><li>#b</li><li>x a</li><li>x b</li></ul>',
-            $renderer->render(['items' => ['a', 'b'], 'classes' => ['a', 'b']])
-        );
-    }
-
-    public function testRefusesMapClosuresThatCaptureVariables(): void
-    {
-        $file = $this->shapeFile('capture.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-
-            $item = Compile::shape(li(Slot::text('label')));
-            $prefix = '#';
-
-            return Compile::shape(
-                ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => $prefix . $item]))
-            );
-            PHP);
-
-        try {
-            ArtifactCompiler::write($file);
-            $this->fail('the capture must be refused.');
-        } catch (CompileException $error) {
-            $this->assertStringContainsString("slot 'items[]'", $error->getMessage());
-            $this->assertStringContainsString('captures $prefix', $error->getMessage());
-        }
-
-        $this->assertFileDoesNotExist($this->dir . '/capture.pure.php');
-        $this->assertSame([], glob($this->dir . '/pure-artifact-*') ?: []);
-    }
-
-    public function testRefusesMapClosuresBoundToAnObject(): void
-    {
-        $file = $this->shapeFile('bound.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-
-            $item = Compile::shape(li(Slot::text('label')));
-            $mapper = new class {
-                public function map(mixed $item): array
-                {
-                    return ['label' => (string)$item];
-                }
-            };
-
-            return Compile::shape(
-                ul(Slot::each('items', $item, $mapper->map(...)))
-            );
-            PHP);
-
-        try {
-            ArtifactCompiler::write($file);
-            $this->fail('the bound closure must be refused.');
-        } catch (CompileException $error) {
-            $this->assertStringContainsString('is bound to an object', $error->getMessage());
-        }
-    }
-
-    public function testRefusesMapClosuresThatUseTheirDefiningFile(): void
-    {
-        $file = $this->shapeFile('context.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-
-            $item = Compile::shape(li(Slot::text('label')));
-
-            return Compile::shape(
-                ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => __DIR__ . $item]))
-            );
-            PHP);
-
-        try {
-            ArtifactCompiler::write($file);
-            $this->fail('the context dependent closure must be refused.');
-        } catch (CompileException $error) {
-            $this->assertStringContainsString('uses __DIR__', $error->getMessage());
-        }
-    }
-
-    public function testRefusesClosuresThatShareALineWithAnother(): void
-    {
-        $file = $this->shapeFile('crowded.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-
-            $item = Compile::shape(li(Slot::text('label')));
-
-            return Compile::shape(ul(Slot::each('items', $item, static fn (mixed $item): array => ['a' => $item]), Slot::each('other', $item, static fn (mixed $item): array => ['b' => $item])));
-            PHP);
-
-        try {
-            ArtifactCompiler::write($file);
-            $this->fail('the ambiguous closure must be refused.');
-        } catch (CompileException $error) {
-            $this->assertStringContainsString('shares a line with another closure', $error->getMessage());
-        }
-    }
-
-    public function testReferencesNamedMapCallablesByCallable(): void
-    {
-        $file = $this->shapeFile('named.shape.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\li;
-            use function Pure\HTML\ul;
-
-            $item = Compile::shape(li(Slot::text('label')));
-
-            return Compile::shape(
-                ul(Slot::each('items', $item, \Closure::fromCallable('artifactMapLabel')))
-            );
-            PHP);
-
-        $artifact = ArtifactCompiler::write($file);
-        $contents = (string)file_get_contents($artifact);
-
-        $this->assertStringContainsString("\\Closure::fromCallable('artifactMapLabel')", $contents);
-        $this->assertStringContainsString("namespace {\n", $contents);
-
-        $renderer = self::load($artifact);
-
-        $this->assertInstanceOf(Renderer::class, $renderer);
-        $this->assertSame('<ul><li>#a</li></ul>', $renderer->render(['items' => ['a']]));
     }
 
     public function testPlainViewsAreDependencyFreeAndRenderIdentically(): void
@@ -431,15 +222,18 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('foreach ($items as $item1):', $source);
         $this->assertStringContainsString('if ((bool)($flag ?? false)):', $source);
         $this->assertStringContainsString('class="<?= htmlspecialchars', $source);
+        $this->assertStringContainsString('@var scalar|null|\\Stringable $title', $source);
+        $this->assertStringContainsString('@var mixed $flag', $source);
+        $this->assertStringContainsString(
+            '@var iterable<array-key, array{class: scalar|null|\\Stringable, label: scalar|null|\\Stringable}> $items',
+            $source
+        );
+        $this->assertLessThan(strpos($source, '?>'), strpos($source, '@var'));
 
         $shape = self::load($file);
         $this->assertInstanceOf(Shape::class, $shape);
         $index = ShapeIndex::of($shape->tree());
-        $flat = CodeGenerator::fromSource(
-            CodeGenerator::source($shape->tree(), $index),
-            $index->id(),
-            array_values($index->maps())
-        );
+        $flat = CodeGenerator::fromSource(CodeGenerator::source($shape->tree()), $index->id());
 
         $sets = [
             [
@@ -468,49 +262,46 @@ class ArtifactTest extends TestCase
         }
     }
 
-    public function testPlainViewsWrapNamespacedMapsInANamespaceBlock(): void
+    public function testPlainViewsDeclareRootSlotsWithTypesDerivedFromTheShape(): void
     {
-        $file = $this->shapeFile('plain-named.shape.php', <<<'PHP'
+        $file = $this->shapeFile('plain-types.shape.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
 
-            namespace App\Lists;
-
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
+            use function Pure\HTML\div;
+            use function Pure\HTML\em;
             use function Pure\HTML\li;
             use function Pure\HTML\ul;
 
-            $item = Compile::shape(li(Slot::text('label')));
-
             return Compile::shape(
-                ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => li($item)]))
+                div(
+                    Slot::text('title'),
+                    Slot::child(
+                        'content',
+                        Compile::shape(div(Slot::text('heading'), Slot::each('items', Compile::shape(li(Slot::text('label'))))))
+                    ),
+                    ul(Slot::each('links', Compile::shape(li(Slot::text('label'))))),
+                    Slot::if('flag', Compile::shape(em('on')))
+                )->class(Slot::attr('cardClass'))
             );
             PHP);
 
-        $sources = ArtifactCompiler::writeAll($file, true);
-        $plain = (string)$sources['plain'];
-        $source = (string)file_get_contents($plain);
+        $plain = (string)ArtifactCompiler::build($file, true);
 
-        $this->assertStringContainsString('namespace App\\Lists {', $source);
-        $this->assertStringContainsString('use function Pure\\HTML\\li;', $source);
-        $this->assertStringContainsString("namespace {\n", $source);
-        $this->assertStringNotContainsString('Renderer', $source);
-
-        $shape = self::load($file);
-        $this->assertInstanceOf(Shape::class, $shape);
-        $index = ShapeIndex::of($shape->tree());
-        $flat = CodeGenerator::fromSource(
-            CodeGenerator::source($shape->tree(), $index),
-            $index->id(),
-            array_values($index->maps())
+        $this->assertStringContainsString(
+            "/**\n"
+            . " * @var scalar|null|\\Stringable \$cardClass\n"
+            . " * @var scalar|null|\\Stringable \$title\n"
+            . " * @var array{heading: scalar|null|\\Stringable, items: iterable<array-key, array{label: scalar|null|\\Stringable}>} \$content\n"
+            . " * @var iterable<array-key, array{label: scalar|null|\\Stringable}> \$links\n"
+            . " * @var mixed \$flag\n"
+            . ' */',
+            $plain
         );
-
-        $data = ['items' => ['a', 'b']];
-
-        $this->assertSame($shape->tree()->documentHeader() . $flat->render($data), self::renderPlain($plain, $data));
     }
 
     public function testCompilePlainWritesAndChecksBothFlavours(): void
@@ -580,17 +371,21 @@ class ArtifactTest extends TestCase
         $plain = (string)ArtifactCompiler::build($file, true);
         $written = ArtifactCompiler::writeAll($file, true);
         $this->assertStringContainsString('foreach ($meta[\'items\'] as $item', $plain);
-        $this->assertStringContainsString('switch ($item3[\'kind\'] ?? null)', $plain);
+        $this->assertStringContainsString('switch ($item2[\'kind\'] ?? null)', $plain);
         $this->assertStringContainsString("case 'link':", $plain);
+        $this->assertStringContainsString(
+            '@var array{items: iterable<array-key, array{value: scalar|null|\\Stringable}>} $meta',
+            $plain
+        );
+        $this->assertStringContainsString(
+            '@var iterable<array-key, array{kind?: \'text\'|\'link\', value: scalar|null|\\Stringable}> $blocks',
+            $plain
+        );
 
         $shape = self::load($file);
         $this->assertInstanceOf(Shape::class, $shape);
         $index = ShapeIndex::of($shape->tree());
-        $flat = CodeGenerator::fromSource(
-            CodeGenerator::source($shape->tree(), $index),
-            $index->id(),
-            array_values($index->maps())
-        );
+        $flat = CodeGenerator::fromSource(CodeGenerator::source($shape->tree()), $index->id());
 
         $data = [
             'meta' => ['items' => [['value' => 'm1'], ['value' => 'm2']]],
@@ -629,15 +424,15 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('$data[\'user-name\']', $plain);
         $this->assertStringContainsString('($data[\'data\'] ?? \'fallback\')', $plain);
         $this->assertStringContainsString('($data[\'v1\'] ?? \'numbered\')', $plain);
+        $this->assertStringContainsString(
+            '@var array{\'user-name\': scalar|null|\\Stringable, data: scalar|null|\\Stringable, v1: scalar|null|\\Stringable} $data',
+            $plain
+        );
 
         $shape = self::load($file);
         $this->assertInstanceOf(Shape::class, $shape);
         $index = ShapeIndex::of($shape->tree());
-        $flat = CodeGenerator::fromSource(
-            CodeGenerator::source($shape->tree(), $index),
-            $index->id(),
-            array_values($index->maps())
-        );
+        $flat = CodeGenerator::fromSource(CodeGenerator::source($shape->tree()), $index->id());
 
         $data = ['user-name' => 'Ann', 'data' => 'D', 'v1' => 'V'];
 

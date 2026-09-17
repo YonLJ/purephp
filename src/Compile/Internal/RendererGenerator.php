@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
-use Closure;
 use LogicException;
 use Pure\Compile\CompileException;
 use Pure\Core\Escaper;
@@ -25,13 +24,7 @@ use WeakMap;
  */
 abstract class RendererGenerator implements ShapeVisitor
 {
-    /** @var array<int, Closure> */
-    protected array $maps = [];
-
-    /** @var array<string, int> */
-    protected array $mapIndex = [];
-
-    /** @var list<array{slot: Slot, slotPath: string, mapKey: ?string}> */
+    /** @var list<array{slot: Slot, slotPath: string}> */
     protected array $slotStack = [];
 
     /** @var list<array{itemVar: string, childVar: string, branchOpen: bool}> */
@@ -50,17 +43,6 @@ abstract class RendererGenerator implements ShapeVisitor
     protected function __construct()
     {
         $this->slotCache = new WeakMap();
-    }
-
-    /**
-     * Bind the map closures of the index to their generated positions.
-     */
-    protected static function prepare(self $generator, ShapeIndex $index): void
-    {
-        $generator->maps = array_values($index->maps());
-        foreach (array_keys($index->maps()) as $position => $key) {
-            $generator->mapIndex[$key] = $position;
-        }
     }
 
     /**
@@ -124,15 +106,15 @@ abstract class RendererGenerator implements ShapeVisitor
         $this->literal((string)$raw);
     }
 
-    public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void
+    public function slotEnter(Slot $slot, string $slotPath): void
     {
-        $this->slotStack[] = ['slot' => $slot, 'slotPath' => $slotPath, 'mapKey' => $mapKey];
+        $this->slotStack[] = ['slot' => $slot, 'slotPath' => $slotPath];
 
         if ($this->enterValueSlot($slot, $slotPath)) {
             return;
         }
 
-        $this->enterScopeSlot($slot, $slotPath, $mapKey);
+        $this->enterScopeSlot($slot, $slotPath);
     }
 
     public function slotBranch(string|int $label): void
@@ -163,7 +145,7 @@ abstract class RendererGenerator implements ShapeVisitor
 
         $current = $this->currentContext();
         $this->statement('case ' . var_export((string)$label, true) . ':');
-        $this->dataStack[] = $this->branchScope($context['childVar'], $context['itemVar'], $current['slotPath'] . '[]', $current['mapKey']);
+        $this->dataStack[] = $this->branchScope($context['childVar'], $context['itemVar'], $current['slotPath'] . '[]');
         $context['branchOpen'] = true;
         $this->eachKindStack[] = $context;
     }
@@ -221,15 +203,15 @@ abstract class RendererGenerator implements ShapeVisitor
         }
     }
 
-    private function enterScopeSlot(Slot $slot, string $slotPath, ?string $mapKey): void
+    private function enterScopeSlot(Slot $slot, string $slotPath): void
     {
         switch ($slot->kind) {
             case SlotKind::Child:
-                $this->enterChild($slot, $slotPath, $mapKey);
+                $this->enterChild($slot, $slotPath);
 
                 return;
             case SlotKind::Each:
-                $this->enterEach($slot, $slotPath, $mapKey);
+                $this->enterEach($slot, $slotPath);
 
                 return;
             case SlotKind::If:
@@ -248,21 +230,21 @@ abstract class RendererGenerator implements ShapeVisitor
     /**
      * Open a child slot: bind its nested data scope.
      */
-    protected function enterChild(Slot $slot, string $slotPath, ?string $mapKey): void
+    protected function enterChild(Slot $slot, string $slotPath): void
     {
         $childVar = $this->childVar();
-        $this->statement($childVar . ' = ' . $this->childSource($slot, $this->data(), $slotPath, $mapKey) . ';');
+        $this->statement($childVar . ' = ' . $this->childSource($slot, $this->data(), $slotPath) . ';');
         $this->dataStack[] = $childVar;
     }
 
     /**
      * Open a list slot: iterate it and bind the scope of one item.
      */
-    protected function enterEach(Slot $slot, string $slotPath, ?string $mapKey): void
+    protected function enterEach(Slot $slot, string $slotPath): void
     {
         $itemVar = $this->itemVar();
         $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
-        $this->dataStack[] = $this->eachScope($this->childVar(), $itemVar, $slotPath . '[]', $mapKey);
+        $this->dataStack[] = $this->eachScope($this->childVar(), $itemVar, $slotPath . '[]');
     }
 
     /**
@@ -290,9 +272,9 @@ abstract class RendererGenerator implements ShapeVisitor
     /**
      * Bind the data scope of one list item and return the variable holding it.
      */
-    protected function eachScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    protected function eachScope(string $childVar, string $itemVar, string $scopePath): string
     {
-        $this->statement($childVar . ' = ' . $this->scopeExpr($itemVar, $scopePath, $itemVar, $this->mapExpression($mapKey)) . ';');
+        $this->statement($childVar . ' = ' . $this->scopeSource($itemVar, $scopePath) . ';');
 
         return $childVar;
     }
@@ -300,9 +282,9 @@ abstract class RendererGenerator implements ShapeVisitor
     /**
      * Bind the data scope of one eachKind branch and return its variable.
      */
-    protected function branchScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    protected function branchScope(string $childVar, string $itemVar, string $scopePath): string
     {
-        $this->statement($childVar . ' = ' . $this->scopeExpr($itemVar, $scopePath, $itemVar, $this->mapExpression($mapKey)) . ';');
+        $this->statement($childVar . ' = ' . $this->scopeSource($itemVar, $scopePath) . ';');
 
         return $childVar;
     }
@@ -326,7 +308,7 @@ abstract class RendererGenerator implements ShapeVisitor
     /**
      * Return the current slot stack context.
      *
-     * @return array{slot: Slot, slotPath: string, mapKey: ?string}
+     * @return array{slot: Slot, slotPath: string}
      */
     private function currentContext(): array
     {
@@ -349,36 +331,11 @@ abstract class RendererGenerator implements ShapeVisitor
     }
 
     /**
-     * Expression producing the nested data scope of a child/each slot.
-     */
-    private function scopeExpr(string $value, string $scopePath, string $mapInput, ?string $mapExpression): string
-    {
-        if ($mapExpression !== null) {
-            $value = $mapExpression . '(' . $mapInput . ')';
-        }
-
-        return $this->scopeSource($value, $scopePath);
-    }
-
-    /**
      * Expression writing the nested data scope of a slot.
      */
     protected function scopeSource(string $value, string $scopePath): string
     {
         return '\Pure\Compile\Internal\SlotRuntime::scope(' . $value . ', ' . var_export($scopePath, true) . ')';
-    }
-
-    protected function mapExpression(?string $mapKey): ?string
-    {
-        if ($mapKey === null) {
-            return null;
-        }
-
-        if (!isset($this->mapIndex[$mapKey])) {
-            throw new LogicException("map '{$mapKey}' is missing from the shape index.");
-        }
-
-        return '($maps[' . $this->mapIndex[$mapKey] . '])';
     }
 
     private function conditionExpr(Slot $slot, string $dataVar): string
@@ -430,14 +387,9 @@ abstract class RendererGenerator implements ShapeVisitor
     /**
      * Expression producing the nested data scope of a child slot.
      */
-    protected function childSource(Slot $slot, string $dataVar, string $slotPath, ?string $mapKey): string
+    protected function childSource(Slot $slot, string $dataVar, string $slotPath): string
     {
-        return $this->scopeExpr(
-            $this->valueAccess($slot, $dataVar, $slotPath),
-            $slotPath,
-            $dataVar,
-            $this->mapExpression($mapKey)
-        );
+        return $this->scopeSource($this->valueAccess($slot, $dataVar, $slotPath), $slotPath);
     }
 
     /**

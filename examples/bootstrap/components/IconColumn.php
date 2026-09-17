@@ -20,7 +20,7 @@ function IconColumnShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape())
             )->class('feature-icon d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-2 mb-3'),
             h3(Slot::text('title'))->class('fs-2'),
             p(Slot::text('content')),
