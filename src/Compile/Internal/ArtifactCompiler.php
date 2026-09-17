@@ -28,6 +28,9 @@ final class ArtifactCompiler
 {
     public const SUFFIX = '.shape.php';
 
+    /** @var list<string> The unit suffixes `pure compile` and the binder understand. */
+    public const UNIT_SUFFIXES = ['.shape.php', '.cmp.php'];
+
     /**
      * The artifact contents for one shape file.
      *
@@ -53,7 +56,23 @@ final class ArtifactCompiler
      */
     public static function buildAll(string $shapeFile, bool $plain = false): array
     {
-        $project = self::project($shapeFile, $plain);
+        return self::buildUnit($shapeFile, self::load($shapeFile), $plain);
+    }
+
+    /**
+     * The generated sources of one unit file whose shape is already known.
+     *
+     * `pure compile` uses this for `*.cmp.php` units, where loading the file
+     * registers the lazy factory and the shape comes from the registry.
+     *
+     * @param string $unitFile The unit file path (any unit suffix).
+     * @param Shape $shape The template to compile.
+     * @param bool $plain Also build the plain view.
+     * @return array{artifact: string, plain: ?string}
+     */
+    public static function buildUnit(string $unitFile, Shape $shape, bool $plain = false): array
+    {
+        $project = self::project($unitFile, $shape, $plain);
 
         return ['artifact' => $project['artifact'], 'plain' => $project['plain']];
     }
@@ -88,15 +107,29 @@ final class ArtifactCompiler
      */
     public static function writeChanged(string $shapeFile, bool $plain = false): array
     {
-        $project = self::project($shapeFile, $plain);
-        $artifact = self::artifactPath($shapeFile);
-        $plainFile = $plain ? self::plainPath($shapeFile) : null;
+        return self::writeUnit($shapeFile, self::load($shapeFile), $plain);
+    }
 
-        $artifactWritten = self::writeIfChanged($artifact, $project['artifact'], $shapeFile, $project['id'], 'artifact');
+    /**
+     * Write the artifact (and plain view) of one unit file whose shape is
+     * already known, skipping the files whose content is already current.
+     *
+     * @param string $unitFile The unit file path (any unit suffix).
+     * @param Shape $shape The template to compile.
+     * @param bool $plain Also write the plain view next to the artifact.
+     * @return array{artifact: string, plain: ?string, artifactWritten: bool, plainWritten: bool}
+     */
+    public static function writeUnit(string $unitFile, Shape $shape, bool $plain = false): array
+    {
+        $project = self::project($unitFile, $shape, $plain);
+        $artifact = self::artifactPath($unitFile);
+        $plainFile = $plain ? self::plainPath($unitFile) : null;
+
+        $artifactWritten = self::writeIfChanged($artifact, $project['artifact'], $unitFile, $project['id'], 'artifact');
         $plainWritten = false;
 
         if ($plainFile !== null && $project['plain'] !== null) {
-            $plainWritten = self::writeIfChanged($plainFile, $project['plain'], $shapeFile, $project['id'], 'plain view');
+            $plainWritten = self::writeIfChanged($plainFile, $project['plain'], $unitFile, $project['id'], 'plain view');
         }
 
         return [
@@ -114,7 +147,7 @@ final class ArtifactCompiler
      */
     public static function writeAll(string $shapeFile, bool $plain = false): array
     {
-        $project = self::project($shapeFile, $plain);
+        $project = self::project($shapeFile, self::load($shapeFile), $plain);
         $artifact = self::artifactPath($shapeFile);
         $plainFile = $plain ? self::plainPath($shapeFile) : null;
 
@@ -149,29 +182,33 @@ final class ArtifactCompiler
         return self::sibling($shapeFile, '.plain.php');
     }
 
-    private static function sibling(string $shapeFile, string $suffix): string
+    private static function sibling(string $unitFile, string $suffix): string
     {
-        if (!str_ends_with($shapeFile, self::SUFFIX)) {
-            throw new InvalidArgumentException("'{$shapeFile}' is not a *" . self::SUFFIX . ' file.');
+        foreach (self::UNIT_SUFFIXES as $unitSuffix) {
+            if (str_ends_with($unitFile, $unitSuffix)) {
+                return substr($unitFile, 0, -strlen($unitSuffix)) . $suffix;
+            }
         }
 
-        return substr($shapeFile, 0, -strlen(self::SUFFIX)) . $suffix;
+        throw new InvalidArgumentException(
+            "'{$unitFile}' is not a " . implode(' or ', array_map(static fn (string $s): string => '*' . $s, self::UNIT_SUFFIXES)) . ' file.'
+        );
     }
 
     /**
-     * @param string $shapeFile The shape file path.
+     * @param string $unitFile The unit file path.
+     * @param Shape $shape The template to compile.
      * @param bool $plain Also build the plain view.
      * @return array{artifact: string, plain: ?string, id: string}
      */
-    private static function project(string $shapeFile, bool $plain): array
+    private static function project(string $unitFile, Shape $shape, bool $plain): array
     {
-        $shape = self::load($shapeFile);
         $tree = $shape->tree();
         $id = ShapeIndex::of($tree)->id();
 
         return [
-            'artifact' => self::artifactFile($shapeFile, $tree, $id),
-            'plain' => $plain ? self::plainFile($shapeFile, $tree, $id) : null,
+            'artifact' => self::artifactFile($unitFile, $tree, $id),
+            'plain' => $plain ? self::plainFile($unitFile, $tree, $id) : null,
             'id' => $id,
         ];
     }

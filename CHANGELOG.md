@@ -11,6 +11,17 @@ First public version. No tag has been cut yet.
 
 ### Added
 
+- Component units: `Pure\Component\register()` / `registerPage()` register a
+  lazy template factory under a name, and `component()`, `page()`, `render()`
+  and `renderPage()` accept that name next to a file path. A name and the path
+  of its unit file resolve to the same binder, the factory is only called when
+  no fresh artifact serves the unit (and then once per compile generation), and
+  duplicate registrations throw unless `override: true` is passed.
+- `ArtifactCompiler::buildUnit()` / `writeUnit()` compile a unit file
+  (`*.shape.php` or `*.cmp.php`) whose shape is already known, so a `*.cmp.php`
+  unit gets the same `*.pure.php` artifact and `*.plain.php` view as a shape
+  file; `writeUnit()` skips files whose content is already current.
+
 - `Pure\Component\render()` and `Pure\Component\renderPage()` render a
   `*.shape.php` template in one expression (`render($file, title: $title)`),
   caching the binder per path; `renderPage()` prepends the document header.

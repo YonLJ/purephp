@@ -483,7 +483,7 @@ class ArtifactTest extends TestCase
         $this->assertSame($this->dir . '/page.plain.php', ArtifactCompiler::plainPath($this->dir . '/page.shape.php'));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('is not a *.shape.php file');
+        $this->expectExceptionMessage('is not a *.shape.php or *.cmp.php file');
 
         ArtifactCompiler::plainPath($this->dir . '/page.php');
     }
@@ -566,6 +566,48 @@ class ArtifactTest extends TestCase
         $this->assertStringNotContainsString('compiled:', $second['stdout']);
     }
 
+    public function testCompilesUnitFilesWithAnExplicitShape(): void
+    {
+        $unit = $this->dir . '/badge.cmp.php';
+        file_put_contents($unit, "<?php\n\n// unit placeholder: the shape is passed explicitly.\n");
+
+        $shape = Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::text('title')));
+        $written = ArtifactCompiler::writeUnit($unit, $shape, true);
+
+        $this->assertSame($this->dir . '/badge.pure.php', $written['artifact']);
+        $this->assertSame($this->dir . '/badge.plain.php', $written['plain']);
+        $this->assertTrue($written['artifactWritten']);
+        $this->assertTrue($written['plainWritten']);
+
+        $renderer = self::load($written['artifact']);
+        $this->assertInstanceOf(Renderer::class, $renderer);
+        $this->assertSame('<div>a</div>', $renderer->render(['title' => 'a']));
+
+        $again = ArtifactCompiler::writeUnit($unit, $shape, true);
+        $this->assertFalse($again['artifactWritten']);
+        $this->assertFalse($again['plainWritten']);
+    }
+
+    public function testUnitArtifactsMatchShapeFileArtifacts(): void
+    {
+        $shapeFile = $this->shapeFile(
+            'same.shape.php',
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
+        );
+        $unit = $this->dir . '/same.cmp.php';
+        file_put_contents($unit, "<?php\n\n// unit placeholder: the shape is passed explicitly.\n");
+
+        $fromShapeFile = self::load(ArtifactCompiler::write($shapeFile));
+        $fromUnit = self::load(
+            ArtifactCompiler::writeUnit($unit, Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::text('title'))))['artifact']
+        );
+
+        $this->assertInstanceOf(Renderer::class, $fromShapeFile);
+        $this->assertInstanceOf(Renderer::class, $fromUnit);
+        $this->assertSame($fromShapeFile->id, $fromUnit->id);
+        $this->assertSame($fromShapeFile->render(['title' => 'a']), $fromUnit->render(['title' => 'a']));
+    }
+
     public function testCompilesDirectoriesRecursively(): void
     {
         mkdir($this->dir . '/nested');
@@ -592,7 +634,7 @@ class ArtifactTest extends TestCase
 
         $suffix = $this->runCommand($command, ['pure', 'compile', $this->shapeFile('page.php', "<?php\n\nreturn null;\n")]);
         $this->assertSame(1, $suffix['code']);
-        $this->assertStringContainsString('is not a *.shape.php file', $suffix['stderr']);
+        $this->assertStringContainsString('is not a *.shape.php or *.cmp.php file', $suffix['stderr']);
 
         $missing = $this->runCommand($command, ['pure', 'compile', $this->dir . '/absent.shape.php']);
         $this->assertSame(1, $missing['code']);

@@ -83,10 +83,13 @@ class ComponentTest extends TestCase
 
         $this->assertSame('<div>b</div>', (string)component($file)(['title' => 'b']));
 
-        // Touching the shape file makes it newer, so it compiles again.
+        // Touching the shape file makes it newer, so it compiles again once
+        // the binder cache is dropped: binders are cached per compile
+        // generation, and Compile::flush() starts a new one.
         touch($file);
         touch(ArtifactCompiler::artifactPath($file), time() - 60);
         clearstatcache();
+        Compile::flush();
 
         $this->assertSame('<span>b</span>', (string)component($file)(['title' => 'b']));
     }
