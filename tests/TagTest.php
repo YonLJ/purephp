@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Core\HTML;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
+use Pure\Core\XML;
 
 use function Pure\HTML\button;
 use function Pure\HTML\div;
@@ -263,5 +266,88 @@ class TagTest extends TestCase
         $tag = div('x')->title("caf\xE9");
 
         $this->assertSame("<div title=\"caf\u{FFFD}\">x</div>", $tag->render());
+    }
+
+    public function testCallRejectsWrongArgumentCount(): void
+    {
+        try {
+            div()->id();
+            $this->fail('Expected BadMethodCallException to be thrown.');
+        } catch (BadMethodCallException $e) {
+            $this->assertSame("'id()' accepts exactly one parameter, 0 given.", $e->getMessage());
+        }
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage("'id()' accepts exactly one parameter, 2 given.");
+
+        div()->id('a', 'b');
+    }
+
+    public function testSetAttrRejectsNumericAndEmptyNames(): void
+    {
+        try {
+            div()->setAttrs([0 => 'x']); // @phpstan-ignore argument.type (an int-keyed map is the case under test)
+            $this->fail('Expected InvalidArgumentException to be thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame("Element 'div' attribute name cannot be numbers '0'.", $e->getMessage());
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Element 'div' attribute name cannot be empty ''.");
+
+        div()->setAttrs(['' => 'x']);
+    }
+
+    public function testClassRejectsMixedSlotArguments(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage("Slot values cannot be combined with other 'class' arguments.");
+
+        div()->class('btn', Slot::attr('c'));
+    }
+
+    public function testStyleAcceptsASlot(): void
+    {
+        $slot = Slot::attr('s');
+        $tag = div()->style($slot);
+
+        $this->assertSame($slot, $tag->getAttr('style'));
+    }
+
+    public function testPrintOutputsRenderedHTML(): void
+    {
+        ob_start();
+
+        div('x')->print();
+
+        $this->assertSame('<div>x</div>', ob_get_clean());
+    }
+
+    public function testSavePrependsTheCustomHeader(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'purephp-header-');
+        $this->assertIsString($path);
+
+        try {
+            $this->assertNotFalse(div('hi')->save($path, '# H'));
+            $this->assertSame("# H<div>hi</div>", file_get_contents($path));
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function testDocumentHeaderMatchesSubclassDefaults(): void
+    {
+        $this->assertSame('<!DOCTYPE html>', HTML::div()->documentHeader());
+        $this->assertSame('<?xml version="1.0"?>', (new XML('root'))->documentHeader());
+    }
+
+    public function testVoidElementsAreCaseInsensitive(): void
+    {
+        $this->assertTrue((new HTML('BR'))->getSelfClose());
+        $this->assertTrue((new HTML('IMG'))->getSelfClose());
+        $this->assertFalse((new HTML('div'))->getSelfClose());
+        $this->assertFalse((new HTML('DIV'))->getSelfClose());
+        $this->assertSame('<img />', (string)(new HTML('img')));
     }
 }
