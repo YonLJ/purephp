@@ -206,9 +206,12 @@ echo $page->render(['title' => 'Users']);
 $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 ```
 
-- `pure compile <path>...` accepts files and directories (searched recursively);
-  `pure compile --check` writes nothing and exits with code 1 when an artifact is
-  stale or missing, which fits a CI step. `--plain` also writes the
+- `pure compile <path>...` accepts files and directories (searched recursively)
+  and skips the files whose content is already current: the shape is still
+  loaded and compiled (so a change in anything it pulls in is picked up), but an
+  up-to-date file is reported as `unchanged:` instead of rewritten.
+  `pure compile --check` writes nothing and exits with code 1 when an artifact
+  is stale or missing, which fits a CI step. `--plain` also writes the
   dependency-free view described below, and `--check --plain` covers both
   flavors. The repository examples ship `*.shape.php` files, so
   `vendor/bin/pure compile examples` compiles them all.

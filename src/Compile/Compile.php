@@ -16,7 +16,7 @@ final class Compile
      * Bump when the generated-code format, the fingerprint composition or a
      * class name referenced by generated code changes.
      */
-    public const CACHE_VERSION = 6;
+    public const CACHE_VERSION = 7;
 
     private static int $generation = 0;
 

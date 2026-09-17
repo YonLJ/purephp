@@ -74,8 +74,42 @@ final class ArtifactCompiler
     }
 
     /**
+     * Write the artifact (and plain view) of a shape file, skipping the files
+     * whose content is already current.
+     *
+     * The shape is still loaded and compiled, so a change in anything the shape
+     * file pulls in is picked up; only the write, the load-back verification
+     * and the rename are skipped for unchanged files, which is most of the cost
+     * of compiling an unchanged tree.
+     *
      * @param string $shapeFile The path of a `*.shape.php` file returning a Shape.
      * @param bool $plain Also write the plain view next to the artifact.
+     * @return array{artifact: string, plain: ?string, artifactWritten: bool, plainWritten: bool}
+     */
+    public static function writeChanged(string $shapeFile, bool $plain = false): array
+    {
+        $project = self::project($shapeFile, $plain);
+        $artifact = self::artifactPath($shapeFile);
+        $plainFile = $plain ? self::plainPath($shapeFile) : null;
+
+        $artifactWritten = self::writeIfChanged($artifact, $project['artifact'], $shapeFile, $project['id'], 'artifact');
+        $plainWritten = false;
+
+        if ($plainFile !== null && $project['plain'] !== null) {
+            $plainWritten = self::writeIfChanged($plainFile, $project['plain'], $shapeFile, $project['id'], 'plain view');
+        }
+
+        return [
+            'artifact' => $artifact,
+            'plain' => $plainFile,
+            'artifactWritten' => $artifactWritten,
+            'plainWritten' => $plainWritten,
+        ];
+    }
+
+    /**
+     * @param string $shapeFile The shape file path.
+     * @param bool $plain Also write the plain view.
      * @return array{artifact: string, plain: ?string} The written paths.
      */
     public static function writeAll(string $shapeFile, bool $plain = false): array
@@ -207,6 +241,22 @@ final class ArtifactCompiler
         }
 
         return $file . PlainGenerator::view($tree);
+    }
+
+    /**
+     * Write one generated file when its content changed.
+     *
+     * @return bool Whether the file was written.
+     */
+    private static function writeIfChanged(string $path, string $contents, string $shapeFile, string $id, string $kind): bool
+    {
+        if (is_file($path) && @file_get_contents($path) === $contents) {
+            return false;
+        }
+
+        self::writeFile($path, $contents, $shapeFile, $id, $kind);
+
+        return true;
     }
 
     /**

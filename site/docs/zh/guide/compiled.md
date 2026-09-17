@@ -179,9 +179,12 @@ echo $page->render(['title' => 'Users']);
 $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 ```
 
-- `pure compile <路径>...` 接受文件与目录（递归查找）；`pure compile --check`
-  不写入任何文件，当产物过期或缺失时以退出码 1 结束，适合放在 CI 步骤中。`--plain`
-  会额外写出下文的「无依赖视图」，`--check --plain` 同时校验两种形态。仓库中的示例都带有 `*.shape.php` 文件，`vendor/bin/pure compile examples` 可一次编译全部。
+- `pure compile <路径>...` 接受文件与目录（递归查找），并跳过内容已最新的文件：shape
+  仍会被加载与编译（因此它引用的任何文件发生变化都能被感知），但内容一致的文件会以
+  `unchanged:` 报告而不是重写。`pure compile --check` 不写入任何文件，当产物过期或缺失时
+  以退出码 1 结束，适合放在 CI 步骤中。`--plain` 会额外写出下文的「无依赖视图」，
+  `--check --plain` 同时校验两种形态。仓库中的示例都带有 `*.shape.php` 文件，
+  `vendor/bin/pure compile examples` 可一次编译全部。
 - 产物的渲染结果与运行时编译器完全一致（测试按逐字节比对断言），并且读起来就像模板：
   标记仍是标记，动态值写成 `<?= ... ?>`，控制流使用替代语法，闭包只定义一次并导入类的短名。
   HTML 片段承载的是精确的渲染字节，因此不会被重新缩进。产物的 `Renderer::$source`

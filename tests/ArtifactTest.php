@@ -528,6 +528,44 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('need recompiling', $stale['stderr']);
     }
 
+    public function testWriteChangedSkipsFilesThatAreAlreadyCurrent(): void
+    {
+        $file = $this->shapeFile('incremental.shape.php', "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('a'));\n");
+
+        $first = ArtifactCompiler::writeChanged($file, true);
+        $this->assertTrue($first['artifactWritten']);
+        $this->assertTrue($first['plainWritten']);
+
+        $second = ArtifactCompiler::writeChanged($file, true);
+        $this->assertFalse($second['artifactWritten']);
+        $this->assertFalse($second['plainWritten']);
+
+        file_put_contents($file, "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('b'));\n");
+
+        $third = ArtifactCompiler::writeChanged($file, true);
+        $this->assertTrue($third['artifactWritten']);
+        $this->assertTrue($third['plainWritten']);
+
+        $renderer = self::load($third['artifact']);
+        $this->assertInstanceOf(Renderer::class, $renderer);
+        $this->assertSame('<div>b</div>', $renderer->render([]));
+    }
+
+    public function testSecondCompileRunReportsUnchangedFiles(): void
+    {
+        $file = $this->shapeFile('twice.shape.php', "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('x'));\n");
+        $command = new ArtifactCommand();
+
+        $first = $this->runCommand($command, ['pure', 'compile', $file]);
+        $this->assertSame(0, $first['code']);
+        $this->assertStringContainsString('compiled:', $first['stdout']);
+
+        $second = $this->runCommand($command, ['pure', 'compile', $file]);
+        $this->assertSame(0, $second['code']);
+        $this->assertStringContainsString('unchanged:', $second['stdout']);
+        $this->assertStringNotContainsString('compiled:', $second['stdout']);
+    }
+
     public function testCompilesDirectoriesRecursively(): void
     {
         mkdir($this->dir . '/nested');

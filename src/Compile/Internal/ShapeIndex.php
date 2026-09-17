@@ -107,8 +107,12 @@ final class ShapeIndex implements ShapeVisitor
 
     private function describeSlot(Slot $slot, string $slotPath): string
     {
+        // A null default is the common case (every required slot) and encodes
+        // as 'N' without the serialize() call.
+        $default = $slot->default === null ? 'N' : serialize($slot->default);
+
         return 'slot:' . $slot->kind->name . ':' . $slotPath
             . ':required:' . ($slot->required ? '1' : '0')
-            . ':default:' . serialize($slot->default);
+            . ':default:' . $default;
     }
 }
