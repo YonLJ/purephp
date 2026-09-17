@@ -138,7 +138,7 @@ class CompileTest extends TestCase
 
     public function testTextSlotEscapingUsesTheSharedEscaperConstants(): void
     {
-        $source = Compile::shape(div(Slot::text('title')))->compile()->source();
+        $source = Compile::shape(div(Slot::text('title')))->compile()->source;
 
         // Escaping config stays owned by Escaper: generated code references the
         // shared constants instead of copying the flag values. Whether the
@@ -311,7 +311,7 @@ class CompileTest extends TestCase
         $shape = Compile::shape(div('x'));
 
         $this->assertSame($shape->compile(), $shape->compile());
-        $this->assertSame($shape->id(), $shape->compile()->id());
+        $this->assertSame($shape->id(), $shape->compile()->id);
     }
 
     public function testCompiledSourceContainsStaticMarkup(): void
@@ -319,19 +319,15 @@ class CompileTest extends TestCase
         $shape = Compile::shape(div(span('static'))->class('x'));
         $compiled = $shape->compile();
 
-        $this->assertStringContainsString("'<div class=\"x\"><span>static</span></div>'", $compiled->source());
-        $this->assertSame($shape->id(), $compiled->id());
+        $this->assertStringContainsString("'<div class=\"x\"><span>static</span></div>'", $compiled->source);
+        $this->assertSame($shape->id(), $compiled->id);
     }
 
-    public function testCompiledPrintWritesOutput(): void
+    public function testCompiledRenderReturnsOutput(): void
     {
-        $compiled = Compile::shape(div('hi'))->compile();
+        $compiled = Compile::shape(div(Slot::text('title')))->compile();
 
-        ob_start();
-        $compiled->print([]);
-        $output = ob_get_clean();
-
-        $this->assertSame('<div>hi</div>', $output);
+        $this->assertSame('<div>hi</div>', $compiled->render(['title' => 'hi']));
     }
 
     public function testCompiledSaveWritesFile(): void
@@ -374,7 +370,7 @@ class CompileTest extends TestCase
 
     public function testSlotFreeShapeCompilesToASingleLiteral(): void
     {
-        $source = Compile::shape(div(span('static & more < 10'))->class('note'))->compile()->source();
+        $source = Compile::shape(div(span('static & more < 10'))->class('note'))->compile()->source;
 
         $this->assertStringNotContainsString('SlotRuntime::', $source);
         $this->assertSame(1, substr_count($source, '$out .='));

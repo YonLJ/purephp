@@ -36,7 +36,7 @@ echo $shape([
 | --- | --- |
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)` |
-| `Pure\Compile\Renderer` | 编译后的渲染器：`__invoke($data)`、`id()`、`source()`、`print($data)`、`save($path, $data, $header = '')` |
+| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
 | `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`sub`、`each`、`if`、`eachAny`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
@@ -112,11 +112,10 @@ $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
 ```php
 $compiled = $shape->compile();
 
-$compiled($data);                 // 返回 string
-$compiled->print($data);          // 直接 echo
+$compiled->render($data);         // 返回 string
 $compiled->save($path, $data);    // 写入文件，返回写入的字节数
-$compiled->source();              // 生成的 PHP 源码，调试时有用
-$compiled->id();                  // 结构指纹（与 Shape::id() 相同）
+$compiled->source;                // 生成的 PHP 源码，调试时有用
+$compiled->id;                    // 结构指纹（与 Shape::id() 相同）
 ```
 
 ## 磁盘缓存

@@ -117,7 +117,7 @@ final class Compile
         }
 
         $compiled = CodeGenerator::compile($tree, $index);
-        RendererCache::write($file, $compiled->source(), $index->id(), count($index->maps()));
+        RendererCache::write($file, $compiled->source, $index->id(), count($index->maps()));
 
         return $compiled;
     }

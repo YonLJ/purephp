@@ -32,7 +32,7 @@ final class Shape implements ShapeContract
      */
     public function __invoke(array $data): string
     {
-        return ($this->compile())($data);
+        return $this->compile()->render($data);
     }
 
     /**
@@ -73,7 +73,7 @@ final class Shape implements ShapeContract
      */
     public function print(array $data): void
     {
-        echo ($this->compile())($data);
+        echo $this->compile()->render($data);
     }
 
     /**
