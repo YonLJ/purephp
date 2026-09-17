@@ -38,7 +38,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | --- | --- |
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
-| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
+| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = null)` and the readonly `source` / `id` properties |
 | `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
@@ -121,14 +121,19 @@ $compiled = $shape->compile();
 
 $compiled->render($data);         // string
 $compiled->save($path, $data);    // write to file, returns bytes written
-$compiled->source;                // generated PHP source, useful when debugging
+$compiled->source;                // generated PHP source (empty for precompiled artifacts)
+$compiled->header;                // document header captured at compile time
 $compiled->id;                    // structure fingerprint (same as Shape::id())
 ```
 
 `Shape::save($path, $data)` is the user-facing shortcut: it writes the rendered
 output, prepending the document header of the root tag (for example
 `<!DOCTYPE html>` or the XML declaration) unless you pass your own header.
-`Renderer::save()` is the low-level form and does not guess a header.
+`Renderer::save()` uses the header captured at compile time when `$header` is
+null — empty for renderers compiled at runtime, the root tag's header for
+[precompiled artifacts](/guide/compiled#precompiled-artifacts). `Renderer::$header`
+exposes that header, so a handler can print a whole document with
+`$renderer->header . $renderer->render($data)`.
 
 ## On-Disk Cache
 

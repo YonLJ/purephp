@@ -145,10 +145,57 @@ Nested components use `Slot::child()`, lists use `Slot::each()` (or
 `Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
 Everything else is plain PHP.
 
+For production, `pure compile` precompiles shape files into `*.pure.php`
+artifacts that return a `Renderer` without building the shape tree:
+
+```bash
+vendor/bin/pure compile src/shapes            # *.pure.php: the compiled renderer
+vendor/bin/pure compile --plain src/shapes    # + *.plain.php: a dependency-free view
+```
+
+```php
+$page = require __DIR__ . '/page.pure.php';
+
+echo $page->render(['title' => 'Card Title']);        // the view body
+echo $page->header . $page->render($data);            // the whole document
+```
+
+A `*.plain.php` view is markup and native PHP only — load it by extracting the
+data into locals and nothing of purephp is needed at render time:
+
+```php
+ob_start();
+extract($data, EXTR_SKIP);
+require __DIR__ . '/views/index.plain.php';
+$html = (string)ob_get_clean();
+```
+
+`pure compile --check` reports stale or missing artifacts for CI
+(`--check --plain` covers both flavors). See
+[Compiled Components](/guide/compiled#precompiled-artifacts) for the artifact
+contract and the map closures it can copy.
+
 ## Examples
 
-For more usage examples see [here](https://github.com/YonLD/purephp/tree/master/examples).
-Every example renders through the compiled path.
+`examples/bootstrap-features` is a small MVC setup: `views/index.shape.php`
+compiles into `views/index.pure.php` (strict artifact, loaded by `view()`) and
+`views/index.plain.php` (dependency-free view, loaded by `plain()`). Two
+controllers share the same view data through `indexData()`:
+`app/controllers/IndexController.php` returns `view('index.pure', [...])` and
+`app/controllers/PlainIndexController.php` returns the plain view. One router,
+`public/index.php`, serves both: `/` redirects to `/plain`, `/pure` renders the
+artifact and `/plain` the plain view.
+
+```bash
+vendor/bin/pure compile --plain examples/bootstrap-features
+php -S localhost:8000 -t examples/bootstrap-features/public \
+    examples/bootstrap-features/public/index.php
+# http://localhost:8000/pure and http://localhost:8000/plain
+```
+
+The other examples render through the compiled path too; every artifact is
+byte-identical to its shape. See
+[here](https://github.com/YonLD/purephp/tree/master/examples).
 
 ## License
 
