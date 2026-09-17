@@ -2,7 +2,7 @@
 
 The combination of PurePHP and TailwindCSS provides a powerful development experience: component-based PHP templating engine paired with a utility-first CSS framework.
 
-*Reusable components in this guide are compiled shapes: static Tailwind class strings are written once at build time and per-request values arrive through slots. See [Compiled Components](/guide/compiled). The immediate tag API (`render()` / `toPrint()`) remains available for snippets, and Tailwind finds the class names in both paths because they always live in PHP source.*
+*Reusable components in this guide are compiled shapes: static Tailwind class strings are written once at build time and per-request values arrive through slots. See [Compiled Components](/guide/compiled). The immediate tag API (`render()` / `print()`) remains available for snippets, and Tailwind finds the class names in both paths because they always live in PHP source.*
 
 ## Why Choose This Combination?
 

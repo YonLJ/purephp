@@ -79,6 +79,10 @@ rebuilding them. See the
 [compiled rendering guide](https://yonld.github.io/purephp/guide/compiled) for
 caching, conditionals and heterogeneous lists.
 
+A shape renders with `$shape($data)` (string) or `$shape->print($data)`
+(stdout); `$shape->save($path, $data)` writes a file and prepends the document
+header of the root tag.
+
 ## Snippets and debugging
 
 For small fragments, one-off snippets and debugging you can build a regular tag
@@ -93,7 +97,7 @@ use function Pure\HTML\div;
 div(
     'Hello ',
     a('PHP')->href('https://www.php.net')
-)->class('container')->style('background: #fff;')->data_key('primary')->toPrint();
+)->class('container')->style('background: #fff;')->data_key('primary')->print();
 ```
 
 The above code will output:
@@ -102,7 +106,7 @@ The above code will output:
 <div class="container" style="background: #fff;" data-key="primary">Hello <a href="https://www.php.net">PHP</a></div>
 ```
 
-`render()` and `toPrint()` are the debug/snippet outlet. Production pages
+`render()` and `print()` are the debug/snippet outlet. Production pages
 should compile shapes, because a shape is compiled and static markup is escaped
 once instead of on every render.
 

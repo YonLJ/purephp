@@ -2,6 +2,27 @@
 
 This guide explains the core concepts of PurePHP.
 
+## Choosing a Path
+
+One rule covers both paths:
+
+- **Data drives the output → slots and shapes**: replace the values with `Slot`
+  placeholders, wrap the tree in `Compile::shape()` and bind plain data per
+  request.
+- **A snippet, prototype or debug output → render immediately**: build the tree
+  with the real values and call `print()` or `render()`.
+
+| Action | `Tag` (immediate) | `Shape` (compiled) |
+| --- | --- | --- |
+| String | `render()` | `$shape($data)` |
+| Output | `print()` | `print($data)` |
+| File | `save($path)` | `save($path, $data)` |
+| Debug | `toJSON()` | `compile()->source` |
+
+Each name exists once: `render()` returns a string, `print()` echoes, `save()`
+writes a file (prepending the document header of the root tag) and `toJSON()` /
+`source` expose the structure for debugging.
+
 ## Tag Trees
 
 PurePHP represents HTML with PHP objects. Tag helper functions build a tree, and
@@ -22,7 +43,7 @@ echo $element; // <div class="container"><h1>Title</h1><p>Content</p></div>
 
 Text children and attribute values are escaped while rendering; `Raw` children
 are emitted verbatim. A tag tree that contains data is rendered immediately
-with `render()`, `toPrint()` or `__toString()`. That path is the right tool for
+with `render()`, `print()` or `__toString()`. That path is the right tool for
 snippets and debugging.
 
 ## Shapes and Slots
@@ -58,6 +79,11 @@ Slot types:
 | `Slot::each()` | iterable of arrays | yes, per item |
 | `Slot::if()` | truthy condition | no (branches share the scope) |
 | `Slot::eachAny()` | iterable of arrays with a discriminator | yes, per item |
+
+A slot name is always the **data key** (and the error path), never a tag or
+attribute name: in `a(Slot::text('label'))->class(Slot::attr('classList'))` the
+text binds `label` and the class attribute binds `classList`, while `a` and
+`class` come from the tree.
 
 ## Compiling
 

@@ -2,21 +2,20 @@
 
 PurePHP provides comprehensive support for creating SVG graphics and XML documents with the same elegant syntax as HTML.
 
-*HTML, SVG and XML tag instances all extend `Tag`, so any of them can be wrapped in `Compile::shape()` and rendered with data — see [Compiled Components](/guide/compiled). The SVG sections below are a tag-API reference and render immediately with `render()` / `toPrint()`; the XML sections use the compiled path.*
+*HTML, SVG and XML tag instances all extend `Tag`, so any of them can be wrapped in `Compile::shape()` and rendered with data — see [Compiled Components](/guide/compiled). The SVG sections below are a tag-API reference and render immediately with `render()` / `print()`; the XML sections use the compiled path.*
 
 ## SVG Support
 
 ### Basic SVG Creation
 
-Create SVG graphics using either magic static methods or constructors:
+Create SVG graphics with the `Pure\SVG` functions, or with magic static methods
+for custom tags:
 
 ```php
 <?php
 
 use function Pure\SVG\{svg, circle, rect, path};
-use Pure\Core\SVG;
 
-// Using function approach (recommended for predefined tags)
 $graphic = svg(
     circle()
         ->cx('50')
@@ -34,40 +33,22 @@ $graphic = svg(
 echo $graphic; // Outputs SVG markup
 ```
 
-### Magic Static Methods vs Constructor
+### Functions vs Magic Static Methods
 
-#### Magic Static Methods (Elegant for custom tags)
+Custom tags use the magic static surface:
 
 ```php
 <?php
 
 use Pure\Core\SVG;
-
-// Clean syntax for any SVG tag
-$customElement = SVG::customTag(
-    SVG::innerElement('content')
-)->customAttribute('value');
 
 // Perfect for non-standard or custom SVG elements
-$webComponent = SVG::myCustomSvgElement()
-    ->data_id('unique')
-    ->class('custom-svg');
-```
+$customElement = SVG::customTag(SVG::innerElement('content'))
+    ->customAttribute('value');
 
-#### Constructor Method (Performance optimized)
-
-```php
-<?php
-
-use Pure\Core\SVG;
-
-// Direct constructor for better performance
-$customElement = new SVG('customTag', [
-    new SVG('innerElement', ['content'])
-])->customAttribute('value');
-
-// Better for performance-critical applications
-$webComponent = (new SVG('myCustomSvgElement'))
+// Works with dynamic tag names too
+$tag = 'myCustomSvgElement';
+$webComponent = SVG::{$tag}()
     ->data_id('unique')
     ->class('custom-svg');
 ```
@@ -175,13 +156,15 @@ $data = [
     ],
 ];
 
-$page->compile()->save('./example.xml', $data, '<?xml version="1.0"?>');
+$page->save('./example.xml', $data);
 ```
 
 `Slot::each()` renders one `AddressShape()` per record, and `Slot::if()` skips
 the `city` element for records without it — a missing key is false and never
 throws. The same shape renders to a string with `$page($data)` or
-`$page->print($data)`; `Renderer::save()` only prefixes the document header.
+`$page->print($data)`; `save()` prepends the document header of the root tag,
+and you can pass your own header as the third argument of `Shape::save()`
+(`Renderer::save()` takes it as well but defaults to none).
 
 ### Data-driven Elements
 
@@ -215,36 +198,30 @@ When the structure itself has to vary with the data, use `Slot::if()` or
 
 ## Performance Considerations
 
-### When to Use Magic Methods vs Constructor
+### Functions vs Magic Static Methods
 
-**Use Magic Static Methods when:**
+**Use functions when:**
+- The tag is one of the predefined HTML/SVG tags
+- Working with dynamic values (children and attributes)
+
+**Use magic static methods when:**
 - Creating custom or non-standard tags
-- Prototyping and development
-- Code readability is priority
 - Working with dynamic tag names
 
-**Use Constructor when:**
-- Performance is critical
-- Building libraries or frameworks
-- Need maximum type safety
-- Working with large documents
-
-### Performance Comparison
+Both build the same `Tag` object; the functions are the thin, explicit wrapper
+for the common names:
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// Magic method (slightly slower but more elegant)
+// Custom tag name
 $element1 = HTML::customTag('content')->customAttr('value');
 
-// Constructor (faster, more explicit)
-$element2 = (new HTML('customTag', ['content']))->customAttr('value');
-
-// For predefined tags, use functions (best of both worlds)
+// Predefined tag through its function
 use function Pure\HTML\div;
-$element3 = div('content')->customAttr('value');
+$element2 = div('content')->customAttr('value');
 ```
 
 ## Important: String Content Is Escaped
@@ -259,11 +236,11 @@ use Pure\Core\Raw;
 use Pure\Core\XML;
 
 // ✅ XML tags in strings are escaped, not parsed
-XML::root('<item>This stays visible</item>')->toPrint();
+XML::root('<item>This stays visible</item>')->print();
 // Output: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
 // ✅ Use Raw::of to emit XML content
-XML::root(Raw::of('<item>This is preserved</item>'))->toPrint();
+XML::root(Raw::of('<item>This is preserved</item>'))->print();
 // Output: <root><item>This is preserved</item></root>
 ```
 
@@ -281,9 +258,8 @@ Both render paths behave the same way; bound data is escaped by
 
 1. **Use functions for predefined HTML/SVG tags** - They provide the best balance of performance and readability
 2. **Use magic methods for custom tags** - When you need dynamic tag creation
-3. **Use constructors for performance-critical code** - When building libraries or processing large documents
-4. **Use Raw::of() for trusted content** - When you need to preserve markup structure
-5. **Combine approaches as needed** - You can mix and match based on your specific use case
+3. **Use Raw::of() for trusted content** - When you need to preserve markup structure
+4. **Combine approaches as needed** - You can mix and match based on your specific use case
 
 ## Next Steps
 

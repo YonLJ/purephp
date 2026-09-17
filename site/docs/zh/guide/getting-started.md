@@ -31,7 +31,7 @@ use function Pure\HTML\{div, h1, p};
 div(
     h1('PurePHP Installation Successful'),
     p('Congratulations! PurePHP is correctly installed.')
-)->toPrint();
+)->print();
 ```
 
 运行测试文件：
@@ -101,6 +101,18 @@ php -S localhost:8000
 
 然后访问 `http://localhost:8000`，查看你的第一个 PurePHP 应用！
 
+### 4. 启用开发期 guard
+
+开发期间请启用 guard，让每个请求都重建形状的问题被报告出来，而不是悄悄拖慢页面：
+
+```php
+// index.php，首次渲染之前
+Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
+```
+
+当同一调用点在单个进程内过多地调用 `Compile::shape()` 时，它会按调用点发出一次
+`E_USER_WARNING`，并指向 `static $shape ??=` 模式。
+
 ## 基础示例
 
 ### 使用组件
@@ -155,7 +167,7 @@ $shape = Compile::shape(
 $shape(['id' => 'main-content']);
 ```
 
-对于代码片段——即立即渲染的小片段——你可以继续使用标签 API 与 `toPrint()`：
+对于代码片段——即立即渲染的小片段——你可以继续使用标签 API 与 `print()`：
 
 ```php
 <?php
@@ -166,7 +178,7 @@ div('Content')
     ->class('container')
     ->style('background: #f0f0f0; padding: 20px;')
     ->data_id('main-content')
-    ->toPrint();
+    ->print();
 ```
 
 ## 下一步

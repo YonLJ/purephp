@@ -66,7 +66,7 @@ input()->type('checkbox')->checked(false); // no checked attribute
 
 ## 动态 props
 
-动态属性值使用 `Slot::attr()`。`null` 值会在渲染时省略该属性（绑定的 `false` 行为相同），条件属性也是以此实现的：
+动态属性值使用 `Slot::attr()`。参数是数据键而不是属性名——属性名来自 setter，因此 `->class(Slot::attr('classList'))` 会从数据中取 `classList` 并写入 `class`。`null` 值会在渲染时省略该属性（绑定的 `false` 行为相同），条件属性也是以此实现的：
 
 ```php
 <?php
@@ -74,11 +74,11 @@ input()->type('checkbox')->checked(false); // no checked attribute
 use Pure\Core\Slot;
 
 $shape = Compile::shape(
-    button('Save')->class(Slot::attr('class'))->disabled(Slot::attr('disabled'))
+    button('Save')->class(Slot::attr('classList'))->disabled(Slot::attr('disabled'))
 );
 
-$shape(['class' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
-$shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
+$shape(['classList' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
+$shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
 ```
 
 ## 槽位参考
@@ -86,7 +86,7 @@ $shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="d
 | 槽位 | 值 | 行为 |
 | --- | --- | --- |
 | `Slot::text($name)` | 可字符串化或 `null` | 转义后的文本内容；`null` 渲染为空 |
-| `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 省略该属性 |
+| `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值（`$name` 是数据键）；`null` 省略该属性 |
 | `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
 | `Slot::sub($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |

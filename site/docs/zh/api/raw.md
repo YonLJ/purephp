@@ -12,7 +12,7 @@
 use function Pure\HTML\div;
 
 // 字符串内容被转义
-div('<p>你好 <strong>世界</strong></p>')->toPrint();
+div('<p>你好 <strong>世界</strong></p>')->print();
 // 输出: <div>&lt;p&gt;你好 &lt;strong&gt;世界&lt;/strong&gt;&lt;/p&gt;</div>
 ```
 
@@ -25,7 +25,7 @@ use Pure\Core\Raw;
 use function Pure\HTML\div;
 
 // 原始内容保留标记
-div(Raw::of('<p>你好 <strong>世界</strong></p>'))->toPrint();
+div(Raw::of('<p>你好 <strong>世界</strong></p>'))->print();
 // 输出: <div><p>你好 <strong>世界</strong></p></div>
 ```
 

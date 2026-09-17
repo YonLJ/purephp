@@ -31,18 +31,15 @@ Represents raw HTML or XML content that bypasses escaping. Useful for including 
 ```php
 <?php
 
-use Pure\Core\{HTML, SVG, XML};
+use Pure\Core\HTML;
 use function Pure\HTML\div;
 use function Pure\SVG\circle;
 
-// Function approach (recommended for standard tags)
+// Function approach (standard tags)
 $element1 = div('Content');
 
-// Magic static method (recommended for custom tags)
+// Magic static method (custom tags)
 $element2 = HTML::customTag('Content');
-
-// Constructor (recommended for performance)
-$element3 = new HTML('div', ['Content']);
 ```
 
 ### Compiling Shapes
@@ -70,9 +67,9 @@ All Tag-based classes share these common methods:
 - `style()` - Set inline styles
 - `id()`, `data_*()`, `aria_*()` - Set attributes
 - `getTagName()`, `getAttrs()`, `getChildren()` - Get information
-- `toJSON()`, `render()`, `toPrint()`, `__toString()` - Output methods (snippets/debugging)
+- `toJSON()`, `render()`, `print()`, `__toString()` - Output methods (snippets/debugging)
 
-`Pure\Compile\Shape` provides `__invoke($data)`, `print($data)` and
+`Pure\Compile\Shape` provides `__invoke($data)`, `print($data)`, `save($path, $data)` and
 `compile()`; `Pure\Compile\Renderer` provides `render($data)`,
 `save($path, $data)` and the readonly `source` / `id` properties.
 
@@ -81,7 +78,6 @@ All Tag-based classes share these common methods:
 - **Compile shapes once per process** — memoize them with `static $shape ??= Compile::shape(...)` (under standard PHP-FPM enable `Compile::cachePath()` so requests load the renderer instead of rebuilding it)
 - **Use functions** for standard HTML/SVG tags
 - **Use magic methods** for custom or dynamic tags
-- **Use constructors** for performance-critical code
 - **Use Raw class** for pre-formatted content
 - **Enable `Compile::cachePath()`** in production so warm workers skip code generation
 

@@ -5,7 +5,7 @@
 Tag trees serve two purposes:
 
 - **Immediate rendering** (snippets and debugging): build the tree with real
-  values and render it with `render()` / `toPrint()`.
+  values and render it with `render()` / `print()`.
 - **Compiled rendering** (production): build a data-free tree with
   `Pure\Core\Slot` placeholders, wrap it with `Pure\Compile\Compile::shape()`
   and bind data at render time. See [Compiled Rendering](./compile).
@@ -227,7 +227,7 @@ Renders the tag tree and its children to an HTML string directly, with real
 values. Attribute values and text children are escaped while rendering; Raw
 children are emitted verbatim.
 
-`render()` (and `toPrint()` / `__toString()`) is the **snippet and debugging**
+`render()` (and `print()` / `__toString()`) is the **snippet and debugging**
 outlet. Production pages should compile shapes instead, so static markup is
 escaped once at compile time — see [Compiled Rendering](./compile).
 
@@ -256,7 +256,7 @@ $element = div('Content')->class('container');
 echo (string)$element; // Output: <div class="container">Content</div>
 ```
 
-### `toPrint(): void`
+### `print(): void`
 
 Directly outputs the element's HTML string.
 
@@ -265,8 +265,23 @@ Directly outputs the element's HTML string.
 
 use function Pure\HTML\div;
 
-div('Content')->class('container')->toPrint();
+div('Content')->class('container')->print();
 // Output: <div class="container">Content</div>
+```
+
+### `save(string $path, ?string $header = null): int|false`
+
+Writes the rendered tree to a file. When `$header` is omitted, the document
+header of the tag type is prepended (`<!DOCTYPE html>` for HTML, the XML
+declaration for XML and SVG); pass `$header` to override it. Returns the number
+of bytes written, or `false` on failure.
+
+```php
+<?php
+
+use function Pure\HTML\{div, h1};
+
+div(h1('Report'))->save('report.html');
 ```
 
 ## Dynamic Attribute Methods

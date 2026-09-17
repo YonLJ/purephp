@@ -4,32 +4,25 @@
 
 ## 创建 SVG 元素
 
-与 HTML 类似，SVG 元素可以通过两种方式创建：
-
-### 1. 魔术静态方法
+标准 SVG 标签来自 `Pure\SVG` 函数；其他标签名使用魔术静态接口：
 
 ```php
 <?php
 
-use Pure\Core\SVG;
+use function Pure\SVG\{circle, rect, svg};
 
-// 直接使用 SVG 类的魔术方法
-$circle = SVG::circle()->cx('50')->cy('50')->r('40')->fill('red');
-$rect = SVG::rect()->x('10')->y('10')->width('80')->height('80')->fill('blue');
-$svg = SVG::svg($circle, $rect)->width('100')->height('100');
+$circle = circle()->cx('50')->cy('50')->r('40')->fill('red');
+$rect = rect()->x('10')->y('10')->width('80')->height('80')->fill('blue');
+$svg = svg($circle, $rect)->width('100')->height('100');
 ```
 
-### 2. 构造函数方法
-
 ```php
 <?php
 
 use Pure\Core\SVG;
 
-// 直接使用构造函数
-$circle = (new SVG('circle'))->cx('50')->cy('50')->r('40')->fill('red');
-$rect = (new SVG('rect'))->x('10')->y('10')->width('80')->height('80')->fill('blue');
-$svg = (new SVG('svg', [$circle, $rect]))->width('100')->height('100');
+// 任何标签名，包括自定义元素
+$custom = SVG::customShape(SVG::innerPath('M10,10 L90,90'));
 ```
 
 ## 自闭合标签

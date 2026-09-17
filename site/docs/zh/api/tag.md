@@ -4,7 +4,7 @@
 
 标签树有两种用途：
 
-- **即时渲染**（片段与调试）：用真实值构建树，再用 `render()` / `toPrint()` 渲染。
+- **即时渲染**（片段与调试）：用真实值构建树，再用 `render()` / `print()` 渲染。
 - **编译渲染**（生产环境）：用 `Pure\Core\Slot` 占位符构建不含数据的树，通过
   `Pure\Compile\Compile::shape()` 包装，并在渲染时绑定数据。参见[编译渲染](./compile)。
 
@@ -220,7 +220,7 @@ $json = $element->toJSON();
 直接用真实值把标签树及其子节点渲染为 HTML 字符串。渲染时属性值和文本子节点会被转义；
 Raw 子节点按原样输出。
 
-`render()`（以及 `toPrint()` / `__toString()`）是**片段与调试**出口。生产页面应改为
+`render()`（以及 `print()` / `__toString()`）是**片段与调试**出口。生产页面应改为
 编译形状，这样静态标记只在编译期转义一次——参见[编译渲染](./compile)。
 
 含 `Slot` 占位符的树不能直接渲染：请用 `Pure\Compile\Compile::shape()` 编译，并在渲染
@@ -248,7 +248,7 @@ $element = div('Content')->class('container');
 echo (string)$element; // 输出: <div class="container">Content</div>
 ```
 
-### `toPrint(): void`
+### `print(): void`
 
 直接输出元素的 HTML 字符串。
 
@@ -257,8 +257,22 @@ echo (string)$element; // 输出: <div class="container">Content</div>
 
 use function Pure\HTML\div;
 
-div('Content')->class('container')->toPrint();
+div('Content')->class('container')->print();
 // 输出: <div class="container">Content</div>
+```
+
+### `save(string $path, ?string $header = null): int|false`
+
+将渲染后的树写入文件。省略 `$header` 时会补上该标签类型的文档声明（HTML 为
+`<!DOCTYPE html>`，XML 与 SVG 为 XML 声明）；传入 `$header` 可覆盖。返回写入的
+字节数，失败时返回 `false`。
+
+```php
+<?php
+
+use function Pure\HTML\{div, h1};
+
+div(h1('Report'))->save('report.html');
 ```
 
 ## 动态属性方法

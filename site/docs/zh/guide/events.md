@@ -27,7 +27,7 @@ function BasicEvents() {
 }
 
 // 使用组件
-BasicEvents()->toPrint();
+BasicEvents()->print();
 ```
 
 ## 鼠标事件
@@ -51,7 +51,7 @@ function MouseEvents() {
 }
 
 // 使用组件
-MouseEvents()->toPrint();
+MouseEvents()->print();
 ```
 
 ## 键盘事件
@@ -288,7 +288,7 @@ function CustomEventAttributes() {
 }
 
 // 使用组件
-CustomEventAttributes()->toPrint();
+CustomEventAttributes()->print();
 ```
 
 ## 事件处理最佳实践
@@ -313,7 +313,7 @@ $externalButton = button('External Handler')
 div(
     $inlineButton,
     $externalButton
-)->toPrint();
+)->print();
 ?>
 <script>
 function handleComplexAction() {

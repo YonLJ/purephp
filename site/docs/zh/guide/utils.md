@@ -71,13 +71,13 @@ $size = 'large';
 
 div('Content')
     ->class('btn', 'btn-primary', $isActive ? 'active' : null, $size)
-    ->toPrint();
+    ->print();
 
 // 等同于
 use function Pure\Utils\clx;
 
 $classes = clx('btn', 'btn-primary', $isActive ? 'active' : null, $size);
-div('Content')->class($classes)->toPrint();
+div('Content')->class($classes)->print();
 ```
 
 ## sty 函数
@@ -135,7 +135,7 @@ div('Content')
         'border-radius' => '8px',
         'margin' => '10px 0'
     ])
-    ->toPrint();
+    ->print();
 
 // 等同于
 use function Pure\Utils\sty;
@@ -146,7 +146,7 @@ $styles = sty([
     'border-radius' => '8px',
     'margin' => '10px 0'
 ]);
-div('Content')->style($styles)->toPrint();
+div('Content')->style($styles)->print();
 ```
 
 ## raw 标记
