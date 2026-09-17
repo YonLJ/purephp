@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Pure\Core\HTML;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
+use Pure\Core\SVG;
 use Pure\Core\XML;
 
 use function Pure\HTML\button;
@@ -134,6 +135,16 @@ class TagTest extends TestCase
 
         $this->assertSame('null', $seen);
         $this->assertSame('Created', $tag->getAttr('title'));
+    }
+
+    public function testSetAttrByCbNullRemovesAnExistingAttribute(): void
+    {
+        $tag = div('x')->id('main');
+
+        $tag->setAttrByCb('id', static fn (mixed $value): ?string => null);
+
+        $this->assertNull($tag->getAttr('id'));
+        $this->assertSame('<div>x</div>', $tag->render());
     }
 
     public function testToJsonKeepsStructuralKeysSeparateFromAttributes(): void
@@ -340,6 +351,7 @@ class TagTest extends TestCase
     {
         $this->assertSame('<!DOCTYPE html>', HTML::div()->documentHeader());
         $this->assertSame('<?xml version="1.0"?>', (new XML('root'))->documentHeader());
+        $this->assertSame('<?xml version="1.0"?>', (new SVG('root'))->documentHeader());
     }
 
     public function testVoidElementsAreCaseInsensitive(): void
