@@ -177,25 +177,37 @@ contract and the map closures it can copy.
 
 ## Examples
 
-`examples/bootstrap-features` is a small MVC setup: `views/index.shape.php`
-compiles into `views/index.pure.php` (strict artifact, loaded by `view()`) and
-`views/index.plain.php` (dependency-free view, loaded by `plain()`). Two
-controllers share the same view data through `indexData()`:
-`app/controllers/IndexController.php` returns `view('index.pure', [...])` and
-`app/controllers/PlainIndexController.php` returns the plain view. One router,
-`public/index.php`, serves both: `/` redirects to `/plain`, `/pure` renders the
-artifact and `/plain` the plain view.
+`examples/bootstrap` is a small MVC setup with three pages behind one router.
+`views/features.shape.php` and `views/pricing.shape.php` compile into a strict
+artifact (`*.pure.php`, loaded by `view()`) and a dependency-free view
+(`*.plain.php`, loaded by `plain()`); the two controllers of a page share its
+view data through `featuresData()` / `pricingData()`. The cover page is static
+markup through the string renderer (`views/cover.php`), so it has neither
+variant. Routes:
 
-```bash
-vendor/bin/pure compile --plain examples/bootstrap-features
-php -S localhost:8000 -t examples/bootstrap-features/public \
-    examples/bootstrap-features/public/index.php
-# http://localhost:8000/pure and http://localhost:8000/plain
+```
+/cover             the static cover page
+/plain/features    the plain features view
+/plain/pricing     the plain pricing view
+/pure/features     the compiled features artifact
+/pure/pricing      the compiled pricing artifact
 ```
 
-The other examples render through the compiled path too; every artifact is
-byte-identical to its shape. See
-[here](https://github.com/YonLD/purephp/tree/master/examples).
+```bash
+vendor/bin/pure compile --plain examples/bootstrap
+php -S localhost:8000 -t examples/bootstrap/public \
+    examples/bootstrap/public/index.php
+# http://localhost:8000/cover, /features and /pricing
+```
+
+A request that matches nothing gets a 404 that lists every route.
+
+`event-counter` and `xml` follow the same layout — `views/<page>.shape.php` plus
+a `public/index.php` router for `/`, `/pure` and `/plain` — and `xml` adds
+`write.php`, the CLI entry that writes `example.xml`.
+
+Every artifact is byte-identical to its shape, and every plain view to its
+artifact. See [here](https://github.com/YonLD/purephp/tree/master/examples).
 
 ## License
 

@@ -199,7 +199,7 @@ bootstrap features 示例使用编译路径后渲染约快 10 倍。
 
 ```bash
 php bench/compare.php
-php examples/bootstrap-features/bench.php
+php examples/bootstrap/bench.php
 ```
 
 ## 限制

@@ -258,19 +258,19 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 
 `Renderer::$header` holds the document header captured at build time (the
 `<!DOCTYPE html>` of an `html()` root), so a request handler only has to print
-the view. `examples/bootstrap-features` is a small MVC setup built on that:
+the view. `examples/bootstrap` is a small MVC setup built on that:
 
 ```php
-// app/controllers/IndexController.php: fetch data and fill the compiled view
-function indexController(): string
+// app/controllers/FeaturesController.php: fetch data and fill the compiled view
+function featuresController(): string
 {
-    return view('index.pure', [
+    return view('features.pure', [
         'title' => 'Features · Bootstrap v5.2',
         'content' => [/* … */],
     ]);
 }
 
-// app/bootstrap.php: index.pure maps to views/index.pure.php
+// app/bootstrap.php: features.pure maps to views/features.pure.php
 function view(string $name, array $data = []): string
 {
     static $views = [];
@@ -281,9 +281,10 @@ function view(string $name, array $data = []): string
 }
 ```
 
-Its `PlainIndexController` returns the same `indexData()` through `plain()`
-instead, and a single router (`public/index.php`) serves both: `/` redirects to
-`/plain`, `/pure` renders the artifact and `/plain` the plain view, so you can
+Its `PlainFeaturesController` returns the same `featuresData()` through
+`plain()` instead, and one router (`public/index.php`) serves every page in both
+flavors — `/pure/features` and `/pure/pricing` render the artifacts while
+`/plain/features` and `/plain/pricing` render the plain views — so you can
 compare the flavors while developing.
 - Build artifacts with the same PHP minor version as production: the fingerprint
   and the artifact header embed the PHP version, as the cache does.
@@ -381,7 +382,7 @@ path. Reproduce them with:
 
 ```bash
 php bench/compare.php
-php examples/bootstrap-features/bench.php
+php examples/bootstrap/bench.php
 ```
 
 ## Limitations
