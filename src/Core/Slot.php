@@ -18,7 +18,7 @@ use LogicException;
 final class Slot
 {
     /**
-     * @param array<string, ShapeContract> $variants
+     * @param array<array-key, ShapeContract> $variants
      */
     private function __construct(
         public readonly SlotKind $kind,
@@ -120,8 +120,12 @@ final class Slot
      * Heterogeneous list slot: every item is dispatched on `$item[$kindKey]`
      * to the matching shape; an unknown kind throws an InvalidArgumentException.
      *
+     * Kind keys must be non-empty strings; PHP array keys that look numeric are
+     * ints at runtime and cannot match the string kinds used by the generated
+     * dispatch, so they are rejected here.
+     *
      * @param string $name The slot name.
-     * @param array<string, ShapeContract> $shapes
+     * @param array<array-key, ShapeContract> $shapes
      * @param string $kindKey The key used to dispatch items by kind.
      * @param Closure(mixed): array<string, mixed>|null $map
      * @return self
@@ -133,7 +137,7 @@ final class Slot
         }
 
         foreach (array_keys($shapes) as $kind) {
-            if ($kind === '') {
+            if (!is_string($kind) || $kind === '') {
                 throw new InvalidArgumentException("slot '{$name}' eachAny kinds must be non-empty strings.");
             }
         }

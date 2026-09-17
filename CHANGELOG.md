@@ -175,5 +175,8 @@ First public version. No tag has been cut yet.
 - `Slot::default()` rejects objects, closures and resources with an
   `InvalidArgumentException` instead of failing later with a bare
   `serialize()` error or broken generated code.
+- `Slot::eachAny()` rejects non-string kind keys, which PHP array keys turn
+  into ints, with an `InvalidArgumentException` instead of compiling branches
+  that can never match: generated dispatch compares string kinds strictly.
 
 [Unreleased]: https://github.com/YonLJ/purephp/commits/main
