@@ -14,6 +14,10 @@ coverage.xml
 # Generated example output
 examples/xml/example.xml
 
+# Precompiled shape artifacts (`pure compile`)
+*.pure.php
+*.plain.php
+
 # Code Quality Tools
 .php-cs-fixer.cache
 

@@ -30,4 +30,15 @@ final class CompileException extends LogicException
     {
         return new self("only attribute slots are allowed in attribute position, got '{$kind->name}' for '{$slotPath}'.");
     }
+
+    /**
+     * A map closure depends on runtime context that an artifact cannot carry.
+     *
+     * @param string $slotPath The path of the slot carrying the map.
+     * @param string $reason Why the closure cannot be copied.
+     */
+    public static function mapInArtifact(string $slotPath, string $reason): self
+    {
+        return new self("the map on slot '{$slotPath}' cannot be copied into an artifact: {$reason}.");
+    }
 }

@@ -1,0 +1,231 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Pure\Compile\Internal;
+
+use LogicException;
+use Pure\Compile\CompileException;
+use Pure\Core\Escaper;
+use Pure\Core\Slot;
+use Pure\Core\SlotKind;
+use Pure\Core\Tag;
+
+/**
+ * Generates a plain PHP view: a template with no library dependency.
+ *
+ * The view is loaded by extracting the view data into locals, so a root slot
+ * reads as an ordinary variable and a nested slot as the array it lives in:
+ *
+ *     ob_start();
+ *     extract($data, EXTR_SKIP);
+ *     require 'views/index.plain.php';
+ *     $html = (string)ob_get_clean();
+ *
+ * Values are escaped with `htmlspecialchars()` using the same flags as the
+ * compiled renderer, so a plain view renders byte-identical output for
+ * ordinary data. The strict slot semantics (MissingSlotException, attributes
+ * omitted for null, iterable and kind validation) belong to the runtime
+ * renderer and are not part of a plain view: a missing slot is an undefined
+ * variable, a null attribute prints an empty value.
+ *
+ * @internal
+ */
+final class PlainGenerator extends TemplateGenerator
+{
+    /**
+     * The root data scope of the base class: root slots are locals, not
+     * offsets of an array.
+     */
+    private const ROOT = '$v';
+
+    /**
+     * Slot names that must not become locals: the loader's own variables, the
+     * variables this generator creates and PHP superglobals.
+     */
+    private const RESERVED = [
+        'this', 'globals', 'data', 'kind',
+        '_get', '_post', '_server', '_cookie', '_files', '_env', '_session', '_request',
+    ];
+
+    /**
+     * The plain view body of a tree, with the document header of its root tag.
+     *
+     * @param Tag $tree The shape tree to compile.
+     * @param ShapeIndex $index The structure index of the tree.
+     * @param bool $namespaced Whether the body is embedded in a `namespace {}`
+     *     block, in which case it ends inside PHP so the block can close.
+     * @return string The view source, starting with the header and markup.
+     */
+    public static function view(Tag $tree, ShapeIndex $index, bool $namespaced = false): string
+    {
+        $generator = new self();
+        self::prepare($generator, $index);
+        $generator->level = 0;
+
+        (new ShapeWalker($generator))->walk($tree);
+        $generator->flushLiteral();
+
+        if ($namespaced) {
+            // The `namespace {}` block the body lives in closes with a brace,
+            // so the body has to end inside PHP.
+            $generator->openPhp();
+        }
+
+        $body = $generator->code;
+
+        if (!str_starts_with($body, ' ?>')) {
+            throw new LogicException('a plain view must start with markup.');
+        }
+
+        return '?>' . $tree->documentHeader() . substr($body, 3);
+    }
+
+    protected function valueSource(string $kind, Slot $slot, string $dataVar, string $slotPath): string
+    {
+        $access = $this->slotData($dataVar, $slot);
+
+        if ($kind === 'raw') {
+            return $access;
+        }
+
+        return 'htmlspecialchars((string)' . $access . ", ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false)";
+    }
+
+    /**
+     * Write one attribute: the name stays markup, the value is an echo, like a
+     * hand-written view (`href="<?= … ?>"`).
+     */
+    public function attribute(string $key, string|Slot $value, string $slotPath): void
+    {
+        if (!$value instanceof Slot) {
+            $this->literal(Escaper::attribute($key, $value));
+
+            return;
+        }
+
+        if ($value->kind !== SlotKind::Attr) {
+            throw CompileException::slotInAttributePosition($value->kind, $slotPath);
+        }
+
+        $this->literal(' ' . $key . '="');
+        $this->expression(
+            'htmlspecialchars((string)' . $this->slotData($this->data(), $value)
+            . ", ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')"
+        );
+        $this->literal('"');
+    }
+
+    protected function itemsSource(Slot $slot, string $dataVar, string $slotPath): string
+    {
+        return $this->slotData($dataVar, $slot);
+    }
+
+    protected function mapExpression(?string $mapKey): ?string
+    {
+        return $mapKey === null ? null : '$pureMap' . $this->mapIndex[$mapKey];
+    }
+
+    protected function enterChild(Slot $slot, string $slotPath, ?string $mapKey): void
+    {
+        if ($mapKey === null) {
+            $this->dataStack[] = $this->slotData($this->data(), $slot);
+
+            return;
+        }
+
+        $childVar = $this->childVar();
+        $this->statement($childVar . ' = ' . $this->mapExpression($mapKey) . '(' . $this->data() . ');');
+        $this->dataStack[] = $childVar;
+    }
+
+    protected function enterEach(Slot $slot, string $slotPath, ?string $mapKey): void
+    {
+        $itemVar = $this->itemVar();
+        $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
+        $this->dataStack[] = $this->itemScope($this->childVar(), $itemVar, $mapKey);
+    }
+
+    protected function enterEachKind(Slot $slot, string $slotPath): void
+    {
+        $itemVar = $this->itemVar();
+        $childVar = $this->childVar();
+        $kindKey = var_export($slot->kindKey ?? 'kind', true);
+        $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
+        $this->statement('switch (' . $itemVar . '[' . $kindKey . '] ?? null) {');
+        $this->eachKindStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
+    }
+
+    protected function enterIf(Slot $slot, string $slotPath): void
+    {
+        // Condition slots are never required, so the access carries the default.
+        $this->statement('if ((bool)' . $this->slotData($this->data(), $slot) . ') {');
+    }
+
+    protected function eachScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    {
+        return $this->itemScope($childVar, $itemVar, $mapKey);
+    }
+
+    protected function branchScope(string $childVar, string $itemVar, string $scopePath, ?string $mapKey): string
+    {
+        return $this->itemScope($childVar, $itemVar, $mapKey);
+    }
+
+    /**
+     * The scope of one list item: the item itself, or its mapped data.
+     */
+    private function itemScope(string $childVar, string $itemVar, ?string $mapKey): string
+    {
+        if ($mapKey === null) {
+            return $itemVar;
+        }
+
+        $this->statement($childVar . ' = ' . $this->mapExpression($mapKey) . '(' . $itemVar . ');');
+
+        return $childVar;
+    }
+
+    /**
+     * The data expression of one slot: a local variable for root slots (from
+     * the extracted view data) and an array offset otherwise, with the
+     * compiled default appended for optional slots.
+     */
+    private function slotData(string $dataVar, Slot $slot): string
+    {
+        if ($dataVar === self::ROOT) {
+            $access = self::local($slot->name) ?? '$data[' . var_export($slot->name, true) . ']';
+        } else {
+            $access = $dataVar . '[' . var_export($slot->name, true) . ']';
+        }
+
+        if (!$slot->required) {
+            $access = '(' . $access . ' ?? ' . var_export($slot->default, true) . ')';
+        }
+
+        return $access;
+    }
+
+    /**
+     * The local variable of a root slot, or null when the slot name cannot be
+     * an ordinary view variable.
+     */
+    private static function local(string $name): ?string
+    {
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name) !== 1) {
+            return null;
+        }
+
+        $lower = strtolower($name);
+
+        if (in_array($lower, self::RESERVED, true)) {
+            return null;
+        }
+
+        if (str_starts_with($lower, 'pure') || preg_match('/^(item|v|kind)\d+$/', $lower) === 1) {
+            return null;
+        }
+
+        return '$' . $name;
+    }
+}

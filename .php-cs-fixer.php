@@ -5,7 +5,8 @@ $finder = PhpCsFixer\Finder::create()
     ->in(__DIR__ . '/tests')
     ->name('*.php')
     ->ignoreDotFiles(true)
-    ->ignoreVCS(true);
+    ->ignoreVCS(true)
+    ->append([__DIR__ . '/bin/pure']);
 
 return (new PhpCsFixer\Config())
     ->setRules([

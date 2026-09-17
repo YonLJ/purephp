@@ -31,6 +31,12 @@ final class SlotRuntime
      */
     public static function text(mixed $value, string $path): string
     {
+        if (is_scalar($value)) {
+            // Scalars are the common case for the accessors in template
+            // artifacts, where this method is the only escaping entry point.
+            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING, false);
+        }
+
         return htmlspecialchars(self::stringify($value, $path), Escaper::FLAGS, Escaper::ENCODING, false);
     }
 

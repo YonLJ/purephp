@@ -3,6 +3,9 @@
     "type": "library",
     "description": "Pure is a PHP template engine inspired by ReactJS.",
     "license": "MIT",
+    "bin": [
+        "bin/pure"
+    ],
     "autoload": {
         "psr-4": {
             "Pure\\": "src/"
@@ -18,7 +21,7 @@
         "test": "phpunit tests/",
         "test-coverage": "phpunit --coverage-html coverage/",
         "test-coverage-clover": "phpunit --coverage-clover coverage.xml",
-        "syntax-check": "find src tests -name '*.php' -exec php -l {} \\;",
+        "syntax-check": "find src tests -name '*.php' -exec php -l {} \\; && php -l bin/pure",
         "cs-fix": "php-cs-fixer fix",
         "cs-check": "php-cs-fixer fix --dry-run --diff",
         "phpstan": "phpstan analyse",
