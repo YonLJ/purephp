@@ -203,9 +203,7 @@ function FormField(
                 ->placeholder($placeholder)
                 ->required($required)
                 ->class(Slot::attr('inputClass')),
-            Slot::if('error', Compile::shape(
-                span(Slot::text('error'))->class('text-red-500 text-sm mt-1')
-            ))
+            Slot::if('error', span(Slot::text('error'))->class('text-red-500 text-sm mt-1'))
         )->class('mb-4')
     );
 

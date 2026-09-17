@@ -7,7 +7,10 @@ use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
 use function Pure\HTML\a;
+use function Pure\HTML\b;
 use function Pure\HTML\div;
+use function Pure\HTML\em;
+use function Pure\HTML\i;
 use function Pure\HTML\li;
 use function Pure\HTML\p;
 use function Pure\HTML\span;
@@ -21,7 +24,7 @@ class SlotTest extends TestCase
     public function testIfRendersThenOrElseBranch(): void
     {
         $shape = Compile::shape(div(
-            Slot::if('admin', Compile::shape(span('admin')), Compile::shape(span('guest')))
+            Slot::if('admin', span('admin'), span('guest'))
         ));
 
         $this->assertSame('<div><span>admin</span></div>', $shape(['admin' => true]));
@@ -31,7 +34,7 @@ class SlotTest extends TestCase
 
     public function testIfWithoutElseRendersNothingWhenFalsy(): void
     {
-        $shape = Compile::shape(div('a', Slot::if('show', Compile::shape(span('!'))), 'b'));
+        $shape = Compile::shape(div('a', Slot::if('show', span('!')), 'b'));
 
         $this->assertSame('<div>ab</div>', $shape([]));
         $this->assertSame('<div>a<span>!</span>b</div>', $shape(['show' => 1]));
@@ -40,7 +43,7 @@ class SlotTest extends TestCase
     public function testIfBranchesShareTheCurrentScope(): void
     {
         $shape = Compile::shape(div(
-            Slot::if('admin', Compile::shape(span(Slot::text('name'))))
+            Slot::if('admin', span(Slot::text('name')))
         ));
 
         $this->assertSame('<div><span>Tom</span></div>', $shape(['admin' => true, 'name' => 'Tom']));
@@ -48,7 +51,7 @@ class SlotTest extends TestCase
 
     public function testIfInsideEachUsesItemScope(): void
     {
-        $item = Compile::shape(li(Slot::text('name'), Slot::if('admin', Compile::shape(span('(a)')))));
+        $item = Compile::shape(li(Slot::text('name'), Slot::if('admin', span('(a)'))));
         $shape = Compile::shape(ul(Slot::each('items', $item)));
 
         $this->assertSame(
@@ -57,9 +60,39 @@ class SlotTest extends TestCase
         );
     }
 
+    public function testNestedSlotsAcceptBareTagTrees(): void
+    {
+        $bare = Compile::shape(div(
+            Slot::child('box', span(Slot::text('label'))),
+            Slot::each('items', li(Slot::text('value'))),
+            Slot::if('flag', em('on'), em('off')),
+            Slot::eachKind('kinds', ['a' => i('A'), 'b' => b('B')]),
+        ));
+
+        $wrapped = Compile::shape(div(
+            Slot::child('box', Compile::shape(span(Slot::text('label')))),
+            Slot::each('items', Compile::shape(li(Slot::text('value')))),
+            Slot::if('flag', Compile::shape(em('on')), Compile::shape(em('off'))),
+            Slot::eachKind('kinds', ['a' => Compile::shape(i('A')), 'b' => Compile::shape(b('B'))]),
+        ));
+
+        $data = [
+            'box' => ['label' => 'boxed'],
+            'items' => [['value' => 'one'], ['value' => 'two']],
+            'flag' => true,
+            'kinds' => [['kind' => 'a'], ['kind' => 'b']],
+        ];
+
+        $expected = '<div><span>boxed</span><li>one</li><li>two</li><em>on</em><i>A</i><b>B</b></div>';
+
+        $this->assertSame($expected, $bare($data));
+        $this->assertSame($expected, $wrapped($data));
+        $this->assertSame($bare->id(), $wrapped->id());
+    }
+
     public function testIfModifiersAreRejected(): void
     {
-        $slot = Slot::if('show', Compile::shape(span('x')));
+        $slot = Slot::if('show', span('x'));
 
         try {
             $slot->default(true);
@@ -162,7 +195,7 @@ class SlotTest extends TestCase
     public function testEachKindRejectsInvalidKindKeys(): void
     {
         try {
-            Slot::eachKind('items', ['' => Compile::shape(span('x'))]);
+            Slot::eachKind('items', ['' => span('x')]);
             $this->fail('Expected InvalidArgumentException to be thrown.');
         } catch (InvalidArgumentException $e) {
             $this->assertSame("slot 'items' eachKind variants must be non-empty strings.", $e->getMessage());
@@ -171,13 +204,13 @@ class SlotTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("slot 'items' eachKind variants must be non-empty strings.");
 
-        Slot::eachKind('items', [0 => Compile::shape(span('x'))]);
+        Slot::eachKind('items', [0 => span('x')]);
     }
 
     public function testEachKindRejectsNonStringKindValue(): void
     {
         $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p('x')),
+            'text' => p('x'),
         ])));
 
         try {
@@ -192,7 +225,7 @@ class SlotTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        Compile::shape(div('x')->class(Slot::if('on', Compile::shape(span('y')))))->compile();
+        Compile::shape(div('x')->class(Slot::if('on', span('y'))))->compile();
     }
 
     public function testEachKindSlotInAttributePositionIsRejected(): void

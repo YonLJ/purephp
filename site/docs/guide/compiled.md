@@ -84,7 +84,7 @@ works naturally:
 $item = Compile::shape(
     li(
         Slot::text('name'),
-        Slot::if('admin', Compile::shape(span('(admin)')))
+        Slot::if('admin', span('(admin)'))
     )
 );
 ```

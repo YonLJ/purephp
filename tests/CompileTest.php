@@ -373,7 +373,7 @@ class CompileTest extends TestCase
 
     public function testStaticChildShapeStillValidatesItsSlot(): void
     {
-        $shape = Compile::shape(div(Slot::child('child', Compile::shape(span('static')))));
+        $shape = Compile::shape(div(Slot::child('child', span('static'))));
 
         $this->assertSame('<div><span>static</span></div>', $shape(['child' => []]));
 
@@ -387,7 +387,7 @@ class CompileTest extends TestCase
 
     public function testStaticEachItemStillValidatesItems(): void
     {
-        $shape = Compile::shape(ul(Slot::each('items', Compile::shape(li('x')))));
+        $shape = Compile::shape(ul(Slot::each('items', li('x'))));
 
         $this->assertSame('<ul><li>x</li><li>x</li></ul>', $shape(['items' => [[], []]]));
 

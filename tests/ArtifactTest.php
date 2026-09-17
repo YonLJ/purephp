@@ -116,14 +116,14 @@ class ArtifactTest extends TestCase
                 div(
                     h1(Slot::text('title')),
                     p(Slot::raw('body'))->title(Slot::attr('title')->default('t')),
-                    Slot::child('meta', Compile::shape(span(Slot::text('label')))),
+                    Slot::child('meta', span(Slot::text('label'))),
                     Slot::text('subtitle')->default('none'),
-                    Slot::if('flag', Compile::shape(em('on')), Compile::shape(em('off'))),
-                    Slot::if('absent', Compile::shape(em('never'))),
+                    Slot::if('flag', em('on'), em('off')),
+                    Slot::if('absent', em('never')),
                     ul(Slot::each('items', $item)),
                     ul(Slot::eachKind('mixed', [
-                        'a' => Compile::shape(li('A')),
-                        'b' => Compile::shape(li('B')),
+                        'a' => li('A'),
+                        'b' => li('B'),
                     ]))
                 )->class(Slot::attr('cardClass'))
             );
@@ -202,7 +202,7 @@ class ArtifactTest extends TestCase
                     h1(Slot::text('title')),
                     p(Slot::raw('body')),
                     Slot::text('subtitle')->default('none'),
-                    Slot::if('flag', Compile::shape(span('on')), Compile::shape(span('off'))),
+                    Slot::if('flag', span('on'), span('off')),
                     ul(Slot::each('items', $item))
                 )->class(Slot::attr('cardClass'))->title(Slot::attr('tip')->default('t'))
             );
@@ -282,10 +282,10 @@ class ArtifactTest extends TestCase
                     Slot::text('title'),
                     Slot::child(
                         'content',
-                        Compile::shape(div(Slot::text('heading'), Slot::each('items', Compile::shape(li(Slot::text('label'))))))
+                        div(Slot::text('heading'), Slot::each('items', li(Slot::text('label'))))
                     ),
-                    ul(Slot::each('links', Compile::shape(li(Slot::text('label'))))),
-                    Slot::if('flag', Compile::shape(em('on')))
+                    ul(Slot::each('links', li(Slot::text('label')))),
+                    Slot::if('flag', em('on'))
                 )->class(Slot::attr('cardClass'))
             );
             PHP);

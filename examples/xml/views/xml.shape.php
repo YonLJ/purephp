@@ -18,7 +18,7 @@ function AddressShape(): Shape
     return $shape ??= Compile::shape(
         XML::address(
             XML::street(Slot::text('street')),
-            Slot::if('city', Compile::shape(XML::city(Slot::text('city')))),
+            Slot::if('city', XML::city(Slot::text('city'))),
             XML::state(Slot::text('state')),
             XML::zip(Slot::text('zip'))
         )
