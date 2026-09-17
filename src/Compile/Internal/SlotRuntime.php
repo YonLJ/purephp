@@ -80,14 +80,14 @@ final class SlotRuntime
     }
 
     /**
-     * Ensure a sub-template value is an array usable as a nested data scope.
+     * Ensure a child component value is an array usable as a nested data scope.
      *
      * @param mixed $value The slot value.
      * @param string $path The slot path for error messages.
      * @return array<array-key, mixed>
      * @throws InvalidArgumentException When the value is not an array.
      */
-    public static function sub(mixed $value, string $path): array
+    public static function scope(mixed $value, string $path): array
     {
         if (!is_array($value)) {
             throw new InvalidArgumentException("slot '{$path}' must be an array, " . get_debug_type($value) . ' given.');

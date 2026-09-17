@@ -23,11 +23,11 @@ function PricingPageShape(): Shape
 
     return $shape ??= Compile::shape(
         body(
-            Slot::sub('header', PageHeaderShape('Company name')),
-            Slot::sub('pricing', PricingHeaderShape()),
+            Slot::child('header', PageHeaderShape('Company name')),
+            Slot::child('pricing', PricingHeaderShape()),
             div(
-                Slot::sub('deck', CardDeckShape()),
-                Slot::sub('footer', PageFooterShape())
+                Slot::child('deck', CardDeckShape()),
+                Slot::child('footer', PageFooterShape())
             )->class('container')
         )
     );

@@ -71,7 +71,7 @@ final class Slot
     }
 
     /**
-     * Sub-template slot.
+     * Child component slot.
      *
      * Without $map the nested data scope is `$data[$name]`; with $map it is
      * `$map($data)`, which is how a component derives its children props.
@@ -81,9 +81,9 @@ final class Slot
      * @param Closure(array<string, mixed>): array<string, mixed>|null $map
      * @return self
      */
-    public static function sub(string $name, ShapeContract $shape, ?Closure $map = null): self
+    public static function child(string $name, ShapeContract $shape, ?Closure $map = null): self
     {
-        return new self(SlotKind::Sub, $name, $shape, true, null, $map);
+        return new self(SlotKind::Child, $name, $shape, true, null, $map);
     }
 
     /**
@@ -130,19 +130,19 @@ final class Slot
      * @param Closure(mixed): array<string, mixed>|null $map
      * @return self
      */
-    public static function eachAny(string $name, array $shapes, string $kindKey = 'kind', ?Closure $map = null): self
+    public static function eachKind(string $name, array $shapes, string $kindKey = 'kind', ?Closure $map = null): self
     {
         if ($shapes === []) {
-            throw new InvalidArgumentException("slot '{$name}' eachAny requires at least one shape.");
+            throw new InvalidArgumentException("slot '{$name}' eachKind requires at least one shape.");
         }
 
         foreach (array_keys($shapes) as $kind) {
             if (!is_string($kind) || $kind === '') {
-                throw new InvalidArgumentException("slot '{$name}' eachAny kinds must be non-empty strings.");
+                throw new InvalidArgumentException("slot '{$name}' eachKind variants must be non-empty strings.");
             }
         }
 
-        return new self(SlotKind::EachAny, $name, null, true, null, $map, null, $shapes, $kindKey);
+        return new self(SlotKind::EachKind, $name, null, true, null, $map, null, $shapes, $kindKey);
     }
 
     /**

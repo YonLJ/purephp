@@ -9,8 +9,8 @@ enum SlotKind
     case Text;
     case Attr;
     case Raw;
-    case Sub;
+    case Child;
     case Each;
     case If;
-    case EachAny;
+    case EachKind;
 }
