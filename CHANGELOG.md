@@ -52,8 +52,9 @@ First public version. No tag has been cut yet.
   the override).
 - `Slot::if()` now rejects `required()` and `default()` with a
   `LogicException` instead of silently ignoring them.
-- `Pure\Core\RawType` moved to its own file so it is autoloadable on its own;
-  `Raw` is final and `Raw::toJSON()` uses the enum name.
+- `Raw::$content` is now the public readonly `Raw::$value`, the constructor is
+  private (create instances with `Raw::of()`), and `Tag::toJSON()` serializes
+  Raw children as their value string.
 - `clx()` accepts and drops booleans (`->class('btn', $cond && 'active')` keeps
   working), accepts numbers in scalar and array position, keeps explicit
   non-empty strings including `"0"`, and no longer exports a
@@ -94,8 +95,8 @@ First public version. No tag has been cut yet.
   implementations moved to `bench/fixtures/` as benchmark baselines.
 - String children are now escaped instead of tag-filtered: `div('<p>x</p>')`
   renders `&lt;p&gt;x&lt;/p&gt;` and `2<3` / `a<b` are no longer silently
-  dropped. Static and bound text behave identically; `rawHtml()` / `rawXml()`
-  remain the explicit way to emit trusted markup.
+  dropped. Static and bound text behave identically; `Raw::of()` remains the
+  explicit way to emit trusted markup.
 - `SlotRuntime` value coercion takes an inline fast path for scalars and null,
   and `Slot::attr()` handles booleans like `Tag::setAttr()`; compiled rendering
   is ~12% faster on the 600-element benchmark page (139–144 µs → 124–125 µs).
@@ -122,6 +123,9 @@ First public version. No tag has been cut yet.
 
 - `Pure\Core\Dom`, `PDom` and `NDom`, and `Tag::toDom()` in favor of string
   rendering and the compiled path.
+- `Pure\Core\RawType`, `Raw::toJSON()`, and the `Pure\Utils\rawHtml()` /
+  `rawXml()` / `raw()` helpers; trusted markup is created with
+  `Pure\Core\Raw::of($value)`.
 
 ### Fixed
 

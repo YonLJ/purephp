@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Core\Raw;
 
 use function Pure\HTML\button;
 use function Pure\HTML\div;
 use function Pure\HTML\p;
 use function Pure\HTML\span;
-use function Pure\Utils\rawHtml;
 
 class TagTest extends TestCase
 {
@@ -206,7 +206,7 @@ class TagTest extends TestCase
 
     public function testRawChildrenAreNotEscaped(): void
     {
-        $tag = div(rawHtml('<b>bold</b> & raw'));
+        $tag = div(Raw::of('<b>bold</b> & raw'));
 
         $this->assertSame('<div><b>bold</b> & raw</div>', $tag->render());
     }

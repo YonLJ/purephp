@@ -2,7 +2,7 @@
 
 PurePHP 提供了一些实用的工具函数来简化开发，这些函数在设置元素属性时会自动使用。
 
-*`clx()`、`sty()` 和 `rawHtml()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::text()` / `Slot::attr()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
+*`clx()` 和 `sty()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::text()` / `Slot::attr()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
 
 ## clx 函数
 
@@ -149,42 +149,9 @@ $styles = sty([
 div('Content')->style($styles)->toPrint();
 ```
 
-## rawHtml 函数
+## raw 标记
 
-`rawHtml` 函数用于插入原始 HTML 内容，不会被转义。
-
-### 基本用法
-
-```php
-<?php
-
-use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
-
-div(
-    rawHtml('<strong>This is bold text</strong>'),
-    rawHtml('<em>This is italic text</em>')
-)->toPrint();
-```
-
-### 注意事项
-
-使用 `rawHtml` 时要确保内容是安全的，避免 XSS 攻击：
-
-```php
-<?php
-
-use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
-
-// 安全的使用方式
-$safeHtml = htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
-div(rawHtml($safeHtml))->toPrint();
-
-// 或者使用已知安全的 HTML
-$iconHtml = '<svg><path d="..."/></svg>';
-div(rawHtml($iconHtml))->toPrint();
-```
+可信标记使用 `Pure\Core\Raw::of()` 包装；标签 API 会按原样输出。详见 [Raw API](/zh/api/raw)。
 
 ## 实际应用示例
 

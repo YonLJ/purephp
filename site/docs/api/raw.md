@@ -1,6 +1,7 @@
 # Raw Class
 
-`Pure\Core\Raw` represents raw HTML or XML content that will not be escaped.
+`Pure\Core\Raw` represents trusted markup that is emitted verbatim instead of
+being escaped.
 
 ## Why Raw Content is Important
 
@@ -17,85 +18,49 @@ div('<p>Hello <strong>World</strong></p>')->toPrint();
 // Output: <div>&lt;p&gt;Hello &lt;strong&gt;World&lt;/strong&gt;&lt;/p&gt;</div>
 ```
 
-The Raw class emits content verbatim when you need trusted HTML/XML markup:
-
-```php
-<?php
-
-use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
-
-// Raw content preserves HTML tags
-div(rawHtml('<p>Hello <strong>World</strong></p>'))->toPrint();
-// Output: <div><p>Hello <strong>World</strong></p></div>
-```
-
-## Constructor
-
-### `__construct(RawType $type, string $content)`
-
-Creates a Raw object.
+The Raw class emits content verbatim when you need trusted markup:
 
 ```php
 <?php
 
 use Pure\Core\Raw;
-use Pure\Core\RawType;
+use function Pure\HTML\div;
 
-// Create raw HTML content
-$rawHtml = new Raw(RawType::HTML, '<strong>Bold text</strong>');
+// Raw content preserves markup
+div(Raw::of('<p>Hello <strong>World</strong></p>'))->toPrint();
+// Output: <div><p>Hello <strong>World</strong></p></div>
+```
 
-// Create raw XML content
-$rawXml = new Raw(RawType::XML, '<item>Content</item>');
+## Creation
+
+### `Raw::of(string $value): self`
+
+Wraps trusted markup in a Raw object. The constructor is private, so this
+factory is the only way to create one; the value is a public readonly property:
+
+```php
+<?php
+
+use Pure\Core\Raw;
+
+$raw = Raw::of('<strong>Bold text</strong>');
+
+echo $raw->value; // <strong>Bold text</strong>
 ```
 
 ## Output Methods
 
 ### `__toString(): string`
 
-Converts the Raw object to a string.
+Converts the Raw object to a string:
 
 ```php
 <?php
 
-use function Pure\Utils\rawHtml;
+use Pure\Core\Raw;
 
-$raw = rawHtml('<em>Italic text</em>');
+$raw = Raw::of('<em>Italic text</em>');
 echo $raw; // Output: <em>Italic text</em>
-```
-
-### `toJSON(): array`
-
-Converts the Raw object to JSON array format.
-
-```php
-<?php
-
-use function Pure\Utils\rawHtml;
-
-$raw = rawHtml('<span>Content</span>');
-$json = $raw->toJSON();
-// Returns: ['type' => 'HTML', 'content' => '<span>Content</span>']
-```
-
-## Utility Functions
-
-It's recommended to use utility functions to create Raw objects:
-
-```php
-<?php
-
-use function Pure\Utils\{rawHtml, rawXml};
-use function Pure\HTML\div;
-
-// Using rawHtml function
-div(
-    rawHtml('<strong>This is bold</strong>'),
-    rawHtml('<em>This is italic</em>')
-)->toPrint();
-
-// Using rawXml function
-$xmlContent = rawXml('<item id="1">Content</item>');
 ```
 
 ## Examples
@@ -105,14 +70,14 @@ $xmlContent = rawXml('<item id="1">Content</item>');
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
 
 // Embed pre-formatted HTML content
 $content = div(
-    rawHtml('<h2>Raw HTML Content</h2>'),
-    rawHtml('<p>This content will <strong>not</strong> be escaped.</p>'),
-    rawHtml('<script>console.log("JavaScript works!");</script>')
+    Raw::of('<h2>Raw HTML Content</h2>'),
+    Raw::of('<p>This content will <strong>not</strong> be escaped.</p>'),
+    Raw::of('<script>console.log("JavaScript works!");</script>')
 )->class('raw-content');
 
 echo $content;
@@ -123,15 +88,15 @@ echo $content;
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\{div, h1};
-use function Pure\Utils\rawHtml;
 
 // Include content from external source
 $externalHtml = file_get_contents('external-content.html');
 
 $page = div(
     h1('My Page'),
-    rawHtml($externalHtml)
+    Raw::of($externalHtml)
 )->class('page');
 
 echo $page;
@@ -142,8 +107,8 @@ echo $page;
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\{html, head, title, body};
-use function Pure\Utils\rawHtml;
 
 function includeTemplate(string $templatePath): string
 {
@@ -155,9 +120,9 @@ function includeTemplate(string $templatePath): string
 $page = html(
     head(title('My Site')),
     body(
-        rawHtml(includeTemplate('header.php')),
-        rawHtml(includeTemplate('content.php')),
-        rawHtml(includeTemplate('footer.php'))
+        Raw::of(includeTemplate('header.php')),
+        Raw::of(includeTemplate('content.php')),
+        Raw::of(includeTemplate('footer.php'))
     )
 );
 
@@ -169,15 +134,15 @@ echo $page;
 ```php
 <?php
 
+use Pure\Core\Raw;
 use Pure\Core\XML;
-use function Pure\Utils\rawXml;
 
 $document = XML::document(
     XML::metadata(
         XML::title('Document with Raw Content')
     ),
     XML::content(
-        rawXml('<![CDATA[This is raw XML content with <special> characters]]>')
+        Raw::of('<![CDATA[This is raw XML content with <special> characters]]>')
     )
 );
 
@@ -189,14 +154,14 @@ echo $document;
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
 
 $isDevelopment = true;
 
 $page = div(
     'Main content here',
-    $isDevelopment ? rawHtml('<div class="debug">Debug info</div>') : ''
+    $isDevelopment ? Raw::of('<div class="debug">Debug info</div>') : ''
 )->class('page');
 
 echo $page;
@@ -209,12 +174,12 @@ echo $page;
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
 
 // ❌ DANGEROUS - Never do this with user input
 $userInput = $_POST['content']; // Could contain malicious scripts
-$dangerous = div(rawHtml($userInput));
+$dangerous = div(Raw::of($userInput));
 
 // ✅ SAFE - String children are escaped automatically
 $userInput = $_POST['content'];
@@ -222,5 +187,5 @@ $safe = div($userInput);
 
 // ✅ SAFE - Use Raw only for trusted content
 $trustedHtml = '<strong>Admin Message</strong>';
-$safe = div(rawHtml($trustedHtml));
+$safe = div(Raw::of($trustedHtml));
 ```

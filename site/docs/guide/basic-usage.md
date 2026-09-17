@@ -129,24 +129,24 @@ strings are shown as text instead of being parsed:
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
 
 // ✅ String content is escaped, not parsed
 div('<p>This is shown as text</p>')->toPrint();
 // Output: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
-// ✅ Use rawHtml to emit trusted markup
-div(rawHtml('<p>This is preserved</p>'))->toPrint();
+// ✅ Use Raw::of to emit trusted markup
+div(Raw::of('<p>This is preserved</p>'))->toPrint();
 // Output: <div><p>This is preserved</p></div>
 ```
 
 **Why this matters:**
 - **Security**: Escaping neutralizes XSS in user input
 - **No data loss**: Text that merely looks like markup is kept verbatim
-- **Intentionality**: Emitting markup requires an explicit rawHtml()/rawXml() wrapper
+- **Intentionality**: Emitting markup requires an explicit Raw::of() wrapper
 
-**When to use rawHtml/rawXml:**
+**When to use Raw::of():**
 - Including pre-formatted HTML/XML content
 - Embedding templates or external content
 - Working with trusted HTML/XML strings

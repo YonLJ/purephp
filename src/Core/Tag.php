@@ -442,7 +442,8 @@ abstract class Tag
             'children' => array_map(
                 fn ($child) => match (true) {
                     $child instanceof Slot => ['slot' => $child->name],
-                    $child instanceof Tag || $child instanceof Raw => $child->toJSON(),
+                    $child instanceof Raw => $child->value,
+                    $child instanceof Tag => $child->toJSON(),
                     default => $child,
                 },
                 $this->children

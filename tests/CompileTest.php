@@ -7,6 +7,7 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\SlotRuntime;
 use Pure\Core\HTML;
 use Pure\Core\MissingSlotException;
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
@@ -19,7 +20,6 @@ use function Pure\HTML\table;
 use function Pure\HTML\td;
 use function Pure\HTML\tr;
 use function Pure\HTML\ul;
-use function Pure\Utils\rawHtml;
 
 class CompileTest extends TestCase
 {
@@ -41,7 +41,7 @@ class CompileTest extends TestCase
 
     public function testRawChildrenStayVerbatim(): void
     {
-        $tree = div(rawHtml('<b>bold</b> & raw'), 'plain & text');
+        $tree = div(Raw::of('<b>bold</b> & raw'), 'plain & text');
 
         $this->assertSame($tree->render(), Compile::shape($tree)([]));
     }

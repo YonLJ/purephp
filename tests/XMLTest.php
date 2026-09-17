@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Core\Raw;
 use Pure\Core\XML;
-
-use function Pure\Utils\rawXml;
 
 /** @param array<string, string> $props */
 function Address(array $props): XML
@@ -125,7 +124,7 @@ class XMLTest extends TestCase
     public function testStringChildrenAreEscapedNotFiltered(): void
     {
         // String children are text: XML-looking content is escaped, not
-        // dropped. Use rawXml() to emit trusted markup.
+        // dropped. Use Raw::of() to emit trusted markup.
         $xml = XML::root('<item>This stays visible</item>', 'a<b');
 
         $this->assertSame(
@@ -134,12 +133,12 @@ class XMLTest extends TestCase
         );
     }
 
-    public function testRawXmlPreservesContent(): void
+    public function testRawPreservesContent(): void
     {
-        // Test that rawXml preserves XML content
+        // Test that Raw::of() preserves XML content
         $xml = XML::root(
-            rawXml('<item>This should be preserved</item>'),
-            rawXml('<data>This too</data>')
+            Raw::of('<item>This should be preserved</item>'),
+            Raw::of('<data>This too</data>')
         );
 
         $output = (string)$xml;
