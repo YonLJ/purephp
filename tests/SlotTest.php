@@ -168,6 +168,35 @@ class SlotTest extends TestCase
         Slot::eachAny('items', []);
     }
 
+    public function testEachAnyRejectsInvalidKindKeys(): void
+    {
+        try {
+            Slot::eachAny('items', ['' => Compile::shape(span('x'))]);
+            $this->fail('Expected InvalidArgumentException to be thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame("slot 'items' eachAny kinds must be non-empty strings.", $e->getMessage());
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("slot 'items' eachAny kinds must be non-empty strings.");
+
+        Slot::eachAny('items', [0 => Compile::shape(span('x'))]);
+    }
+
+    public function testEachAnyRejectsNonStringKindValue(): void
+    {
+        $shape = Compile::shape(div(Slot::eachAny('items', [
+            'text' => Compile::shape(p('x')),
+        ])));
+
+        try {
+            $shape(['items' => [['kind' => 42]]]);
+            $this->fail('Expected InvalidArgumentException to be thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame("slot 'items[].kind' must be one of 'text', int given.", $e->getMessage());
+        }
+    }
+
     public function testIfSlotInAttributePositionIsRejected(): void
     {
         $this->expectException(LogicException::class);
