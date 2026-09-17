@@ -4,9 +4,7 @@
 
 ## 创建 XML 元素
 
-XML 元素也可以使用两种方式创建：
-
-### 1. 魔术静态方法
+XML 标签名是任意的，因此元素通过魔术静态接口创建：
 
 ```php
 <?php
@@ -24,27 +22,9 @@ $customer = XML::customer(
 )->id('123');
 ```
 
-### 2. 构造函数方法
-
-```php
-<?php
-
-use Pure\Core\XML;
-
-// 使用构造函数创建 XML 元素
-$customer = (new XML('customer', [
-    new XML('name', ['客户名称']),
-    new XML('address', [
-        new XML('street', ['街道地址']),
-        new XML('city', ['城市']),
-        new XML('zip', ['邮编'])
-    ])
-]))->id('123');
-```
-
 ## 保存方法
 
-### `toSave(string $path, ?string $header = null): int|false`
+### `save(string $path, ?string $header = null): int|false`
 
 将 XML 元素保存到文件。省略 `$header` 时会先写入 `<?xml version="1.0"?>`。
 
@@ -53,19 +33,12 @@ $customer = (new XML('customer', [
 
 use Pure\Core\XML;
 
-// 使用魔术静态方法
 $xml = XML::root(
     XML::item('内容1'),
     XML::item('内容2')
 );
 
-// 或使用构造函数
-$xml = new XML('root', [
-    new XML('item', ['内容1']),
-    new XML('item', ['内容2'])
-]);
-
-$result = $xml->toSave('output.xml');
+$result = $xml->save('output.xml');
 if ($result !== false) {
     echo "XML 文件保存成功";
 }
@@ -98,7 +71,7 @@ $config = XML::configuration(
     )
 )->version('1.0');
 
-$config->toSave('config.xml');
+$config->save('config.xml');
 ```
 
 ### 数据导出
@@ -135,7 +108,7 @@ $users = [
 ];
 
 $xml = exportUsers($users);
-$xml->toSave('users.xml');
+$xml->save('users.xml');
 ```
 
 ### RSS 订阅
@@ -177,7 +150,7 @@ $posts = [
 ];
 
 $rss = createRSSFeed($posts);
-$rss->toSave('feed.xml');
+$rss->save('feed.xml');
 ```
 
 ### SOAP 信封
@@ -204,19 +177,18 @@ $soapEnvelope = XML::envelope(
 echo $soapEnvelope;
 ```
 
-### 使用构造函数的自定义 XML
+### 大型文档
 
 ```php
 <?php
 
 use Pure\Core\XML;
 
-// 对于性能关键的 XML 生成
 $items = [];
 for ($i = 1; $i <= 10000; $i++) {
-    $items[] = (new XML('item', ["项目 $i"]))->id((string)$i);
+    $items[] = XML::item("项目 $i")->id((string)$i);
 }
 
-$largeXml = new XML('root', $items);
-$largeXml->toSave('large.xml');
+$largeXml = XML::root(...$items);
+$largeXml->save('large.xml');
 ```

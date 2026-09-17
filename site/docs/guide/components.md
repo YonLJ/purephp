@@ -236,7 +236,7 @@ directly:
 
 use function Pure\HTML\{div, h2, p};
 
-div(h2('Title'), p('Content'))->class('card')->toPrint();
+div(h2('Title'), p('Content'))->class('card')->print();
 ```
 
 Use this for snippets and debugging only; production pages should compile

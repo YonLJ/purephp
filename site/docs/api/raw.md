@@ -14,7 +14,7 @@ being parsed:
 use function Pure\HTML\div;
 
 // String content is escaped
-div('<p>Hello <strong>World</strong></p>')->toPrint();
+div('<p>Hello <strong>World</strong></p>')->print();
 // Output: <div>&lt;p&gt;Hello &lt;strong&gt;World&lt;/strong&gt;&lt;/p&gt;</div>
 ```
 
@@ -27,7 +27,7 @@ use Pure\Core\Raw;
 use function Pure\HTML\div;
 
 // Raw content preserves markup
-div(Raw::of('<p>Hello <strong>World</strong></p>'))->toPrint();
+div(Raw::of('<p>Hello <strong>World</strong></p>'))->print();
 // Output: <div><p>Hello <strong>World</strong></p></div>
 ```
 

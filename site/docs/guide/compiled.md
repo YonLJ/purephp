@@ -43,7 +43,7 @@ paths share the same escaping implementation.
 
 | Object | Meaning |
 | --- | --- |
-| `Shape` | A data-free tree; `__invoke($data)`, `compile()`, `id()`, `print($data)` |
+| `Shape` | A data-free tree; `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
 | `Renderer` | The compiled renderer; `render($data)`, `save($path, $data)`, and the readonly `source` / `id` properties |
 | `Slot` | A placeholder for data, bound at render time |
 

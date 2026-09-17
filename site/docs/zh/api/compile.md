@@ -35,7 +35,7 @@ echo $shape([
 | 类 | 用途 |
 | --- | --- |
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
-| `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)` |
+| `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
 | `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
 | `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`sub`、`each`、`if`、`eachAny`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
@@ -118,6 +118,10 @@ $compiled->source;                // 生成的 PHP 源码，调试时有用
 $compiled->id;                    // 结构指纹（与 Shape::id() 相同）
 ```
 
+`Shape::save($path, $data)` 是面向用户的便捷方法：写出渲染结果，并补上根标签的文档声明
+（例如 `<!DOCTYPE html>` 或 XML 声明），除非你传入自己的声明。
+`Renderer::save()` 是低层形式，不会猜测声明。
+
 ## 磁盘缓存
 
 默认关闭。在引导阶段启用一次：
@@ -134,6 +138,10 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
   并重新生成。
 - 引用组件映射的渲染器依然有效，因为 map 闭包保存在形状中；被缓存的只有生成的代码。
 - `Compile::clearCache()` 删除由本库写入的缓存文件。
+- 生成的源码也会按指纹在内存中记忆化，因此在同一进程内重建同一棵树会重新求值缓存的
+  源码，而不是重新生成；map 闭包保持实时，所以重建的形状会绑定自己的闭包。这份记忆有
+  字节预算上限（超限时先丢弃最旧的源码，比预算还大的单个源码不会被保留），因此随请求
+  变化的结构不会让它无限增长。
 - `Compile::flush()` 让内存中的渲染器失效（每个形状在下次使用时重新编译）；它不会删除
   缓存文件。
 
@@ -164,7 +172,7 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 
 ## 含槽位的树不能使用其它输出路径
 
-含槽位的树调用 `render()`、`toPrint()` 和 `toSave()` 会抛出 `LogicException`，因为
+含槽位的树调用 `render()`、`print()` 和 `save()` 会抛出 `LogicException`，因为
 没有可绑定的数据。`toJSON()` 把槽位描述为 `['slot' => 'name']`。
 
 ## 性能

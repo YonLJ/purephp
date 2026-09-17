@@ -37,7 +37,7 @@ echo $page([
 
 | 对象 | 含义 |
 | --- | --- |
-| `Shape` | 不含数据的树；`__invoke($data)`、`compile()`、`id()`、`print($data)` |
+| `Shape` | 不含数据的树；`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
 | `Renderer` | 编译后的渲染器；`render($data)`、`save($path, $data)`，以及只读属性 `source` / `id` |
 | `Slot` | 数据的占位符，在渲染时绑定 |
 

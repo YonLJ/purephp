@@ -2,7 +2,7 @@
 
 PurePHP 与 TailwindCSS 的结合为你提供了强大的开发体验：组件化的 PHP 模板引擎配合实用优先的 CSS 框架。
 
-*本指南中的可复用组件都是编译形状：静态 Tailwind 类字符串在构建时只写一次，每次请求的值通过槽位传入。参见[编译组件](/zh/guide/compiled)。即时标签 API（`render()` / `toPrint()`）仍然可用于代码片段，Tailwind 在两条路径中都能找到类名，因为它们始终位于 PHP 源码中。*
+*本指南中的可复用组件都是编译形状：静态 Tailwind 类字符串在构建时只写一次，每次请求的值通过槽位传入。参见[编译组件](/zh/guide/compiled)。即时标签 API（`render()` / `print()`）仍然可用于代码片段，Tailwind 在两条路径中都能找到类名，因为它们始终位于 PHP 源码中。*
 
 ## 为什么选择这个组合？
 

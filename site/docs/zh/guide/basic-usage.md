@@ -2,13 +2,13 @@
 
 本指南将介绍 PurePHP 的核心概念和基本用法。
 
-*本页介绍用于代码片段、原型和调试的标签 API；以此方式构建的树通过 `render()` / `toPrint()` 即时渲染。生产页面应改为编译形状——参见[编译组件](/zh/guide/compiled)。*
+*本页介绍用于代码片段、原型和调试的标签 API；以此方式构建的树通过 `render()` / `print()` 即时渲染。生产页面应改为编译形状——参见[编译组件](/zh/guide/compiled)。*
 
 ## 基本语法
 
 ### 1. 创建 HTML 元素
 
-PurePHP 提供多种创建 HTML 元素的方式：
+PurePHP 提供两种创建 HTML 元素的方式：
 
 #### 函数方式（推荐用于预定义标签）
 
@@ -22,13 +22,13 @@ use function Pure\HTML\h1;
 use function Pure\HTML\p;
 
 // 创建简单的 div 元素
-div('Hello World')->toPrint();
+div('Hello World')->print();
 
 // 创建嵌套的元素
 div(
     h1('Title'),
     p('Paragraph content')
-)->class('container')->toPrint();
+)->class('container')->print();
 ```
 
 #### 魔术静态方法（适合自定义标签）
@@ -39,31 +39,24 @@ div(
 use Pure\Core\HTML;
 
 // 使用魔术方法创建自定义 HTML 元素
-HTML::customTag('Custom content')->class('custom')->toPrint();
+HTML::customTag('Custom content')->class('custom')->print();
 
 // 非常适合 Web 组件或非标准标签
 HTML::myComponent(
     HTML::header('Component Header'),
     HTML::content('Component Body')
-)->data_component('my-component')->toPrint();
+)->data_component('my-component')->print();
 ```
 
-#### 构造函数方法（适合性能关键代码）
+自定义标签接受与函数相同的子节点参数，因此动态标签名也可用：
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// 直接构造函数方式
-(new HTML('div', ['Hello World']))->class('container')->toPrint();
-
-// 对于大型文档有更好的性能
-$elements = [];
-for ($i = 0; $i < 1000; $i++) {
-    $elements[] = new HTML('item', ["Item $i"]);
-}
-(new HTML('list', $elements))->class('large-list')->toPrint();
+$tag = 'my-element';
+HTML::{$tag}('Content')->class('dynamic')->print();
 ```
 
 ### 2. 设置属性
@@ -80,7 +73,7 @@ div('Content')
     ->style('background: #fff;')
     ->data_key('primary')
     ->id('main')
-    ->toPrint();
+    ->print();
 ```
 
 ## 选择正确的方式
@@ -97,25 +90,17 @@ div('Content')
 - **优点**：适用于任何标签名，语法优雅
 - **示例**：`HTML::customElement()`、`HTML::webComponent()`
 
-#### 使用构造函数
-- **最适合**：性能关键代码、库、大型文档
-- **优点**：最大性能，明确的类型检查
-- **示例**：`new HTML('tag')` 用于数千个元素
-
 ```php
 <?php
 
 use function Pure\HTML\div;
 use Pure\Core\HTML;
 
-// 函数方式 - 推荐用于标准标签
+// 函数方式 - 标准标签
 $standard = div('Standard content')->class('container');
 
-// 魔术方法 - 适合自定义标签
+// 魔术方法 - 自定义标签
 $custom = HTML::myCustomTag('Custom content')->data_component('special');
-
-// 构造函数 - 最佳性能
-$performant = new HTML('div', ['Performance content']);
 ```
 
 ## 重要用法说明
@@ -132,11 +117,11 @@ use Pure\Core\Raw;
 use function Pure\HTML\div;
 
 // ✅ 字符串内容被转义，不会被解析
-div('<p>This is shown as text</p>')->toPrint();
+div('<p>This is shown as text</p>')->print();
 // 输出: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
 // ✅ 使用 Raw::of 输出可信标记
-div(Raw::of('<p>This is preserved</p>'))->toPrint();
+div(Raw::of('<p>This is preserved</p>'))->print();
 // 输出: <div><p>This is preserved</p></div>
 ```
 
@@ -161,8 +146,8 @@ div(Raw::of('<p>This is preserved</p>'))->toPrint();
 use function Pure\HTML\div;
 
 // 两种写法都可以
-div('Content')->class('container')->toPrint();
-div('Content')->className('container')->toPrint();
+div('Content')->class('container')->print();
+div('Content')->className('container')->print();
 ```
 
 ### 3. 内置工具函数
@@ -181,7 +166,7 @@ $isLarge = false;
 div('Content')
     ->class('btn', $isActive ? 'active' : null, $isLarge ? 'large' : null)
     ->style(['color' => 'red', 'font-size' => '16px'])
-    ->toPrint();
+    ->print();
 
 // 等同于手动使用工具函数
 use function Pure\Utils\{clx, sty};
@@ -192,7 +177,7 @@ $styles = sty(['color' => 'red', 'font-size' => '16px']);
 div('Content')
     ->class($classes)
     ->style($styles)
-    ->toPrint();
+    ->print();
 ```
 
 ### 4. 属性命名规则
@@ -208,7 +193,7 @@ div('Content')
     ->data_id('123')           // 对应 data-id="123"
     ->data_type('card')        // 对应 data-type="card"
     ->aria_label('Button')     // 对应 aria-label="Button"
-    ->toPrint();
+    ->print();
 ```
 
 ### 5. 添加子元素
@@ -225,7 +210,7 @@ div(
     p('First paragraph'),
     p('Second paragraph'),
     p('Third paragraph')
-)->class('content')->toPrint();
+)->class('content')->print();
 ```
 
 ## 常用 HTML 标签
@@ -242,24 +227,24 @@ use function Pure\HTML\{
 };
 
 // 创建链接
-a('Click here')->href('https://example.com')->toPrint();
+a('Click here')->href('https://example.com')->print();
 
 // 创建图片
-img()->src('image.jpg')->alt('Image description')->toPrint();
+img()->src('image.jpg')->alt('Image description')->print();
 
 // 创建列表
 ul(
     li('Item 1'),
     li('Item 2'),
     li('Item 3')
-)->class('list')->toPrint();
+)->class('list')->print();
 
 // 创建表单
 form(
     input()->type('text')->name('username'),
     input()->type('password')->name('password'),
     button('Submit')->type('submit')
-)->method('POST')->action('/login')->toPrint();
+)->method('POST')->action('/login')->print();
 ```
 
 ## SVG 支持
@@ -280,7 +265,7 @@ svg(
         ->stroke('black')
         ->stroke_width('3')
         ->fill('red')
-)->width('100')->height('100')->toPrint();
+)->width('100')->height('100')->print();
 
 // 创建矩形
 svg(
@@ -290,7 +275,7 @@ svg(
         ->width('80')
         ->height('80')
         ->fill('blue')
-)->width('100')->height('100')->toPrint();
+)->width('100')->height('100')->print();
 ```
 
 ## 条件渲染
@@ -306,7 +291,7 @@ $isLoggedIn = true;
 
 div(
     $isLoggedIn ? p('Welcome back!') : p('Please log in')
-)->class('message')->toPrint();
+)->class('message')->print();
 ```
 
 在编译渲染中，条件会成为一个 `Slot::if()` 占位符，各分支则是形状。诸如 `Slot::text()` 这类槽位用于代表在渲染时绑定的值：
@@ -352,7 +337,7 @@ $items = ['Apple', 'Banana', 'Orange'];
 
 ul(
     ...array_map(fn($item) => li($item), $items)
-)->class('fruits')->toPrint();
+)->class('fruits')->print();
 ```
 
 在编译渲染中，列表是 `Slot::each()` 槽位：条目形状会为所绑定可迭代对象的每个元素渲染，`Slot::text()` 标记要绑定的值：
@@ -401,7 +386,7 @@ div('Content')
         padding: 20px;
         border-radius: 8px;
     ')
-    ->toPrint();
+    ->print();
 ```
 
 ### 2. 类名处理
@@ -416,7 +401,7 @@ $isActive = true;
 div('Content')
     ->class('container')
     ->class($isActive ? 'active' : 'inactive')
-    ->toPrint();
+    ->print();
 ```
 
 ## 下一步

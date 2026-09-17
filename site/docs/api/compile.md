@@ -37,7 +37,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | Class | Purpose |
 | --- | --- |
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
-| `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)` |
+| `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
 | `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
 | `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `sub`, `each`, `if`, `eachAny`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
@@ -125,6 +125,11 @@ $compiled->source;                // generated PHP source, useful when debugging
 $compiled->id;                    // structure fingerprint (same as Shape::id())
 ```
 
+`Shape::save($path, $data)` is the user-facing shortcut: it writes the rendered
+output, prepending the document header of the root tag (for example
+`<!DOCTYPE html>` or the XML declaration) unless you pass your own header.
+`Renderer::save()` is the low-level form and does not guess a header.
+
 ## On-Disk Cache
 
 Disabled by default. Enable it once during bootstrap:
@@ -143,6 +148,12 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 - Renderers that reference component maps stay valid because the map closures
   live in the shape; only the generated code is cached.
 - `Compile::clearCache()` deletes the files written by the library.
+- Generated sources are memoized per fingerprint in memory as well, so building
+  the same tree again in one process re-evaluates the cached source instead of
+  regenerating it; map closures stay live, so a rebuilt shape binds its own
+  closures. The memo is bounded by a byte budget (the oldest sources are dropped
+  first and a source larger than the budget is not kept), so a structure that
+  varies per request cannot grow it without limit.
 - `Compile::flush()` invalidates in-memory renderers (every shape recompiles on
   next use); it does not delete cache files.
 
@@ -177,7 +188,7 @@ process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
 
 ## Trees with Slots Cannot Use Other Output Paths
 
-`render()`, `toPrint()` and `toSave()` throw a `LogicException` for trees that
+`render()`, `print()` and `save()` throw a `LogicException` for trees that
 contain slots, because there is no data to bind. `toJSON()` describes slots as
 `['slot' => 'name']`.
 

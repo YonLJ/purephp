@@ -4,32 +4,26 @@
 
 ## Creating SVG Elements
 
-Similar to HTML, SVG elements can be created in two ways:
-
-### 1. Magic Static Methods
+Standard SVG tags come from the `Pure\SVG` functions; other tag names come from
+the magic static surface:
 
 ```php
 <?php
 
-use Pure\Core\SVG;
+use function Pure\SVG\{circle, rect, svg};
 
-// Use SVG class directly with magic methods
-$circle = SVG::circle()->cx('50')->cy('50')->r('40')->fill('red');
-$rect = SVG::rect()->x('10')->y('10')->width('80')->height('80')->fill('blue');
-$svg = SVG::svg($circle, $rect)->width('100')->height('100');
+$circle = circle()->cx('50')->cy('50')->r('40')->fill('red');
+$rect = rect()->x('10')->y('10')->width('80')->height('80')->fill('blue');
+$svg = svg($circle, $rect)->width('100')->height('100');
 ```
 
-### 2. Constructor Method
-
 ```php
 <?php
 
 use Pure\Core\SVG;
 
-// Use constructor directly
-$circle = (new SVG('circle'))->cx('50')->cy('50')->r('40')->fill('red');
-$rect = (new SVG('rect'))->x('10')->y('10')->width('80')->height('80')->fill('blue');
-$svg = (new SVG('svg', [$circle, $rect]))->width('100')->height('100');
+// Any tag name, including custom elements
+$custom = SVG::customShape(SVG::innerPath('M10,10 L90,90'));
 ```
 
 ## Self-Closing Tags

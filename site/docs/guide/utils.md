@@ -75,13 +75,13 @@ $size = 'large';
 
 div('Content')
     ->class('btn', 'btn-primary', $isActive ? 'active' : null, $size)
-    ->toPrint();
+    ->print();
 
 // Equivalent to
 use function Pure\Utils\clx;
 
 $classes = clx('btn', 'btn-primary', $isActive ? 'active' : null, $size);
-div('Content')->class($classes)->toPrint();
+div('Content')->class($classes)->print();
 ```
 
 ## sty Function
@@ -139,7 +139,7 @@ div('Content')
         'border-radius' => '8px',
         'margin' => '10px 0'
     ])
-    ->toPrint();
+    ->print();
 
 // Equivalent to
 use function Pure\Utils\sty;
@@ -150,7 +150,7 @@ $styles = sty([
     'border-radius' => '8px',
     'margin' => '10px 0'
 ]);
-div('Content')->style($styles)->toPrint();
+div('Content')->style($styles)->print();
 ```
 
 ## Raw Markup

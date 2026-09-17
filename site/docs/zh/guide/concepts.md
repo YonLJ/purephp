@@ -2,6 +2,22 @@
 
 本指南介绍 PurePHP 的核心概念。
 
+## 选择路径
+
+一条规则覆盖两条路径：
+
+- **输出由数据驱动 → 槽位与形状**：把值替换为 `Slot` 占位符，用 `Compile::shape()` 包装这棵树，然后按请求绑定普通数据。
+- **代码片段、原型或调试输出 → 立即渲染**：用真实值构建树并调用 `print()` 或 `render()`。
+
+| 动作 | `Tag`（即时） | `Shape`（编译） |
+| --- | --- | --- |
+| 字符串 | `render()` | `$shape($data)` |
+| 输出 | `print()` | `print($data)` |
+| 文件 | `save($path)` | `save($path, $data)` |
+| 调试 | `toJSON()` | `compile()->source` |
+
+每个名字只出现一次：`render()` 返回字符串，`print()` 输出，`save()` 写文件（并补上根标签的文档声明），`toJSON()` / `source` 暴露结构用于调试。
+
 ## 标签树
 
 PurePHP 用 PHP 对象表示 HTML。标签辅助函数构建树，方法链式调用设置属性：
@@ -19,7 +35,7 @@ $element = div(
 echo $element; // <div class="container"><h1>Title</h1><p>Content</p></div>
 ```
 
-渲染时文本子节点与属性值会被转义；`Raw` 子节点原样输出。包含数据的标签树通过 `render()`、`toPrint()` 或 `__toString()` 立即渲染。这条路径适合代码片段与调试。
+渲染时文本子节点与属性值会被转义；`Raw` 子节点原样输出。包含数据的标签树通过 `render()`、`print()` 或 `__toString()` 立即渲染。这条路径适合代码片段与调试。
 
 ## 形状与槽位
 
@@ -52,6 +68,8 @@ $shape = Compile::shape(
 | `Slot::each()` | 数组的可迭代集合 | 是，逐项 |
 | `Slot::if()` | 真值条件 | 否（各分支共享作用域） |
 | `Slot::eachAny()` | 带判别键的数组的可迭代集合 | 是，逐项 |
+
+槽位名字始终是**数据键**（也是错误路径），而不是标签名或属性名：在 `a(Slot::text('label'))->class(Slot::attr('classList'))` 中，文本绑定 `label`，class 属性绑定 `classList`，而 `a` 与 `class` 来自树本身。
 
 ## 编译
 

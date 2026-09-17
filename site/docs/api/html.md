@@ -4,61 +4,41 @@
 
 ## Creating HTML Elements
 
-PurePHP provides two ways to create HTML elements:
+Standard tags come from the `Pure\HTML` functions; tags without a function come
+from `HTML::customTag()`:
 
-### 1. Magic Static Methods (Recommended for predefined tags)
+### 1. Functions (Standard tags)
+
+```php
+<?php
+
+use function Pure\HTML\{div, p, span};
+
+$div = div('Content');
+$p = p('Paragraph');
+$span = span('Text')->class('highlight');
+```
+
+### 2. Magic Static Methods (Custom tags)
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// Use HTML class directly with magic methods
-$div = HTML::div('Content');
-$p = HTML::p('Paragraph');
-$span = HTML::span('Text')->class('highlight');
+// Works with any tag name
+$element = HTML::customTag('Content')->class('custom');
+$component = HTML::myWebComponent(HTML::header('Header'));
 ```
-
-**Advantages:**
-- Clean and elegant syntax
-- Works with any tag name
-- Perfect for custom or non-standard tags
 
 **Use cases:**
 - Custom HTML tags
 - Web components
 - Non-standard HTML elements
 
-### 2. Constructor Method (Recommended for performance-critical code)
-
-```php
-<?php
-
-use Pure\Core\HTML;
-
-// Use constructor directly
-$div = new HTML('div', ['Content']);
-$p = new HTML('p', ['Paragraph']);
-$span = (new HTML('span', ['Text']))->class('highlight');
-
-// For tags without children, you can omit the second parameter
-$img = new HTML('img');
-$br = new HTML('br');
-```
-
-**Advantages:**
-- Better performance (no magic method overhead)
-- Better IDE support and type checking
-- More explicit
-
-**Use cases:**
-- Performance-critical applications
-- When you need maximum type safety
-- Library development
-
 ## Save Methods
 
-### `toSave(string $path, ?string $header = null): int|false`
+### `save(string $path, ?string $header = null): int|false`
 
 Saves the HTML element to a file. When `$header` is omitted, `<!DOCTYPE html>`
 is written first.
@@ -73,7 +53,7 @@ $page = html(
     body(div('Page Content'))
 );
 
-$result = $page->toSave('output.html');
+$result = $page->save('output.html');
 if ($result !== false) {
     echo "File saved successfully, wrote {$result} bytes";
 }
@@ -164,19 +144,19 @@ $customCard = HTML::cardComponent(
 echo $customCard;
 ```
 
-### Performance-Critical Generation
+### Large Lists
 
 ```php
 <?php
 
-use Pure\Core\HTML;
+use function Pure\HTML\{li, ul};
 
 // Generate large lists efficiently
 $items = [];
 for ($i = 1; $i <= 1000; $i++) {
-    $items[] = new HTML('li', ["Item $i"]);
+    $items[] = li("Item $i");
 }
 
-$list = new HTML('ul', $items);
+$list = ul($items);
 echo $list;
 ```

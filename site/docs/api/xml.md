@@ -4,9 +4,8 @@
 
 ## Creating XML Elements
 
-XML elements can also be created using both approaches:
-
-### 1. Magic Static Methods
+XML tag names are arbitrary, so elements are created with the magic static
+surface:
 
 ```php
 <?php
@@ -24,27 +23,9 @@ $customer = XML::customer(
 )->id('123');
 ```
 
-### 2. Constructor Method
-
-```php
-<?php
-
-use Pure\Core\XML;
-
-// Create XML elements with constructor
-$customer = (new XML('customer', [
-    new XML('name', ['Customer Name']),
-    new XML('address', [
-        new XML('street', ['Street Address']),
-        new XML('city', ['City']),
-        new XML('zip', ['Zip Code'])
-    ])
-]))->id('123');
-```
-
 ## Save Methods
 
-### `toSave(string $path, ?string $header = null): int|false`
+### `save(string $path, ?string $header = null): int|false`
 
 Saves the XML element to a file. When `$header` is omitted,
 `<?xml version="1.0"?>` is written first.
@@ -54,19 +35,12 @@ Saves the XML element to a file. When `$header` is omitted,
 
 use Pure\Core\XML;
 
-// Using magic static methods
 $xml = XML::root(
     XML::item('Content 1'),
     XML::item('Content 2')
 );
 
-// Or using constructor
-$xml = new XML('root', [
-    new XML('item', ['Content 1']),
-    new XML('item', ['Content 2'])
-]);
-
-$result = $xml->toSave('output.xml');
+$result = $xml->save('output.xml');
 if ($result !== false) {
     echo "XML file saved successfully";
 }
@@ -99,7 +73,7 @@ $config = XML::configuration(
     )
 )->version('1.0');
 
-$config->toSave('config.xml');
+$config->save('config.xml');
 ```
 
 ### Data Export
@@ -158,7 +132,7 @@ $users = [
 ];
 
 $xml = exportUsers($users);
-$xml->toSave('users.xml');
+$xml->save('users.xml');
 ```
 
 ### RSS Feed
@@ -200,7 +174,7 @@ $posts = [
 ];
 
 $rss = createRSSFeed($posts);
-$rss->toSave('feed.xml');
+$rss->save('feed.xml');
 ```
 
 ### SOAP Envelope
@@ -227,19 +201,18 @@ $soapEnvelope = XML::envelope(
 echo $soapEnvelope;
 ```
 
-### Custom XML with Constructor
+### Large Documents
 
 ```php
 <?php
 
 use Pure\Core\XML;
 
-// For performance-critical XML generation
 $items = [];
 for ($i = 1; $i <= 10000; $i++) {
-    $items[] = (new XML('item', ["Item $i"]))->id((string)$i);
+    $items[] = XML::item("Item $i")->id((string)$i);
 }
 
-$largeXml = new XML('root', $items);
-$largeXml->toSave('large.xml');
+$largeXml = XML::root(...$items);
+$largeXml->save('large.xml');
 ```

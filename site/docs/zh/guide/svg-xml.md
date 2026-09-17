@@ -2,21 +2,19 @@
 
 PurePHP 为创建 SVG 图形和 XML 文档提供全面支持，使用与 HTML 相同的优雅语法。
 
-*HTML、SVG 和 XML 标签实例都继承自 `Tag`，因此它们中的任何一个都可以包装进 `Compile::shape()` 并用数据渲染——参见[编译组件](/zh/guide/compiled)。下面的 SVG 部分属于标签 API 参考，使用 `render()` / `toPrint()` 即时渲染；XML 部分使用编译路径。*
+*HTML、SVG 和 XML 标签实例都继承自 `Tag`，因此它们中的任何一个都可以包装进 `Compile::shape()` 并用数据渲染——参见[编译组件](/zh/guide/compiled)。下面的 SVG 部分属于标签 API 参考，使用 `render()` / `print()` 即时渲染；XML 部分使用编译路径。*
 
 ## SVG 支持
 
 ### 基本 SVG 创建
 
-使用魔术静态方法或构造函数创建 SVG 图形：
+使用 `Pure\SVG` 函数创建 SVG 图形，自定义标签则使用魔术静态方法：
 
 ```php
 <?php
 
 use function Pure\SVG\{svg, circle, rect, path};
-use Pure\Core\SVG;
 
-// 使用函数方式（推荐用于预定义标签）
 $graphic = svg(
     circle()
         ->cx('50')
@@ -34,40 +32,22 @@ $graphic = svg(
 echo $graphic; // 输出 SVG 标记
 ```
 
-### 魔术静态方法 vs 构造函数
+### 函数 vs 魔术静态方法
 
-#### 魔术静态方法（适合自定义标签）
+自定义标签使用魔术静态接口：
 
 ```php
 <?php
 
 use Pure\Core\SVG;
-
-// 任何 SVG 标签的简洁语法
-$customElement = SVG::customTag(
-    SVG::innerElement('content')
-)->customAttribute('value');
 
 // 非常适合非标准或自定义 SVG 元素
-$webComponent = SVG::myCustomSvgElement()
-    ->data_id('unique')
-    ->class('custom-svg');
-```
+$customElement = SVG::customTag(SVG::innerElement('content'))
+    ->customAttribute('value');
 
-#### 构造函数方法（性能优化）
-
-```php
-<?php
-
-use Pure\Core\SVG;
-
-// 直接使用构造函数获得更好性能
-$customElement = new SVG('customTag', [
-    new SVG('innerElement', ['content'])
-])->customAttribute('value');
-
-// 更适合性能关键的应用
-$webComponent = (new SVG('myCustomSvgElement'))
+// 动态标签名同样可用
+$tag = 'myCustomSvgElement';
+$webComponent = SVG::{$tag}()
     ->data_id('unique')
     ->class('custom-svg');
 ```
@@ -172,10 +152,10 @@ $data = [
     ],
 ];
 
-$page->compile()->save('./example.xml', $data, '<?xml version="1.0"?>');
+$page->save('./example.xml', $data);
 ```
 
-`Slot::each()` 为每条记录渲染一个 `AddressShape()`，`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。同一个形状可以用 `$page($data)` 或 `$page->print($data)` 渲染为字符串；`Renderer::save()` 只是为文档加上头部。
+`Slot::each()` 为每条记录渲染一个 `AddressShape()`，`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。同一个形状可以用 `$page($data)` 或 `$page->print($data)` 渲染为字符串；`save()` 会补上根标签的文档声明，也可以把自定义声明作为 `Shape::save()` 的第三个参数传入（`Renderer::save()` 同样接受它，但默认不添加任何声明）。
 
 ### 数据驱动的元素
 
@@ -207,36 +187,29 @@ $config->print(['settings' => [
 
 ## 性能考虑
 
-### 何时使用魔术方法 vs 构造函数
+### 函数 vs 魔术静态方法
+
+**使用函数当：**
+- 标签属于预定义的 HTML/SVG 标签
+- 需要处理动态值（子节点与属性）
 
 **使用魔术静态方法当：**
 - 创建自定义或非标准标签
-- 原型设计和开发
-- 代码可读性是优先考虑
 - 使用动态标签名
 
-**使用构造函数当：**
-- 性能至关重要
-- 构建库或框架
-- 需要最大类型安全
-- 处理大型文档
-
-### 性能比较
+两者构建的都是同一个 `Tag` 对象；函数只是常用标签名的薄而明确的包装：
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// 魔术方法（稍慢但更优雅）
+// 自定义标签名
 $element1 = HTML::customTag('content')->customAttr('value');
 
-// 构造函数（更快，更明确）
-$element2 = (new HTML('customTag', ['content']))->customAttr('value');
-
-// 对于预定义标签，使用函数（两全其美）
+// 预定义标签通过它的函数
 use function Pure\HTML\div;
-$element3 = div('content')->customAttr('value');
+$element2 = div('content')->customAttr('value');
 ```
 
 ## 重要：字符串内容会被转义
@@ -250,11 +223,11 @@ use Pure\Core\Raw;
 use Pure\Core\XML;
 
 // ✅ 字符串中的 XML 标签会被转义，不会被解析
-XML::root('<item>This stays visible</item>')->toPrint();
+XML::root('<item>This stays visible</item>')->print();
 // 输出: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
 // ✅ 使用 Raw::of 输出 XML 内容
-XML::root(Raw::of('<item>This is preserved</item>'))->toPrint();
+XML::root(Raw::of('<item>This is preserved</item>'))->print();
 // 输出: <root><item>This is preserved</item></root>
 ```
 
@@ -270,9 +243,8 @@ XML::root(Raw::of('<item>This is preserved</item>'))->toPrint();
 
 1. **对预定义的 HTML/SVG 标签使用函数**——它们提供性能和可读性的最佳平衡
 2. **对自定义标签使用魔术方法**——当你需要动态创建标签时
-3. **对性能关键代码使用构造函数**——当构建库或处理大型文档时
-4. **对可信内容使用 Raw::of()**——当你需要保留标记结构时
-5. **根据需要组合方法**——你可以根据具体用例混合搭配
+3. **对可信内容使用 Raw::of()**——当你需要保留标记结构时
+4. **根据需要组合方法**——你可以根据具体用例混合搭配
 
 ## 下一步
 

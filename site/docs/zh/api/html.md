@@ -4,61 +4,40 @@
 
 ## 创建 HTML 元素
 
-PurePHP 提供两种创建 HTML 元素的方式：
+标准标签来自 `Pure\HTML` 函数；没有对应函数的标签使用 `HTML::customTag()`：
 
-### 1. 魔术静态方法（推荐用于预定义标签）
+### 1. 函数（标准标签）
+
+```php
+<?php
+
+use function Pure\HTML\{div, p, span};
+
+$div = div('内容');
+$p = p('段落');
+$span = span('文本')->class('highlight');
+```
+
+### 2. 魔术静态方法（自定义标签）
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// 直接使用 HTML 类的魔术方法
-$div = HTML::div('内容');
-$p = HTML::p('段落');
-$span = HTML::span('文本')->class('highlight');
+// 适用于任何标签名
+$element = HTML::customTag('内容')->class('custom');
+$component = HTML::myWebComponent(HTML::header('Header'));
 ```
-
-**优点：**
-- 语法简洁优雅
-- 适用于任何标签名
-- 非常适合自定义或非标准标签
 
 **使用场景：**
 - 自定义 HTML 标签
 - Web 组件
 - 非标准 HTML 元素
 
-### 2. 构造函数方法（推荐用于性能关键代码）
-
-```php
-<?php
-
-use Pure\Core\HTML;
-
-// 直接使用构造函数
-$div = new HTML('div', ['内容']);
-$p = new HTML('p', ['段落']);
-$span = (new HTML('span', ['文本']))->class('highlight');
-
-// 对于没有子元素的标签，可以省略第二个参数
-$img = new HTML('img');
-$br = new HTML('br');
-```
-
-**优点：**
-- 更好的性能（无魔术方法开销）
-- 更好的 IDE 支持和类型检查
-- 更明确
-
-**使用场景：**
-- 性能关键应用
-- 需要最大类型安全时
-- 库开发
-
 ## 保存方法
 
-### `toSave(string $path, ?string $header = null): int|false`
+### `save(string $path, ?string $header = null): int|false`
 
 将 HTML 元素保存到文件。省略 `$header` 时会先写入 `<!DOCTYPE html>`。
 
@@ -72,7 +51,7 @@ $page = html(
     body(div('页面内容'))
 );
 
-$result = $page->toSave('output.html');
+$result = $page->save('output.html');
 if ($result !== false) {
     echo "文件保存成功，写入了 {$result} 字节";
 }
@@ -163,19 +142,19 @@ $customCard = HTML::cardComponent(
 echo $customCard;
 ```
 
-### 性能关键的生成
+### 大型列表
 
 ```php
 <?php
 
-use Pure\Core\HTML;
+use function Pure\HTML\{li, ul};
 
 // 高效生成大型列表
 $items = [];
 for ($i = 1; $i <= 1000; $i++) {
-    $items[] = new HTML('li', ["项目 $i"]);
+    $items[] = li("项目 $i");
 }
 
-$list = new HTML('ul', $items);
+$list = ul($items);
 echo $list;
 ```

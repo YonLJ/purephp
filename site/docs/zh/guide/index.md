@@ -7,7 +7,7 @@ PurePHP 有两条渲染路径：
 | 路径 | 你写什么 | 何时使用 |
 | --- | --- | --- |
 | **编译渲染** | 带 `Slot` 占位符的无数据*形状*树，每个 worker 进程编译一次（或从渲染器缓存加载），每个请求用普通数据渲染 | 生产环境中的页面与组件 |
-| **即时渲染** | 包含真实值的标签树，用 `render()` / `toPrint()` 当场渲染 | 代码片段、原型、CLI 工具与调试 |
+| **即时渲染** | 包含真实值的标签树，用 `render()` / `print()` 当场渲染 | 代码片段、原型、CLI 工具与调试 |
 
 ## 为什么选择 PurePHP？
 
@@ -64,7 +64,7 @@ use function Pure\HTML\{div, h1, p};
 div(
     h1('Welcome to PurePHP'),
     p('A PHP template engine')
-)->class('container')->toPrint();
+)->class('container')->print();
 ```
 
 ## 优势

@@ -2,13 +2,13 @@
 
 This guide introduces the core concepts and basic usage of PurePHP.
 
-*This page documents the tag API used for snippets, prototypes, and debugging; trees built this way render immediately via `render()` / `toPrint()`. Production pages should compile shapes instead — see [Compiled Components](/guide/compiled).*
+*This page documents the tag API used for snippets, prototypes, and debugging; trees built this way render immediately via `render()` / `print()`. Production pages should compile shapes instead — see [Compiled Components](/guide/compiled).*
 
 ## Basic Syntax
 
 ### 1. Creating HTML Elements
 
-PurePHP provides multiple ways to create HTML elements:
+PurePHP provides two ways to create HTML elements:
 
 #### Function Approach (Recommended for predefined tags)
 
@@ -22,13 +22,13 @@ use function Pure\HTML\h1;
 use function Pure\HTML\p;
 
 // Create a simple div element
-div('Hello World')->toPrint();
+div('Hello World')->print();
 
 // Create nested elements
 div(
     h1('Title'),
     p('Paragraph content')
-)->class('container')->toPrint();
+)->class('container')->print();
 ```
 
 #### Magic Static Methods (For custom tags)
@@ -39,31 +39,25 @@ div(
 use Pure\Core\HTML;
 
 // Create custom HTML elements using magic methods
-HTML::customTag('Custom content')->class('custom')->toPrint();
+HTML::customTag('Custom content')->class('custom')->print();
 
 // Perfect for web components or non-standard tags
 HTML::myComponent(
     HTML::header('Component Header'),
     HTML::content('Component Body')
-)->data_component('my-component')->toPrint();
+)->data_component('my-component')->print();
 ```
 
-#### Constructor Method (For performance-critical code)
+Custom tags take the same children arguments as the functions, so a dynamic
+tag name works too:
 
 ```php
 <?php
 
 use Pure\Core\HTML;
 
-// Direct constructor approach
-(new HTML('div', ['Hello World']))->class('container')->toPrint();
-
-// Better performance for large documents
-$elements = [];
-for ($i = 0; $i < 1000; $i++) {
-    $elements[] = new HTML('item', ["Item $i"]);
-}
-(new HTML('list', $elements))->class('large-list')->toPrint();
+$tag = 'my-element';
+HTML::{$tag}('Content')->class('dynamic')->print();
 ```
 
 ### 2. Setting Attributes
@@ -80,7 +74,7 @@ div('Content')
     ->style('background: #fff;')
     ->data_key('primary')
     ->id('main')
-    ->toPrint();
+    ->print();
 ```
 
 ## Choosing the Right Approach
@@ -97,25 +91,17 @@ div('Content')
 - **Advantages**: Works with any tag name, elegant syntax
 - **Example**: `HTML::customElement()`, `HTML::webComponent()`
 
-#### Use Constructor
-- **Best for**: Performance-critical code, libraries, large documents
-- **Advantages**: Maximum performance, explicit type checking
-- **Example**: `new HTML('tag')` for thousands of elements
-
 ```php
 <?php
 
 use function Pure\HTML\div;
 use Pure\Core\HTML;
 
-// Function approach - recommended for standard tags
+// Function approach - standard tags
 $standard = div('Standard content')->class('container');
 
-// Magic method - perfect for custom tags
+// Magic method - custom tags
 $custom = HTML::myCustomTag('Custom content')->data_component('special');
-
-// Constructor - best for performance
-$performant = new HTML('div', ['Performance content']);
 ```
 
 ## Important Usage Notes
@@ -133,11 +119,11 @@ use Pure\Core\Raw;
 use function Pure\HTML\div;
 
 // ✅ String content is escaped, not parsed
-div('<p>This is shown as text</p>')->toPrint();
+div('<p>This is shown as text</p>')->print();
 // Output: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
 // ✅ Use Raw::of to emit trusted markup
-div(Raw::of('<p>This is preserved</p>'))->toPrint();
+div(Raw::of('<p>This is preserved</p>'))->print();
 // Output: <div><p>This is preserved</p></div>
 ```
 
@@ -162,8 +148,8 @@ Since `class` is a PHP keyword, PurePHP provides `className` as an alias:
 use function Pure\HTML\div;
 
 // Both ways work
-div('Content')->class('container')->toPrint();
-div('Content')->className('container')->toPrint();
+div('Content')->class('container')->print();
+div('Content')->className('container')->print();
 ```
 
 ### 3. Built-in Utility Functions
@@ -182,7 +168,7 @@ $isLarge = false;
 div('Content')
     ->class('btn', $isActive ? 'active' : null, $isLarge ? 'large' : null)
     ->style(['color' => 'red', 'font-size' => '16px'])
-    ->toPrint();
+    ->print();
 
 // Equivalent to manually using utility functions
 use function Pure\Utils\{clx, sty};
@@ -193,7 +179,7 @@ $styles = sty(['color' => 'red', 'font-size' => '16px']);
 div('Content')
     ->class($classes)
     ->style($styles)
-    ->toPrint();
+    ->print();
 ```
 
 ### 4. Attribute Naming Rules
@@ -209,7 +195,7 @@ div('Content')
     ->data_id('123')           // corresponds to data-id="123"
     ->data_type('card')        // corresponds to data-type="card"
     ->aria_label('Button')     // corresponds to aria-label="Button"
-    ->toPrint();
+    ->print();
 ```
 
 ### 5. Adding Child Elements
@@ -226,7 +212,7 @@ div(
     p('First paragraph'),
     p('Second paragraph'),
     p('Third paragraph')
-)->class('content')->toPrint();
+)->class('content')->print();
 ```
 
 ## Common HTML Tags
@@ -243,24 +229,24 @@ use function Pure\HTML\{
 };
 
 // Create a link
-a('Click here')->href('https://example.com')->toPrint();
+a('Click here')->href('https://example.com')->print();
 
 // Create an image
-img()->src('image.jpg')->alt('Image description')->toPrint();
+img()->src('image.jpg')->alt('Image description')->print();
 
 // Create a list
 ul(
     li('Item 1'),
     li('Item 2'),
     li('Item 3')
-)->class('list')->toPrint();
+)->class('list')->print();
 
 // Create a form
 form(
     input()->type('text')->name('username'),
     input()->type('password')->name('password'),
     button('Submit')->type('submit')
-)->method('POST')->action('/login')->toPrint();
+)->method('POST')->action('/login')->print();
 ```
 
 ## SVG Support
@@ -281,7 +267,7 @@ svg(
         ->stroke('black')
         ->stroke_width('3')
         ->fill('red')
-)->width('100')->height('100')->toPrint();
+)->width('100')->height('100')->print();
 
 // Create a rectangle
 svg(
@@ -291,7 +277,7 @@ svg(
         ->width('80')
         ->height('80')
         ->fill('blue')
-)->width('100')->height('100')->toPrint();
+)->width('100')->height('100')->print();
 ```
 
 ## Conditional Rendering
@@ -307,7 +293,7 @@ $isLoggedIn = true;
 
 div(
     $isLoggedIn ? p('Welcome back!') : p('Please log in')
-)->class('message')->toPrint();
+)->class('message')->print();
 ```
 
 With compiled rendering, the condition becomes a `Slot::if()` placeholder and
@@ -356,7 +342,7 @@ $items = ['Apple', 'Banana', 'Orange'];
 
 ul(
     ...array_map(fn($item) => li($item), $items)
-)->class('fruits')->toPrint();
+)->class('fruits')->print();
 ```
 
 With compiled rendering, lists are `Slot::each()` slots: the item shape is
@@ -408,7 +394,7 @@ div('Content')
         padding: 20px;
         border-radius: 8px;
     ')
-    ->toPrint();
+    ->print();
 ```
 
 ### 2. Class Name Handling
@@ -423,7 +409,7 @@ $isActive = true;
 div('Content')
     ->class('container')
     ->class($isActive ? 'active' : 'inactive')
-    ->toPrint();
+    ->print();
 ```
 
 ## Next Steps

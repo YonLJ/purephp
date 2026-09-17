@@ -7,7 +7,7 @@ PurePHP has two rendering paths:
 | Path | What you write | When to use |
 | --- | --- | --- |
 | **Compiled rendering** | A data-free *shape* tree with `Slot` placeholders, compiled once per worker process (or loaded from the renderer cache) and rendered per request with plain data | Pages and components in production |
-| **Immediate rendering** | A tag tree containing the real values, rendered on the spot with `render()` / `toPrint()` | Snippets, prototypes, CLI tools and debugging |
+| **Immediate rendering** | A tag tree containing the real values, rendered on the spot with `render()` / `print()` | Snippets, prototypes, CLI tools and debugging |
 
 ## Why Choose PurePHP?
 
@@ -66,7 +66,7 @@ use function Pure\HTML\{div, h1, p};
 div(
     h1('Welcome to PurePHP'),
     p('A PHP template engine')
-)->class('container')->toPrint();
+)->class('container')->print();
 ```
 
 ## Advantages

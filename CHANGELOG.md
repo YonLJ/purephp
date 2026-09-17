@@ -31,10 +31,35 @@ First public version. No tag has been cut yet.
   the same call site.
 - `bench/compare.php`, `bench/cache.php` and `bench/README.md` with recorded
   numbers, plus `composer bench`.
+- `Shape::save($path, $data, ?string $header = null)`: renders a compiled shape
+  to a file, prepending the document header of the root tag (`<!DOCTYPE html>`,
+  the XML declaration) unless a header is given. Subclasses keep customizing that
+  header by overriding the protected `Tag::defaultHeader()`; the compiled path
+  reads it through an `@internal` `Tag::documentHeader()` accessor.
 - Compiled guide and API documentation (English and Chinese).
 
 ### Changed
 
+- `Tag::toPrint()` / `Tag::toSave()` are now `Tag::print()` / `Tag::save()`, so
+  one verb names one action everywhere: `render()` returns a string, `print()`
+  echoes, `save()` writes a file, and `toJSON()` / `$source` expose the
+  structure for debugging.
+- `HTML`, `SVG`, `XML`, `Shape` and `Renderer` constructors are `@internal`:
+  tags are created with the functions or the magic static surface
+  (`HTML::customTag()`, `XML::customer()`), shapes with `Compile::shape()`; the
+  docs no longer present constructors as a user-facing alternative.
+- `Slot::attr($name)` treats `$name` as the data key everywhere: compile errors
+  and missing-slot exceptions now report the slot name instead of the attribute
+  name, so `->class(Slot::attr('classList'))` reports `classList`.
+- Generated sources are memoized per fingerprint in memory (on top of the
+  on-disk cache), so a tree rebuilt in the same process is re-evaluated instead
+  of regenerated; map closures stay live, so a rebuilt shape binds its own
+  closures. The memo is bounded by a byte budget (oldest sources are dropped
+  first), so a structure that varies per request cannot grow it without limit;
+  `Compile::flush()` clears it.
+- The concepts guide states the one-line rule (data drives the output → slots
+  and shapes; snippets and debugging → immediate rendering) and the verb table,
+  and the quick start documents the development guard.
 - `Renderer::__invoke()` is now the named `Renderer::render($data)`, the
   `Renderer::print()` alias was removed, and `Renderer::$source` / `Renderer::$id`
   are public readonly properties instead of `source()` / `id()` getters, so the
@@ -45,10 +70,10 @@ First public version. No tag has been cut yet.
 - `Tag::getAttr()` returns `null` for a missing attribute instead of emitting a
   warning and failing on the return type; `Tag::setAttrByCb()` passes `null` to
   the callback for a missing attribute.
-- `Tag::toSave()` moved to the base class as
-  `toSave(string $path, ?string $header = null)`; `HTML`, `XML` and `SVG`
+- `Tag::save()` moved to the base class as
+  `save(string $path, ?string $header = null)`; `HTML`, `XML` and `SVG`
   provide their default document headers via `defaultHeader()`. Subclasses that
-  override `toSave()` must accept the new optional `$header` parameter (or drop
+  override `save()` must accept the new optional `$header` parameter (or drop
   the override).
 - `Slot::if()` now rejects `required()` and `default()` with a
   `LogicException` instead of silently ignoring them.
@@ -89,7 +114,7 @@ First public version. No tag has been cut yet.
   `Pure\Core\ShapeContract` (implemented by `Pure\Compile\Shape`), so
   `Pure\Core` no longer depends on `Pure\Compile`.
 - Slot values are allowed as tag children and attribute values; `Tag::render()`,
-  `toPrint()` and `toSave()` throw a `LogicException` for trees containing
+  `print()` and `save()` throw a `LogicException` for trees containing
   slots, and `toJSON()` describes slots as `['slot' => '<name>']`.
 - Every example renders through the compiled path; the classic component
   implementations moved to `bench/fixtures/` as benchmark baselines.
@@ -107,7 +132,7 @@ First public version. No tag has been cut yet.
   behaviour is unchanged; compiled rendering is another ~5% faster
   (124 µs → 118 µs with opcache). `Compile::CACHE_VERSION` is now 5 because
   the generated code and the layout both changed.
-- `Tag::toSave()` and `Renderer::save()` write with `file_put_contents()`, so a
+- `Tag::save()` and `Renderer::save()` write with `file_put_contents()`, so a
   long document is always written in full.
 - Source directories now mirror the namespaces one to one —
   `src/Core`, `src/Compile`, `src/HTML`, `src/SVG`, `src/Utils` — and the

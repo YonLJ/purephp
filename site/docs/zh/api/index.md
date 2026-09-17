@@ -31,18 +31,15 @@ PurePHP 由几个核心类组成，它们协同工作提供强大的模板系统
 ```php
 <?php
 
-use Pure\Core\{HTML, SVG, XML};
+use Pure\Core\HTML;
 use function Pure\HTML\div;
 use function Pure\SVG\circle;
 
-// 函数方式（推荐用于标准标签）
+// 函数方式（标准标签）
 $element1 = div('Content');
 
-// 魔术静态方法（推荐用于自定义标签）
+// 魔术静态方法（自定义标签）
 $element2 = HTML::customTag('Content');
-
-// 构造函数（推荐用于性能）
-$element3 = new HTML('div', ['Content']);
 ```
 
 ### 编译形状
@@ -70,9 +67,9 @@ $shape->print(['title' => 'Hello']);
 - `style()` - 设置内联样式
 - `id()`, `data_*()`, `aria_*()` - 设置属性
 - `getTagName()`, `getAttrs()`, `getChildren()` - 获取信息
-- `toJSON()`, `render()`, `toPrint()`, `__toString()` - 输出方法（片段/调试）
+- `toJSON()`, `render()`, `print()`, `__toString()` - 输出方法（片段/调试）
 
-`Pure\Compile\Shape` 提供 `__invoke($data)`、`print($data)` 和 `compile()`；
+`Pure\Compile\Shape` 提供 `__invoke($data)`、`print($data)`、`save($path, $data)` 和 `compile()`；
 `Pure\Compile\Renderer` 提供 `render($data)`、`save($path, $data)`，以及只读属性
 `source` / `id`。
 
@@ -81,7 +78,6 @@ $shape->print(['title' => 'Hello']);
 - **每个进程只编译一次形状** —— 用 `static $shape ??= Compile::shape(...)` 记忆化（标准 PHP-FPM 下请启用 `Compile::cachePath()`，让请求加载渲染器而不是重建）
 - **使用函数** 用于标准 HTML/SVG 标签
 - **使用魔术方法** 用于自定义或动态标签
-- **使用构造函数** 用于性能关键代码
 - **使用 Raw 类** 用于预格式化内容
 - **在生产环境启用 `Compile::cachePath()`**，让已预热的 worker 跳过代码生成
 

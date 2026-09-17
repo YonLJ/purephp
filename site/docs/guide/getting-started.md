@@ -31,7 +31,7 @@ use function Pure\HTML\{div, h1, p};
 div(
     h1('PurePHP Installation Successful'),
     p('Congratulations! PurePHP is correctly installed.')
-)->toPrint();
+)->print();
 ```
 
 Run the test file:
@@ -104,6 +104,20 @@ php -S localhost:8000
 
 Then visit `http://localhost:8000` to see your first PurePHP application!
 
+### 4. Enable the Development Guard
+
+While developing, enable the guard so a shape that is rebuilt per request is
+reported instead of silently slowing the page down:
+
+```php
+// index.php, before the first render
+Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
+```
+
+It emits one `E_USER_WARNING` per call site when the same place calls
+`Compile::shape()` too many times in one process, and points at the
+`static $shape ??=` pattern.
+
 ## Basic Examples
 
 ### Using Components
@@ -161,7 +175,7 @@ $shape(['id' => 'main-content']);
 ```
 
 For snippets — small fragments that are rendered immediately — you can keep
-using the tag API and `toPrint()`:
+using the tag API and `print()`:
 
 ```php
 <?php
@@ -172,7 +186,7 @@ div('Content')
     ->class('container')
     ->style('background: #f0f0f0; padding: 20px;')
     ->data_id('main-content')
-    ->toPrint();
+    ->print();
 ```
 
 ## Next Steps

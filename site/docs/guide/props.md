@@ -74,9 +74,11 @@ attributes cannot drift apart: a bound `false` omits the attribute and a bound
 
 ## Dynamic Props
 
-Dynamic attribute values use `Slot::attr()`. A `null` value omits the
-attribute at render time (a bound `false` behaves the same), which is also how
-conditional attributes work:
+Dynamic attribute values use `Slot::attr()`. The argument is the data key, not
+the attribute name — the attribute name comes from the setter, so
+`->class(Slot::attr('classList'))` binds `classList` from the data and writes it
+into `class`. A `null` value omits the attribute at render time (a bound `false`
+behaves the same), which is also how conditional attributes work:
 
 ```php
 <?php
@@ -84,11 +86,11 @@ conditional attributes work:
 use Pure\Core\Slot;
 
 $shape = Compile::shape(
-    button('Save')->class(Slot::attr('class'))->disabled(Slot::attr('disabled'))
+    button('Save')->class(Slot::attr('classList'))->disabled(Slot::attr('disabled'))
 );
 
-$shape(['class' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
-$shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
+$shape(['classList' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
+$shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="disabled"
 ```
 
 ## Slot Reference
@@ -96,7 +98,7 @@ $shape(['class' => 'btn btn-primary', 'disabled' => 'disabled']); // disabled="d
 | Slot | Value | Behavior |
 | --- | --- | --- |
 | `Slot::text($name)` | stringable or `null` | escaped text content; `null` renders empty |
-| `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute |
+| `Slot::attr($name)` | stringable or `null` | escaped attribute value ($name is the data key); `null` omits the attribute |
 | `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
 | `Slot::sub($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |

@@ -217,7 +217,7 @@ function PageShape(): Shape
 
 use function Pure\HTML\{div, h2, p};
 
-div(h2('Title'), p('Content'))->class('card')->toPrint();
+div(h2('Title'), p('Content'))->class('card')->print();
 ```
 
 仅将这种方式用于代码片段与调试；生产页面应当编译形状，让转义与结构成本只支付一次。

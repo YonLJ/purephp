@@ -31,7 +31,7 @@ function BasicEvents() {
 }
 
 // Use the component
-BasicEvents()->toPrint();
+BasicEvents()->print();
 ```
 
 ## Mouse Events
@@ -55,7 +55,7 @@ function MouseEvents() {
 }
 
 // Use the component
-MouseEvents()->toPrint();
+MouseEvents()->print();
 ```
 
 ## Keyboard Events
@@ -295,7 +295,7 @@ function CustomEventAttributes() {
 }
 
 // Use the component
-CustomEventAttributes()->toPrint();
+CustomEventAttributes()->print();
 ```
 
 ## Event Handler Best Practices
@@ -320,7 +320,7 @@ $externalButton = button('External Handler')
 div(
     $inlineButton,
     $externalButton
-)->toPrint();
+)->print();
 ?>
 <script>
 function handleComplexAction() {
