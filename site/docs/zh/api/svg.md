@@ -27,8 +27,22 @@ $custom = SVG::customShape(SVG::innerPath('M10,10 L90,90'));
 
 ## 自闭合标签
 
-SVG 类自动识别以下自闭合标签：
-- `animate`, `animateMotion`, `circle`, `ellipse`, `feBlend`, `feColorMatrix`, `feDisplacementMap`, `feDropShadow`, `feGaussianBlur`, `feImage`, `image`, `line`, `mpath`, `path`, `polygon`, `polyline`, `rect`, `stop`, `use`
+SVG 没有 void 元素：`<feTile />` 与 `<feTile></feTile>` 描述同一份文档，因此这里的
+自闭合只是渲染风格，而不是内容规则。以下元素在创建时不带子元素，SVG 类就会渲染成
+自闭合形式：
+
+- `animate`, `animateMotion`, `animateTransform`, `circle`, `ellipse`,
+  `feBlend`, `feColorMatrix`, `feComposite`, `feConvolveMatrix`,
+  `feDistantLight`, `feDisplacementMap`, `feDropShadow`, `feFlood`, `feFuncA`,
+  `feFuncB`, `feFuncG`, `feFuncR`, `feGaussianBlur`, `feImage`, `feMergeNode`,
+  `feMorphology`, `feOffset`, `fePointLight`, `feSpotLight`, `feTile`,
+  `feTurbulence`, `image`, `line`, `mpath`, `path`, `polygon`, `polyline`,
+  `rect`, `set`, `stop`, `use`, `view`
+
+一旦传入子元素，元素就保持展开，因此动画元素可以嵌套 `<mpath>`
+（`animateMotion(mpath()->href('#p'))`），`<use>` 也可以嵌套描述性元素；`<g>`、
+`<text>`、`<feMerge>` 这类容器永远不会自闭合。`setSelfClose(true)` 仍可强制短
+形式（带子元素时会抛错），`setSelfClose(false)` 强制展开形式。
 
 ```php
 <?php

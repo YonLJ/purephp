@@ -107,6 +107,19 @@ First public version. No tag has been cut yet.
   (`['br' => true]`) instead of lists, so membership is an `isset()` lookup
   rather than a linear `in_array()` scan; constructing a tag is ~10% faster
   (shape building happens once per process, so this is a compile-time win).
+- SVG self-closing now applies only to elements created without children: SVG
+  has no void elements, so the short form is a style choice and children must
+  win. Animation elements can nest `<mpath>`
+  (`animateMotion(mpath()->href('#p'))`) and `<use>` can nest descriptive
+  elements instead of throwing a `LogicException`, while the list gains the
+  remaining leaf elements (`animateTransform`, `set`, `view`, `feOffset`,
+  `feTile`, `feFlood`, `feTurbulence`, `feComposite`, `feConvolveMatrix`,
+  `feMorphology`, `feMergeNode`, `feFuncA`, `feFuncB`, `feFuncG`, `feFuncR`,
+  `feDistantLight`, `fePointLight`, `feSpotLight`) so they render compactly.
+  Containers stay out of the list. HTML void elements still reject children,
+  and the self-close flag is part of the structure fingerprint, so cached
+  renderers for the affected elements are regenerated without a
+  `Compile::CACHE_VERSION` bump.
 - Renamed the compiled renderer `Pure\Compile\Compiled` to
   `Pure\Compile\Renderer`; the internal code generator is now
   `Pure\Compile\Internal\CodeGenerator` (previously `Compiler`).

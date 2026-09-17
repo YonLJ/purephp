@@ -120,6 +120,14 @@ class HTMLTest extends TestCase
         $this->assertSame(['Hello World'], $tag->getChildren());
     }
 
+    public function testVoidElementsRejectChildren(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage("Self-closing element 'input' cannot have child elements.");
+
+        input('child');
+    }
+
     public function testConstructorMethod(): void
     {
         /** @var HTML */
