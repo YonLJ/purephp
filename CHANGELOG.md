@@ -36,6 +36,10 @@ First public version. No tag has been cut yet.
   the XML declaration) unless a header is given. Subclasses keep customizing that
   header by overriding the protected `Tag::defaultHeader()`; the compiled path
   reads it through an `@internal` `Tag::documentHeader()` accessor.
+- `Pure\HTML\htmlVar()` for the `<var>` element: `var` is a PHP keyword and
+  cannot name a function, so the helper carries the namespace prefix, as
+  SVG already does for `<use>` (`svgUse()`) and `<switch>` (`svgSwitch()`);
+  `HTML::var()` and `HTML::customTag('var')` stay available.
 - Compiled guide and API documentation (English and Chinese).
 
 ### Changed
