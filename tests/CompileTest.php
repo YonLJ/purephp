@@ -517,4 +517,86 @@ class CompileTest extends TestCase
             putenv('PURE_COMPILE_MEMO_BYTES');
         }
     }
+
+    public function testStyleSlotRendersEscapedAttribute(): void
+    {
+        $shape = Compile::shape(div('x')->style(Slot::attr('s')));
+
+        $this->assertSame('<div style="a&quot;b">x</div>', $shape(['s' => 'a"b']));
+    }
+
+    public function testRequiredFalseMakesSlotOptionalWithoutDefault(): void
+    {
+        $shape = Compile::shape(div(Slot::text('v')->required(false)));
+
+        $this->assertSame('<div></div>', $shape([]));
+        $this->assertSame('<div>x</div>', $shape(['v' => 'x']));
+    }
+
+    public function testStringableAttributeSlotIsStringifiedAndEscaped(): void
+    {
+        $value = new class () {
+            public function __toString(): string
+            {
+                return 'a & b';
+            }
+        };
+
+        $shape = Compile::shape(div('x')->class(Slot::attr('c')));
+
+        $this->assertSame('<div class="a &amp; b">x</div>', $shape(['c' => $value]));
+        $this->assertSame($shape(['c' => 'a & b']), $shape(['c' => $value]));
+    }
+
+    public function testMissingRawSlotThrows(): void
+    {
+        $shape = Compile::shape(div(Slot::raw('body')));
+
+        try {
+            $shape([]);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame("slot 'body' is required but was not provided.", $e->getMessage());
+        }
+    }
+
+    public function testNullRawSlotRendersEmpty(): void
+    {
+        $shape = Compile::shape(div(Slot::raw('body')));
+
+        $this->assertSame('<div></div>', $shape(['body' => null]));
+    }
+
+    public function testArrayRawSlotValueIsRejected(): void
+    {
+        $shape = Compile::shape(div(Slot::raw('body')));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("slot 'body' must be stringable, array given.");
+
+        $shape(['body' => ['a']]);
+    }
+
+    public function testMissingAttributeSlotThrows(): void
+    {
+        $shape = Compile::shape(div('x')->class(Slot::attr('cls')));
+
+        try {
+            $shape([]);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame("slot 'cls' is required but was not provided.", $e->getMessage());
+        }
+    }
+
+    public function testShapePrintOutputsRenderedHTML(): void
+    {
+        $shape = Compile::shape(div(Slot::text('v')));
+
+        ob_start();
+
+        $shape->print(['v' => 'a']);
+
+        $this->assertSame('<div>a</div>', ob_get_clean());
+    }
 }
