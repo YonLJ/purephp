@@ -3,7 +3,12 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
 use Pure\Core\SVG;
+
+use function Pure\SVG\svg;
+use function Pure\SVG\svgUse;
 
 class SVGTest extends TestCase
 {
@@ -145,5 +150,28 @@ class SVGTest extends TestCase
 
         $expected = '<svg width="50" height="50"><circle cx="25" cy="25" r="20" fill="red" /></svg>';
         $this->assertSame($expected, (string)$svg);
+    }
+
+    public function testCompileOutputMatchesRenderForSelfClosingElements(): void
+    {
+        $circle = SVG::circle()->cx('50')->cy('50')->r('40');
+
+        $this->assertSame($circle->render(), Compile::shape($circle)([]));
+        $this->assertSame('<circle cx="50" cy="50" r="40" />', Compile::shape($circle)([]));
+    }
+
+    public function testCompileKeepsElementsWithChildrenOpen(): void
+    {
+        $tree = SVG::animate(SVG::mpath()->href('#p'));
+
+        $this->assertSame($tree->render(), Compile::shape($tree)([]));
+        $this->assertSame('<animate><mpath href="#p" /></animate>', Compile::shape($tree)([]));
+    }
+
+    public function testUseElementRendersSelfClosedThroughASlot(): void
+    {
+        $shape = Compile::shape(svg(svgUse()->href(Slot::attr('href'))));
+
+        $this->assertSame('<svg><use href="#i" /></svg>', $shape(['href' => '#i']));
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
+use Pure\Compile\Internal\ShapeGuard;
 use Pure\Core\Slot;
 
 use function Pure\HTML\div;
@@ -303,5 +304,49 @@ class CompileCacheTest extends TestCase
         $this->assertStringContainsString('static', $warnings[0]);
         $this->assertStringContainsString(__FILE__ . ':', $warnings[0]);
         $this->assertStringNotContainsString('src/Compile/Compile.php', $warnings[0]);
+    }
+
+    public function testGuardEnablesFromTheEnvironmentVariable(): void
+    {
+        (new ReflectionProperty(ShapeGuard::class, 'enabled'))->setValue(null, null);
+        (new ReflectionProperty(ShapeGuard::class, 'calls'))->setValue(null, []);
+        putenv('PURE_COMPILE_GUARD=1');
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            for ($i = 0; $i < 25; $i++) {
+                Compile::shape(div('guarded'));
+            }
+        } finally {
+            restore_error_handler();
+            putenv('PURE_COMPILE_GUARD');
+            Compile::guard(false);
+            (new ReflectionProperty(ShapeGuard::class, 'calls'))->setValue(null, []);
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('static', $warnings[0]);
+    }
+
+    public function testStaleCacheVersionIsRegenerated(): void
+    {
+        $shape = Compile::shape(div(span('x')));
+        $shape->compile();
+        $file = $this->dir . '/' . $shape->id() . '.php';
+        $contents = (string)file_get_contents($file);
+        file_put_contents($file, (string)preg_replace('/v=\d+/', 'v=1', $contents, 1));
+
+        $this->assertSame('<div><span>x</span></div>', Compile::shape(div(span('x')))([]));
+        $this->assertStringContainsString('v=' . Compile::CACHE_VERSION, (string)file_get_contents($file));
     }
 }
