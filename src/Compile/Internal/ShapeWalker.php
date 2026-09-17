@@ -47,7 +47,10 @@ final class ShapeWalker
         }
 
         foreach ($export['attrs'] as $key => $value) {
-            $this->visitor->attribute((string)$key, $value, self::slotPath($path, (string)$key));
+            // A slot is named by its data key, so attribute slots report the
+            // slot name in error paths (not the attribute name).
+            $name = $value instanceof Slot ? $value->name : (string)$key;
+            $this->visitor->attribute((string)$key, $value, self::slotPath($path, $name));
         }
 
         if ($export['selfClose']) {

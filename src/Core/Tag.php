@@ -451,7 +451,7 @@ abstract class Tag
         ];
     }
 
-    public function toPrint(): void
+    public function print(): void
     {
         echo $this->__toString();
     }
@@ -464,9 +464,22 @@ abstract class Tag
      * @param string|null $header Optional document header to prepend.
      * @return int|false The number of bytes written, or false on failure.
      */
-    public function toSave(string $path, ?string $header = null): int|false
+    public function save(string $path, ?string $header = null): int|false
     {
         return file_put_contents($path, ($header ?? $this->defaultHeader()) . $this->render());
+    }
+
+    /**
+     * Cross-class accessor for the compiled path: Shape::save() reads the
+     * document header of the root tag, which defaultHeader() keeps protected.
+     *
+     * @internal Subclasses customize the header by overriding defaultHeader().
+     *
+     * @return string The default document header.
+     */
+    public function documentHeader(): string
+    {
+        return $this->defaultHeader();
     }
 
     /**

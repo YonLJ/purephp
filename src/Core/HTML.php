@@ -28,7 +28,7 @@ const SELF_CLOSE_HTML_TAGS = [
 class HTML extends Tag
 {
     /**
-     * Initialize an HTML element. Self-closing tags are detected automatically.
+     * @internal Use the Pure\HTML functions or HTML::customTag() instead.
      *
      * @param string $tagName The HTML tag name.
      * @param array<int, mixed> $children

@@ -328,7 +328,7 @@ class HTMLTest extends TestCase
         $outputPath = './output.html';
         $tag = HTML::div('Hello, World!');
 
-        $result = $tag->toSave($outputPath);
+        $result = $tag->save($outputPath);
         $this->assertNotFalse($result);
         $this->assertFileExists($outputPath);
 
