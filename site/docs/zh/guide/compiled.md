@@ -48,25 +48,25 @@ echo $page([
 | `Slot::text($name)` | 可字符串化或 `null` | 转字符串后转义；`null` 渲染为空内容 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 省略该属性（与 `setAttr(null)` 一致） |
 | `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
-| `Slot::sub($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
+| `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 当 `$data[$name]` 为真时渲染 `$then`，否则渲染 `$else`；缺失的键为 false，且绝不抛出异常 |
-| `Slot::eachAny($name, ['kind' => $shape, ...])` | 数组的可迭代集合 | 按 `$item['kind']` 逐项分派；未知的 kind 会抛出 `InvalidArgumentException` |
+| `Slot::eachKind($name, ['kind' => $shape, ...])` | 数组的可迭代集合 | 按 `$item['kind']` 逐项分派；未知的 kind 会抛出 `InvalidArgumentException` |
 
 修饰符：
 
 - `->required(false)`——槽位可以缺失。
 - `->default($value)`——键缺失时使用的回退值。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
-- `Slot::sub(..., $map)` / `Slot::each(..., $map)` / `Slot::eachAny(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；组件正是通过这种方式把自己的 props 映射给子组件。
+- `Slot::child(..., $map)` / `Slot::each(..., $map)` / `Slot::eachKind(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；组件正是通过这种方式把自己的 props 映射给子组件。
 
 值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
 
 ## 作用域与缺失数据
 
-`Slot::sub()` 与 `Slot::each()` 会创建嵌套数据作用域；在其中，槽位针对该作用域解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`，例如 `slot 'items[].title' is required but was not provided.`。可选数据请使用 `default()` 或 `required(false)`。
+`Slot::child()` 与 `Slot::each()` 会创建嵌套数据作用域；在其中，槽位针对该作用域解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`，例如 `slot 'items[].title' is required but was not provided.`。可选数据请使用 `default()` 或 `required(false)`。
 
-`Slot::if()` 与 `Slot::eachAny()` 的分支共享当前作用域，因此下面这样写可以自然工作：
+`Slot::if()` 与 `Slot::eachKind()` 的分支共享当前作用域，因此下面这样写可以自然工作：
 
 ```php
 $item = Compile::shape(
@@ -107,7 +107,7 @@ function PageShape(): Shape
 
     return $shape ??= Compile::shape(
         div(
-            Slot::sub('card', CardShape('card shadow'))
+            Slot::child('card', CardShape('card shadow'))
         )->class('container')
     );
 }
@@ -117,7 +117,7 @@ PageShape()->print([
 ]);
 ```
 
-嵌套组件使用 `Slot::sub()`，列表使用 `Slot::each()`，混合列表使用 `Slot::eachAny()`，可选/条件标记使用 `Slot::if()`。
+嵌套组件使用 `Slot::child()`，列表使用 `Slot::each()`，混合列表使用 `Slot::eachKind()`，可选/条件标记使用 `Slot::if()`。
 
 ### 列表
 
@@ -134,7 +134,7 @@ $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 $text = Compile::shape(p(Slot::text('value')));
 $link = Compile::shape(a(Slot::text('value'))->href(Slot::attr('href')));
 
-$shape = Compile::shape(div(Slot::eachAny('blocks', [
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
     'text' => $text,
     'link' => $link,
 ])));
@@ -145,7 +145,7 @@ $shape(['blocks' => [
 ]]);
 ```
 
-每个项都必须是带有判别键的数组（默认是 `kind`；可以把不同的键作为 `Slot::eachAny()` 的第三个参数传入）。
+每个项都必须是带有判别键的数组（默认是 `kind`；可以把不同的键作为 `Slot::eachKind()` 的第三个参数传入）。
 
 ## 缓存
 
@@ -196,7 +196,7 @@ php examples/bootstrap-features/bench.php
 
 ## 限制
 
-- 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()` / `Slot::eachAny()`，或者在渲染前规范化数据。
+- 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()` / `Slot::eachKind()`，或者在渲染前规范化数据。
 - 编译后的代码与形状结构绑定；改变形状会改变它的 `id()`，从而改变其缓存文件。
 - 映射闭包按文件与行号生成指纹；就地修改闭包体不会改变指纹。编辑映射闭包时请清除缓存（或提升 `Compile::CACHE_VERSION`）。
 - 编译时会读取当前的形状树，`id()` 也反映调用时刻的树。已编译的渲染器会持续渲染它编译时的那份树，因此在修改已包装为形状的树之后需要调用 `Compile::flush()`；每个进程只构建一次形状即可完全避免此问题。
@@ -211,6 +211,6 @@ php examples/bootstrap-features/bench.php
 | `->class($classList)` | 静态 props 直接 `->class($classList)`，动态的用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::sub('child', ChildShape())` 或映射 |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` 或映射 |
 
 即时（`render()`）标签树仍然可用于代码片段与调试；参见[基本用法](/zh/guide/basic-usage)。

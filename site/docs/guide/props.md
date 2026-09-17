@@ -100,10 +100,10 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | `Slot::text($name)` | stringable or `null` | escaped text content; `null` renders empty |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value ($name is the data key); `null` omits the attribute |
 | `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
-| `Slot::sub($name, $shape)` | array | nested scope for `$shape` |
+| `Slot::child($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders a branch; a missing key is false |
-| `Slot::eachAny($name, ['kind' => $shape])` | iterable of arrays | dispatches per item on the discriminator key |
+| `Slot::eachKind($name, ['kind' => $shape])` | iterable of arrays | dispatches per item on the discriminator key |
 
 ## Modifiers
 
@@ -149,7 +149,7 @@ try {
 }
 ```
 
-Paths identify nested scopes: `card.title` for a sub slot, `items[].title` for
+Paths identify nested scopes: `card.title` for a child slot, `items[].title` for
 a list item, `items[].kind` for a heterogeneous list discriminator.
 
 ## Derived Props (Maps)
@@ -165,7 +165,7 @@ use Pure\Core\Slot;
 $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
 
 $shape = Compile::shape(div(
-    Slot::sub('user', $badge, static fn (array $data): array => [
+    Slot::child('user', $badge, static fn (array $data): array => [
         'label' => strtoupper((string)$data['name']),
     ])
 ));
@@ -173,7 +173,7 @@ $shape = Compile::shape(div(
 $shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
 ```
 
-`Slot::each()` and `Slot::eachAny()` accept the same optional map, applied to
+`Slot::each()` and `Slot::eachKind()` accept the same optional map, applied to
 every item.
 
 ## Component Props Contract

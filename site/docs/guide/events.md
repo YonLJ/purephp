@@ -238,7 +238,7 @@ function ParentShape(): Shape
     return $shape ??= Compile::shape(
         div(
             p('Parent Component'),
-            Slot::sub('child', ChildShape()),
+            Slot::child('child', ChildShape()),
             p()->id('parent-output')->style('margin-top: 10px; color: #666;')
         )->class('parent-component')
     );

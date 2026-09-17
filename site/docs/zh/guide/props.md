@@ -88,10 +88,10 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | `Slot::text($name)` | 可字符串化或 `null` | 转义后的文本内容；`null` 渲染为空 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值（`$name` 是数据键）；`null` 省略该属性 |
 | `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
-| `Slot::sub($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
+| `Slot::child($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 渲染分支；缺失的键为 false |
-| `Slot::eachAny($name, ['kind' => $shape])` | 数组的可迭代集合 | 按判别键逐项分派 |
+| `Slot::eachKind($name, ['kind' => $shape])` | 数组的可迭代集合 | 按判别键逐项分派 |
 
 ## 修饰符
 
@@ -129,7 +129,7 @@ try {
 }
 ```
 
-路径用于标识嵌套作用域：`card.title` 表示 sub 槽位，`items[].title` 表示列表项，`items[].kind` 表示异构列表的判别键。
+路径用于标识嵌套作用域：`card.title` 表示 `Slot::child()` 槽位，`items[].title` 表示列表项，`items[].kind` 表示异构列表的判别键。
 
 ## 派生 props（映射）
 
@@ -143,7 +143,7 @@ use Pure\Core\Slot;
 $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
 
 $shape = Compile::shape(div(
-    Slot::sub('user', $badge, static fn (array $data): array => [
+    Slot::child('user', $badge, static fn (array $data): array => [
         'label' => strtoupper((string)$data['name']),
     ])
 ));
@@ -151,7 +151,7 @@ $shape = Compile::shape(div(
 $shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
 ```
 
-`Slot::each()` 与 `Slot::eachAny()` 接受同样的可选映射，并应用于每个项。
+`Slot::each()` 与 `Slot::eachKind()` 接受同样的可选映射，并应用于每个项。
 
 ## 组件 props 契约
 

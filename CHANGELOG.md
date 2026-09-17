@@ -15,8 +15,8 @@ First public version. No tag has been cut yet.
   tree with `Pure\Core\Slot` placeholders into a flat PHP renderer
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
   subtrees without slots are folded into literals.
-- Slot types `Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::sub()`,
-  `Slot::each()`, `Slot::if()` and `Slot::eachAny()`, with `required(false)`
+- Slot types `Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::child()`,
+  `Slot::each()`, `Slot::if()` and `Slot::eachKind()`, with `required(false)`
   and `default()` modifiers and optional map closures for derived scopes.
 - `Pure\Core\MissingSlotException` with full slot paths for missing data, and
   `InvalidArgumentException` for non-stringable values and list contract
@@ -152,6 +152,11 @@ First public version. No tag has been cut yet.
   the generated code and the layout both changed.
 - `Tag::save()` and `Renderer::save()` write with `file_put_contents()`, so a
   long document is always written in full.
+- `Slot::sub()` and `Slot::eachAny()` are now `Slot::child()` and
+  `Slot::eachKind()` (with `SlotKind::Child` / `SlotKind::EachKind`), matching the
+  vocabulary the guides already used (child component, kind discriminator); the
+  internal scope helper is `SlotRuntime::scope()`, so `Compile::CACHE_VERSION` is
+  now 6 and cached renderers are discarded and regenerated.
 - Source directories now mirror the namespaces one to one —
   `src/Core`, `src/Compile`, `src/HTML`, `src/SVG`, `src/Utils` — and the
   function frontends live in `src/HTML/functions.php` and
@@ -189,10 +194,10 @@ First public version. No tag has been cut yet.
   conversion" warning and a literal `"Array"` attribute.
 - `class('')` no longer emits `class=""`; it behaves like `class(null)` and
   `class([''])`.
-- `Slot::default()` rejects objects, closures and resources with an
+- `->default()` rejects objects, closures and resources with an
   `InvalidArgumentException` instead of failing later with a bare
   `serialize()` error or broken generated code.
-- `Slot::eachAny()` rejects non-string kind keys, which PHP array keys turn
+- `Slot::eachKind()` rejects non-string kind keys, which PHP array keys turn
   into ints, with an `InvalidArgumentException` instead of compiling branches
   that can never match: generated dispatch compares string kinds strictly.
 

@@ -194,7 +194,7 @@ $config->print(['settings' => [
 ```
 
 When the structure itself has to vary with the data, use `Slot::if()` or
-`Slot::eachAny()`; the tag set of a shape cannot.
+`Slot::eachKind()`; the tag set of a shape cannot.
 
 ## Performance Considerations
 

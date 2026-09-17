@@ -37,7 +37,7 @@ echo $shape([
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
 | `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
-| `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`sub`、`each`、`if`、`eachAny`）与修饰符 |
+| `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
 ## 形状与数据
@@ -54,7 +54,7 @@ echo $shape([
 | `->class($classList)` | 静态 props 用 `->class($classList)`，动态 props 用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::sub('child', ChildShape())` 或组件映射 |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` 或组件映射 |
 
 静态子组件完全不需要槽位——直接放进形状里构建，它们会被编译成字面量：
 
@@ -69,18 +69,18 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 | `Slot::text($name)` | 可字符串化或 `null` | 转换为字符串后转义；`null` 渲染为空内容 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 时省略该属性（与 `setAttr(null)` 相同） |
 | `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
-| `Slot::sub($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
+| `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个 item 渲染一次 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | `$data[$name]` 为真值时渲染 `$then`，否则渲染 `$else`；键缺失视为 false，绝不抛异常 |
-| `Slot::eachAny($name, ['kind' => $shape], $kindKey = 'kind')` | 数组的可迭代集合 | 按 `$item[$kindKey]` 分发每个 item；未知 kind 抛出 `InvalidArgumentException` |
+| `Slot::eachKind($name, ['kind' => $shape], $kindKey = 'kind')` | 数组的可迭代集合 | 按 `$item[$kindKey]` 分发每个 item；未知 kind 抛出 `InvalidArgumentException` |
 
 修饰符：
 
 - `->required(false)`——允许槽位缺失。
 - `->default($value)`——键缺失时使用的回退值。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
-- `Slot::sub($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
-  `Slot::eachAny(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；
+- `Slot::child($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
+  `Slot::eachKind(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；
   组件借此把自身 props 映射给子组件（例如 `fn (array $d) => ['href' => '#' . $d['icon']]`）。
 
 值必须可字符串化：接受 `null`、标量和 `Stringable`；数组或其它对象会抛出
@@ -168,7 +168,10 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
   `slot 'items[].title' is required but was not provided.`
 - 位置错误（`Slot::attr` 用作子节点、`Slot::text` 用作属性值）或缺少形状：编译期抛
   `LogicException`。
-- 列表不可迭代、item 或作用域不是数组、未知的 `eachAny` kind、值不可字符串化：
+- `Slot::eachKind()` 没有分支形状，或判别键为空、数字形：构建期抛
+  `InvalidArgumentException`（对 `Slot::if()` 使用 `required()` / `default()` 会抛
+  `LogicException`）。
+- 列表不可迭代、item 或作用域不是数组、item 的判别键缺失或未知、值不可字符串化：
   渲染期抛 `InvalidArgumentException`。
 
 ## 含槽位的树不能使用其它输出路径
@@ -199,7 +202,7 @@ php examples/bootstrap-features/bench.php
 ## 限制
 
 - 标签名不能依赖数据：一个形状始终使用相同的标签。结构变化请用 `Slot::if()` /
-  `Slot::eachAny()`，或者在渲染前规整数据。
+  `Slot::eachKind()`，或者在渲染前规整数据。
 - 形状只在 PHP 进程的生命周期内存在。长驻 worker（或 `opcache.preload`）下是每个
   worker 一次；标准 PHP-FPM 下形状树会在每个请求中重建、渲染器会被重新生成，反而比
   `render()` 更慢。请启用 `cachePath()`，让请求加载生成的渲染器而不是重新生成。
