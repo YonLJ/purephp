@@ -12,6 +12,8 @@ use Closure;
 final class Renderer
 {
     /**
+     * @internal Renderers are created by the compiler, not by user code.
+     *
      * @param Closure(array<string, mixed>, array<int, Closure>): string $closure
      * @param string $source Generated PHP source, for debugging.
      * @param string $id Structure fingerprint shared by the shape and its cached renderer.

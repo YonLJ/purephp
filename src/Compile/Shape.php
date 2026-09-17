@@ -20,6 +20,11 @@ final class Shape implements ShapeContract
 
     private int $generation = -1;
 
+    /**
+     * @internal Use Compile::shape() to wrap a tree.
+     *
+     * @param Tag $tree The data-free shape tree.
+     */
     public function __construct(private readonly Tag $tree)
     {
     }
@@ -74,6 +79,20 @@ final class Shape implements ShapeContract
     public function print(array $data): void
     {
         echo $this->compile()->render($data);
+    }
+
+    /**
+     * Render the compiled shape and write the output to a file, prepending the
+     * document header of the root tag unless $header is given.
+     *
+     * @param string $path The file path to write to.
+     * @param array<string, mixed> $data The rendering data.
+     * @param string|null $header Optional document header to prepend.
+     * @return int|false The number of bytes written, or false on failure.
+     */
+    public function save(string $path, array $data, ?string $header = null): int|false
+    {
+        return $this->compile()->save($path, $data, $header ?? $this->tree->documentHeader());
     }
 
     /**

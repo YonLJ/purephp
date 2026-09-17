@@ -47,7 +47,11 @@ final class Slot
     /**
      * Attribute value slot: the value is coerced to string and escaped.
      *
-     * @param string $name The attribute name, e.g. "href" or "data-foo".
+     * The attribute name comes from the setter
+     * (`->class(Slot::attr('classList'))` sets `class`); $name is the data key
+     * holding the value.
+     *
+     * @param string $name The data key holding the attribute value.
      * @return self
      */
     public static function attr(string $name): self

@@ -278,23 +278,38 @@ class CompileTest extends TestCase
 
     public function testAttributeSlotInChildPositionIsRejected(): void
     {
-        $this->expectException(LogicException::class);
-
-        Compile::shape(div(Slot::attr('x')))->compile();
+        try {
+            Compile::shape(div(Slot::attr('x')))->compile();
+            $this->fail('Expected LogicException to be thrown.');
+        } catch (LogicException $e) {
+            $this->assertSame("attribute slots are not allowed in child position: 'x'.", $e->getMessage());
+        }
     }
 
     public function testTextSlotInAttributePositionIsRejected(): void
     {
-        $this->expectException(LogicException::class);
-
-        Compile::shape(div('x')->class(Slot::text('cls')))->compile();
+        try {
+            Compile::shape(div('x')->class(Slot::text('cls')))->compile();
+            $this->fail('Expected LogicException to be thrown.');
+        } catch (LogicException $e) {
+            $this->assertSame(
+                "only attribute slots are allowed in attribute position, got 'Text' for 'cls'.",
+                $e->getMessage()
+            );
+        }
     }
 
     public function testSlotTreesCannotBeRenderedDirectly(): void
     {
-        $this->expectException(LogicException::class);
-
-        div(Slot::text('title'))->render();
+        try {
+            div(Slot::text('title'))->render();
+            $this->fail('Expected LogicException to be thrown.');
+        } catch (LogicException $e) {
+            $this->assertSame(
+                'Tag trees containing slots cannot be rendered directly; use Pure\Compile\Compile::shape() and render with data.',
+                $e->getMessage()
+            );
+        }
     }
 
     public function testToJsonDescribesSlots(): void
@@ -399,5 +414,26 @@ class CompileTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $shape(['items' => 'nope']);
+    }
+
+    public function testShapeSavePrependsTheDocumentHeader(): void
+    {
+        $path = sys_get_temp_dir() . '/purephp-shape-save.html';
+
+        $this->assertNotFalse(Compile::shape(div(Slot::text('title')))->save($path, ['title' => 'hi']));
+        $this->assertSame('<!DOCTYPE html><div>hi</div>', file_get_contents($path));
+
+        $this->assertNotFalse(
+            Compile::shape(div(Slot::text('title')))->save($path, ['title' => 'hi'], '<!-- custom -->')
+        );
+        $this->assertSame('<!-- custom --><div>hi</div>', file_get_contents($path));
+    }
+
+    public function testShapeSaveUsesTheXmlDeclarationForXmlRoots(): void
+    {
+        $path = sys_get_temp_dir() . '/purephp-shape-save.xml';
+
+        $this->assertNotFalse(Compile::shape(XML::root(Slot::text('v')))->save($path, ['v' => 'x']));
+        $this->assertSame('<?xml version="1.0"?><root>x</root>', file_get_contents($path));
     }
 }

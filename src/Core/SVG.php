@@ -34,7 +34,7 @@ const SELF_CLOSE_SVG_TAGS = [
 class SVG extends XML
 {
     /**
-     * Initialize an SVG element. Self-closing tags are detected automatically.
+     * @internal Use the Pure\SVG functions or SVG::customTag() instead.
      *
      * @param string $tagName The SVG tag name.
      * @param array<int, mixed> $children
