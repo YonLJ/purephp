@@ -28,8 +28,24 @@ $custom = SVG::customShape(SVG::innerPath('M10,10 L90,90'));
 
 ## Self-Closing Tags
 
-The SVG class automatically recognizes the following self-closing tags:
-- `animate`, `animateMotion`, `circle`, `ellipse`, `feBlend`, `feColorMatrix`, `feDisplacementMap`, `feDropShadow`, `feGaussianBlur`, `feImage`, `image`, `line`, `mpath`, `path`, `polygon`, `polyline`, `rect`, `stop`, `use`
+SVG has no void elements: `<feTile />` and `<feTile></feTile>` describe the same
+document, so self-closing is a rendering style here, not a content rule. The
+SVG class renders these elements self-closed when they are created without
+children:
+
+- `animate`, `animateMotion`, `animateTransform`, `circle`, `ellipse`,
+  `feBlend`, `feColorMatrix`, `feComposite`, `feConvolveMatrix`,
+  `feDistantLight`, `feDisplacementMap`, `feDropShadow`, `feFlood`, `feFuncA`,
+  `feFuncB`, `feFuncG`, `feFuncR`, `feGaussianBlur`, `feImage`, `feMergeNode`,
+  `feMorphology`, `feOffset`, `fePointLight`, `feSpotLight`, `feTile`,
+  `feTurbulence`, `image`, `line`, `mpath`, `path`, `polygon`, `polyline`,
+  `rect`, `set`, `stop`, `use`, `view`
+
+Passing children keeps the element open, so animation elements can nest
+`<mpath>` (`animateMotion(mpath()->href('#p'))`) and `<use>` can nest
+descriptive elements; containers such as `<g>`, `<text>` or `<feMerge>` are
+never self-closed. `setSelfClose(true)` still forces the short form (and rejects
+children), `setSelfClose(false)` forces the open/close pair.
 
 ```php
 <?php

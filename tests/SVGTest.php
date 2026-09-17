@@ -68,14 +68,49 @@ class SVGTest extends TestCase
 
     public function testCamelCaseSelfClosingTagsAreRecognized(): void
     {
-        foreach (['animateMotion', 'feBlend', 'feColorMatrix', 'feDisplacementMap', 'feDropShadow', 'feGaussianBlur', 'feImage'] as $name) {
+        foreach ([
+            'animateMotion', 'animateTransform', 'feBlend', 'feColorMatrix',
+            'feComposite', 'feConvolveMatrix', 'feDistantLight', 'feDisplacementMap',
+            'feDropShadow', 'feFlood', 'feFuncR', 'feGaussianBlur', 'feImage',
+            'feMergeNode', 'feMorphology', 'feOffset', 'fePointLight', 'feSpotLight',
+            'feTile', 'feTurbulence',
+        ] as $name) {
             $this->assertTrue((new SVG($name))->getSelfClose(), "SVG '{$name}' should be self-closing.");
         }
 
         // Element names are case-sensitive: a name outside the list stays a
         // container, and an unknown casing is not folded into the list.
         $this->assertFalse((new SVG('feComponentTransfer'))->getSelfClose());
+        $this->assertFalse((new SVG('feMerge'))->getSelfClose());
         $this->assertFalse((new SVG('FEBLEND'))->getSelfClose());
+    }
+
+    public function testLeafElementsRenderSelfClosed(): void
+    {
+        $this->assertSame('<feTile />', (string)(new SVG('feTile')));
+        $this->assertSame('<animateTransform />', (string)(new SVG('animateTransform')));
+        $this->assertSame('<set />', (string)(new SVG('set')));
+        $this->assertSame('<view />', (string)(new SVG('view')));
+    }
+
+    public function testChildrenKeepElementsOpen(): void
+    {
+        // SVG has no void elements: animate and animateMotion may nest mpath
+        // (SMIL motion along a path), and use may nest descriptive elements.
+        $this->assertSame(
+            '<animateMotion><mpath href="#p" /></animateMotion>',
+            (string)SVG::animateMotion(SVG::mpath()->href('#p'))
+        );
+        $this->assertSame(
+            '<animate><mpath href="#p" /></animate>',
+            (string)SVG::animate(SVG::mpath()->href('#p'))
+        );
+        $this->assertSame(
+            '<use><title>label</title></use>',
+            (string)SVG::use(SVG::title('label'))
+        );
+        $this->assertTrue(SVG::animateMotion()->getSelfClose());
+        $this->assertTrue(SVG::use()->getSelfClose());
     }
 
     public function testCamelCaseSelfClosingTagOutput(): void
