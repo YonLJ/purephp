@@ -124,14 +124,14 @@ ButtonShape()->print([
 ]);
 ```
 
-当子组件需要与父组件不同的数据形状时，把映射闭包作为第三个参数传入；它从父数据派生出子的作用域：
+当子组件需要与父组件不同的数据形状时，在数据层派生子作用域：child 槽读取 `$data[$name]`，因此绑定数据里带上子组件期望的嵌套数组即可。
 
 ```php
 <?php
 
-Slot::child('user', BadgeShape(), static fn (array $data): array => [
-    'label' => strtoupper((string)$data['name']),
-]);
+Slot::child('user', BadgeShape()); // 读取 $data['user']
+
+$shape(['user' => ['label' => 'ADA']]);
 ```
 
 ## 列表

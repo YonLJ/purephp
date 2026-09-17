@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
-use Closure;
 use Pure\Compile\Compile;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\SlotKind;
 use Pure\Core\Tag;
-use ReflectionFunction;
 
 /**
  * Canonical structural fingerprint of a shape tree.
  *
- * Consumes the shared traversal (ShapeWalker) and records the same paths,
- * ordering and map keys the code generator sees, so cache keys and generated
- * code stay aligned.
+ * Consumes the shared traversal (ShapeWalker) and records the same paths and
+ * ordering the code generator sees, so cache keys and generated code stay
+ * aligned.
  *
  * @internal
  */
@@ -25,9 +23,6 @@ final class ShapeIndex implements ShapeVisitor
 {
     /** @var string[] */
     private array $parts = [];
-
-    /** @var array<string, Closure> */
-    private array $maps = [];
 
     private string $id = '';
 
@@ -49,16 +44,6 @@ final class ShapeIndex implements ShapeVisitor
     public function id(): string
     {
         return $this->id;
-    }
-
-    /**
-     * Return the closure maps collected during traversal.
-     *
-     * @return array<string, Closure>
-     */
-    public function maps(): array
-    {
-        return $this->maps;
     }
 
     /**
@@ -102,17 +87,12 @@ final class ShapeIndex implements ShapeVisitor
         $this->parts[] = 'raw:' . (string)$raw;
     }
 
-    public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void
+    public function slotEnter(Slot $slot, string $slotPath): void
     {
         $this->parts[] = $this->describeSlot($slot, $slotPath);
 
         if ($slot->kind === SlotKind::EachKind) {
             $this->parts[] = 'kindKey:' . ($slot->kindKey ?? 'kind');
-        }
-
-        if ($mapKey !== null && $slot->map !== null) {
-            $this->maps[$mapKey] = $slot->map;
-            $this->parts[] = 'map:' . $mapKey . ':' . self::closureFingerprint($slot->map);
         }
     }
 
@@ -130,12 +110,5 @@ final class ShapeIndex implements ShapeVisitor
         return 'slot:' . $slot->kind->name . ':' . $slotPath
             . ':required:' . ($slot->required ? '1' : '0')
             . ':default:' . serialize($slot->default);
-    }
-
-    private static function closureFingerprint(Closure $closure): string
-    {
-        $ref = new ReflectionFunction($closure);
-
-        return ($ref->getFileName() ?: '?') . ':' . $ref->getStartLine() . ':' . $ref->getEndLine();
     }
 }

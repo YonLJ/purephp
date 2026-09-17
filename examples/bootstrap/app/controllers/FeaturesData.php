@@ -14,16 +14,20 @@ function featuresData(): array
 {
     $content = featuresContent();
 
+    // The components read the icon of an item as the nested data of their
+    // IconShape child, so the controller nests it here.
+    $withIcon = static fn (array $item): array => array_merge($item, ['icon' => ['href' => '#' . $item['icon']]]);
+
     return [
         'title' => 'Features · Bootstrap v5.2',
         'content' => [
             'columns' => [
                 'title' => 'Columns with icons',
-                'contents' => $content['columns'],
+                'contents' => array_map($withIcon, $content['columns']),
             ],
             'hanging' => [
                 'title' => 'Hanging icons',
-                'contents' => $content['hanging'],
+                'contents' => array_map($withIcon, $content['hanging']),
             ],
             'cards' => [
                 'title' => 'Custom cards',
@@ -34,7 +38,7 @@ function featuresData(): array
             ],
             'grid' => [
                 'title' => 'Icon grid',
-                'contents' => $content['grid'],
+                'contents' => array_map($withIcon, $content['grid']),
             ],
             'features' => [
                 'title' => 'Features with title',
@@ -44,7 +48,7 @@ function featuresData(): array
                     'link' => '#',
                     'linkText' => 'Primary button',
                 ],
-                'features' => $content['features'],
+                'features' => array_map($withIcon, $content['features']),
             ],
         ],
     ];

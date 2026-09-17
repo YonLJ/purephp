@@ -54,7 +54,7 @@ echo $shape([
 | `->class($classList)` | 静态 props 用 `->class($classList)`，动态 props 用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` 或组件映射 |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` |
 
 静态子组件完全不需要槽位——直接放进形状里构建，它们会被编译成字面量：
 
@@ -79,9 +79,7 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 - `->required(false)`——允许槽位缺失。
 - `->default($value)`——键缺失时使用的回退值。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
-- `Slot::child($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
-  `Slot::eachKind(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；
-  组件借此把自身 props 映射给子组件（例如 `fn (array $d) => ['href' => '#' . $d['icon']]`）。
+- 嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
 值必须可字符串化：接受 `null`、标量和 `Stringable`；数组或其它对象会抛出
 `InvalidArgumentException`，错误信息中会指出完整槽位路径。
@@ -100,8 +98,7 @@ $shape = Compile::shape(div(Header(), Slot::text('title')));
 ## 结构指纹
 
 `Shape::id()` 是形状结构的 sha1 结构指纹：标签名、属性、槽位种类与名称、默认值、
-嵌套形状、map 闭包（文件与行号）以及库缓存版本。它无需编译即可计算，用作缓存文件名
-和组件缓存键：
+嵌套形状以及库缓存版本。它无需编译即可计算，用作缓存文件名和组件缓存键：
 
 ```php
 $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
@@ -137,12 +134,10 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 
 - 缓存文件以 `Shape::id()` 命名，原子写入（临时文件 + rename），内容是返回编译闭包的
   纯 PHP，因此 opcache 可以直接提供它们。
-- 缓存条目的头部与预期的 id、map 数量、缓存版本或 PHP 版本不匹配时，该条目会被丢弃
-  并重新生成。
-- 引用组件映射的渲染器依然有效，因为 map 闭包保存在形状中；被缓存的只有生成的代码。
+- 缓存条目的头部与预期的 id、缓存版本或 PHP 版本不匹配时，该条目会被丢弃并重新生成。
 - `Compile::clearCache()` 删除由本库写入的缓存文件。
 - 生成的源码也会按指纹在内存中记忆化，因此在同一进程内重建同一棵树会重新求值缓存的
-  源码，而不是重新生成；map 闭包保持实时，所以重建的形状会绑定自己的闭包。这份记忆有
+  源码，而不是重新生成。这份记忆有
   字节预算上限（超限时先丢弃最旧的源码，比预算还大的单个源码不会被保留），因此随请求
   变化的结构不会让它无限增长。可通过环境变量 `PURE_COMPILE_MEMO_BYTES` 调整预算
   （设为 `0` 即关闭记忆化）。
@@ -151,8 +146,7 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 
 缓存目录必须是私有目录：归 PHP 运行用户所有、组与其他用户不可写（`cachePath()` 会以
 0700 创建缺失目录，并拒绝权限过松或属主不符的目录），且应位于 Web 根目录之外。不要把
-缓存目录直接指向 `/tmp` 这类共享位置。只有在想强制重新生成时才在部署之间删除它；修改
-map 闭包不会改变结构指纹，因此要么清空缓存，要么提升 `Compile::CACHE_VERSION`。
+缓存目录直接指向 `/tmp` 这类共享位置。只有在想强制重新生成时才在部署之间删除它。
 
 ## 每请求守卫
 
@@ -211,4 +205,3 @@ php examples/bootstrap/bench.php
   `render()` 更慢。请启用 `cachePath()`，让请求加载生成的渲染器而不是重新生成。
 - 编译渲染拿编译成本换速度：为每进程只渲染一次的形状做编译比 `render()` 更慢。请编译
   会被反复渲染的页面和组件。
-- map 闭包按文件和行号参与结构指纹；就地修改闭包体不会使缓存失效。

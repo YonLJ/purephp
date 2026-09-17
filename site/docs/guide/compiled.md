@@ -64,9 +64,6 @@ Modifiers:
 - `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
-- `Slot::child(..., $map)` / `Slot::each(..., $map)` / `Slot::eachKind(..., $map)` — derive
-  the nested scope with a closure instead of reading `$data[$name]`; this is how a
-  component maps its own props to a child component.
 
 Value coercion: `null`, scalars and `Stringable` are accepted for
 text/attribute/raw slots; arrays and other objects raise an
@@ -242,18 +239,18 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
   renderer does. `path:` only appears where the slot path differs from the key.
 
 ```php
-    $pureBody = static function (array $v, array $maps): string {
-        ob_start();
-        try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
-            foreach (TemplateRuntime::items($v, 'items') as $item1):
-                $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
-            endforeach; ?></ul></div><?php
-        } finally {
-            $out = (string)ob_get_clean();
-        }
+$pureBody = static function (array $v): string {
+    ob_start();
+    try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
+        foreach (TemplateRuntime::items($v, 'items') as $item1):
+            $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
+        endforeach; ?></ul></div><?php
+    } finally {
+        $out = (string)ob_get_clean();
+    }
 
-        return $out;
-    };
+    return $out;
+};
 ```
 
 `Renderer::$header` holds the document header captured at build time (the
@@ -326,44 +323,28 @@ compiled component, so the strict slot semantics stay with the artifact:
 - list slots are not checked for being iterable, and values are stringified by
   PHP rather than by `SlotRuntime`.
 
+The view declares every root slot with an `@var` annotation derived from the
+shape, so static analyzers read the extracted locals without an exclusion and
+without configuration:
+
+```php
+/**
+ * @var scalar|null|\Stringable $title
+ * @var array{columns: array{title: scalar|null|\Stringable, contents: iterable<array-key, array{title: scalar|null|\Stringable}>}} $content
+ */
+```
+
+Value slots are `scalar|null|\Stringable` (what `htmlspecialchars()` accepts),
+condition slots are `mixed`, and child and list scopes become array shapes and
+iterables of them. Odd slot names are declared on the loader's `$data` array.
+The annotations are comments: they add no output bytes. An optional container
+slot without an array default stays flagged, because its generated read falls
+back to `null` and the annotation says so.
+
 Reach for `--plain` when the views have to run without the library — a
 deployment that ships only `public/` and `views/`, or a template directory
 handed to someone else. Views are includes, so enable opcache: without it every
 render parses the file again, which is the one case where the artifact wins.
-
-### Maps in Artifacts
-
-Map closures (the third argument of `Slot::child()`, `Slot::each()` and
-`Slot::eachKind()`) are copied into the artifact from the file that defines
-them, together with that file's namespace and imports:
-
-```php
-$item = Compile::shape(li(Slot::text('label')));
-
-return Compile::shape(
-    ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => '#' . $item]))
-);
-```
-
-The closure must be copyable on its own:
-
-- it must not be bound to an object, so no `$this` and no tear-offs from
-  instances;
-- it must not capture variables (`use (...)`, or outer variables in an arrow
-  function) — pass data through the slot scope instead;
-- it must not use `self`, `parent`, `static::`, `__FILE__`, `__DIR__`,
-  `__LINE__`, `__CLASS__` or `__TRAIT__`, whose values depend on the file that
-  defines them;
-- it must not share its line with another closure.
-
-The same copying rules apply to plain views: a namespaced closure puts the
-whole view into a `namespace {}` block, so its namespace and imports stay in
-effect there too.
-
-Named callables (`Closure::fromCallable('App\mapItem')`, `mapItem(...)`) are
-referenced by name; the function must be loaded when the artifact renders.
-When a closure cannot be copied, the compiler reports the slot path and the
-reason, and the shape can keep using [Caching](#caching) instead.
 
 ## Performance
 
@@ -392,9 +373,6 @@ php examples/bootstrap/bench.php
   data before rendering.
 - Compiled code is tied to the shape structure; changing a shape changes its
   `id()` and therefore its cache file.
-- Map closures are fingerprinted by file and line; changing a closure body in
-  place does not change the fingerprint. Clear the cache (or bump
-  `Compile::CACHE_VERSION`) when you edit map closures.
 - A shape tree is read live while it compiles, and `id()` reflects the tree as
   it is at that moment. An already compiled renderer keeps rendering the tree
   state it was built from, so call `Compile::flush()` after mutating a tree that
@@ -411,7 +389,7 @@ php examples/bootstrap/bench.php
 | `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` or a map |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` |
 
 Immediate (`render()`) tag trees remain available for snippets and debugging;
 see [Basic Usage](/guide/basic-usage).

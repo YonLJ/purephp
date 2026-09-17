@@ -152,10 +152,10 @@ try {
 Paths identify nested scopes: `card.title` for a child slot, `items[].title` for
 a list item, `items[].kind` for a heterogeneous list discriminator.
 
-## Derived Props (Maps)
+## Derived Props
 
-A map closure derives the nested scope of a child component instead of reading
-`$data[$name]` directly:
+A child component reads its props from the nested data under its slot name, so
+derive them in the data layer before rendering:
 
 ```php
 <?php
@@ -164,17 +164,14 @@ use Pure\Core\Slot;
 
 $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
 
-$shape = Compile::shape(div(
-    Slot::child('user', $badge, static fn (array $data): array => [
-        'label' => strtoupper((string)$data['name']),
-    ])
-));
+$shape = Compile::shape(div(Slot::child('user', $badge)));
 
-$shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
+$shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></div>
 ```
 
-`Slot::each()` and `Slot::eachKind()` accept the same optional map, applied to
-every item.
+`Slot::each()` and `Slot::eachKind()` read their items the same way: every item
+is already the item scope, so a controller turns a list of rows into a list of
+prop arrays before handing it to the shape.
 
 ## Component Props Contract
 

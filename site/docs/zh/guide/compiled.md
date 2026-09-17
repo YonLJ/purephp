@@ -58,7 +58,7 @@ echo $page([
 - `->required(false)`——槽位可以缺失。
 - `->default($value)`——键缺失时使用的回退值。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
-- `Slot::child(..., $map)` / `Slot::each(..., $map)` / `Slot::eachKind(..., $map)`——用闭包派生嵌套作用域，而不是读取 `$data[$name]`；组件正是通过这种方式把自己的 props 映射给子组件。
+- `Slot::child()` / `Slot::each()` / `Slot::eachKind()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
 值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
 
@@ -203,18 +203,18 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
   仅当槽位路径与键名不同时才出现 `path:`。
 
 ```php
-    $pureBody = static function (array $v, array $maps): string {
-        ob_start();
-        try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
-            foreach (TemplateRuntime::items($v, 'items') as $item1):
-                $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
-            endforeach; ?></ul></div><?php
-        } finally {
-            $out = (string)ob_get_clean();
-        }
+$pureBody = static function (array $v): string {
+    ob_start();
+    try { ?><div class="card"><h1><?= TemplateRuntime::text($v, 'title') ?></h1><ul><?php
+        foreach (TemplateRuntime::items($v, 'items') as $item1):
+            $v2 = TemplateRuntime::scope($item1, 'items[]'); ?><li><?= TemplateRuntime::text($v2, 'label', path: 'items[].label') ?></li><?php
+        endforeach; ?></ul></div><?php
+    } finally {
+        $out = (string)ob_get_clean();
+    }
 
-        return $out;
-    };
+    return $out;
+};
 ```
 
 `Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`），
@@ -276,34 +276,20 @@ $html = (string)ob_get_clean();
 - `null` 属性输出为空值，而不是整个属性消失；
 - 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`。
 
+视图会按形状结构为每个顶层槽生成 `@var` 注解，静态分析器无需排除规则或额外配置即可读取这些展开的局部变量：
+
+```php
+/**
+ * @var scalar|null|\Stringable $title
+ * @var array{columns: array{title: scalar|null|\Stringable, contents: iterable<array-key, array{title: scalar|null|\Stringable}>}} $content
+ */
+```
+
+值槽是 `scalar|null|\Stringable`（即 `htmlspecialchars()` 可接受的类型），条件槽是 `mixed`，child 与列表作用域会推导成 array shape 及它们的 iterable。特殊槽名声明在加载器的 `$data` 数组上。这些注解只是注释，不会增加任何输出字节。唯一仍会告警的是没有数组默认值的可选容器槽：生成的读取会回退到 `null`，注解如实反映这一点。
+
 当你需要「视图脱离库运行」时用 `--plain`：例如部署只带 `public/` 与 `views/`，
 或把模板目录交给其他人。视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，
 那是产物唯一更快的场景。
-
-### 产物中的映射
-
-`Slot::child()`、`Slot::each()` 和 `Slot::eachKind()` 的第三个参数（映射闭包）会连同其定义文件的命名空间与导入一起复制进产物：
-
-```php
-$item = Compile::shape(li(Slot::text('label')));
-
-return Compile::shape(
-    ul(Slot::each('items', $item, static fn (mixed $item): array => ['label' => '#' . $item]))
-);
-```
-
-闭包必须能够独立复制：
-
-- 不得绑定对象，因此不能有 `$this`，也不能从实例上取一等可调用；
-- 不得捕获变量（`use (...)`，或箭头函数隐式捕获的外部变量）——请通过槽位作用域传递数据；
-- 不得使用 `self`、`parent`、`static::`、`__FILE__`、`__DIR__`、`__LINE__`、
-  `__CLASS__`、`__TRAIT__`——它们的值取决于定义闭包的文件；
-- 不得与另一个闭包共用同一行。
-
-无依赖视图遵循同样的复制规则：若某个闭包带命名空间，整个视图会被放进 `namespace {}`
-块中，使其命名空间与导入依然生效。
-
-具名可调用（`Closure::fromCallable('App\mapItem')`、`mapItem(...)`）会按名称引用；产物渲染时该函数必须已加载。当闭包无法复制时，编译器会报出槽位路径与原因，该形状可以继续使用[缓存](#缓存)。
 
 ## 性能
 
@@ -329,7 +315,6 @@ php examples/bootstrap/bench.php
 
 - 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()` / `Slot::eachKind()`，或者在渲染前规范化数据。
 - 编译后的代码与形状结构绑定；改变形状会改变它的 `id()`，从而改变其缓存文件。
-- 映射闭包按文件与行号生成指纹；就地修改闭包体不会改变指纹。编辑映射闭包时请清除缓存（或提升 `Compile::CACHE_VERSION`）。
 - 编译时会读取当前的形状树，`id()` 也反映调用时刻的树。已编译的渲染器会持续渲染它编译时的那份树，因此在修改已包装为形状的树之后需要调用 `Compile::flush()`；每个进程只构建一次形状即可完全避免此问题。
 - 形状不得包含请求数据——它们是进程级产物。
 
@@ -342,6 +327,6 @@ php examples/bootstrap/bench.php
 | `->class($classList)` | 静态 props 直接 `->class($classList)`，动态的用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` 或映射 |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` |
 
 即时（`render()`）标签树仍然可用于代码片段与调试；参见[基本用法](/zh/guide/basic-usage)。

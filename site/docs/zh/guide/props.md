@@ -131,9 +131,9 @@ try {
 
 路径用于标识嵌套作用域：`card.title` 表示 `Slot::child()` 槽位，`items[].title` 表示列表项，`items[].kind` 表示异构列表的判别键。
 
-## 派生 props（映射）
+## 派生 props
 
-映射闭包用于派生子组件的嵌套作用域，而不是直接读取 `$data[$name]`：
+子组件从其槽名对应的嵌套数据中读取 props，因此请在数据层完成派生，再交给渲染：
 
 ```php
 <?php
@@ -142,16 +142,12 @@ use Pure\Core\Slot;
 
 $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
 
-$shape = Compile::shape(div(
-    Slot::child('user', $badge, static fn (array $data): array => [
-        'label' => strtoupper((string)$data['name']),
-    ])
-));
+$shape = Compile::shape(div(Slot::child('user', $badge)));
 
-$shape(['name' => 'ada']); // <div><span class="badge">ADA</span></div>
+$shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></div>
 ```
 
-`Slot::each()` 与 `Slot::eachKind()` 接受同样的可选映射，并应用于每个项。
+`Slot::each()` 与 `Slot::eachKind()` 同理：每个元素本身就是该项的作用域，所以控制器先把原始行整理成 props 数组列表再渲染。
 
 ## 组件 props 契约
 

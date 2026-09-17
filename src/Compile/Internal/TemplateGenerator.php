@@ -74,29 +74,26 @@ class TemplateGenerator extends RendererGenerator
      * The interleaved template source of a tree.
      *
      * @param Tag $tree The shape tree to compile.
-     * @param ShapeIndex $index The structure index of the tree.
-     * @param int $indent The indentation level of the closure.
      * @return string The generated template source.
      */
-    public static function source(Tag $tree, ShapeIndex $index, int $indent = 0): string
+    public static function source(Tag $tree): string
     {
         $generator = new self();
-        self::prepare($generator, $index);
-        $generator->level = $indent + 2;
+        $generator->level = 2;
 
-        $generator->code = 'static function (array $v, array $maps): string {' . "\n";
-        $generator->code .= self::indent($indent + 1) . "ob_start();\n";
-        $generator->code .= self::indent($indent + 1) . 'try {';
+        $generator->code = 'static function (array $v): string {' . "\n";
+        $generator->code .= self::indent(1) . "ob_start();\n";
+        $generator->code .= self::indent(1) . 'try {';
 
         (new ShapeWalker($generator))->walk($tree);
         $generator->flushLiteral();
         $generator->openPhp();
 
-        $generator->code .= "\n" . self::indent($indent + 1) . "} finally {\n";
-        $generator->code .= self::indent($indent + 2) . "\$out = (string)ob_get_clean();\n";
-        $generator->code .= self::indent($indent + 1) . "}\n\n";
-        $generator->code .= self::indent($indent + 1) . "return \$out;\n";
-        $generator->code .= self::indent($indent) . '}';
+        $generator->code .= "\n" . self::indent(1) . "} finally {\n";
+        $generator->code .= self::indent(2) . "\$out = (string)ob_get_clean();\n";
+        $generator->code .= self::indent(1) . "}\n\n";
+        $generator->code .= self::indent(1) . "return \$out;\n";
+        $generator->code .= '}';
 
         return $generator->code;
     }
@@ -165,14 +162,8 @@ class TemplateGenerator extends RendererGenerator
             . ')';
     }
 
-    protected function childSource(Slot $slot, string $dataVar, string $slotPath, ?string $mapKey): string
+    protected function childSource(Slot $slot, string $dataVar, string $slotPath): string
     {
-        $map = $this->mapExpression($mapKey);
-
-        if ($map !== null) {
-            return $this->scopeSource($map . '(' . $dataVar . ')', $slotPath);
-        }
-
         return 'TemplateRuntime::child(' . $this->access($dataVar, $slot, $slotPath) . ')';
     }
 

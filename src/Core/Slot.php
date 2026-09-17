@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pure\Core;
 
-use Closure;
 use InvalidArgumentException;
 use LogicException;
 
@@ -26,7 +25,6 @@ final class Slot
         public readonly ?ShapeContract $shape,
         public readonly bool $required,
         public readonly mixed $default,
-        public readonly ?Closure $map,
         public readonly ?ShapeContract $else = null,
         public readonly array $variants = [],
         public readonly ?string $kindKey = null,
@@ -41,7 +39,7 @@ final class Slot
      */
     public static function text(string $name): self
     {
-        return new self(SlotKind::Text, $name, null, true, null, null);
+        return new self(SlotKind::Text, $name, null, true, null);
     }
 
     /**
@@ -56,7 +54,7 @@ final class Slot
      */
     public static function attr(string $name): self
     {
-        return new self(SlotKind::Attr, $name, null, true, null, null);
+        return new self(SlotKind::Attr, $name, null, true, null);
     }
 
     /**
@@ -67,38 +65,32 @@ final class Slot
      */
     public static function raw(string $name): self
     {
-        return new self(SlotKind::Raw, $name, null, true, null, null);
+        return new self(SlotKind::Raw, $name, null, true, null);
     }
 
     /**
-     * Child component slot.
-     *
-     * Without $map the nested data scope is `$data[$name]`; with $map it is
-     * `$map($data)`, which is how a component derives its children props.
+     * Child component slot: the nested data scope is `$data[$name]`.
      *
      * @param string $name The slot name.
      * @param ShapeContract $shape The shape for rendering this slot's content.
-     * @param Closure(array<string, mixed>): array<string, mixed>|null $map
      * @return self
      */
-    public static function child(string $name, ShapeContract $shape, ?Closure $map = null): self
+    public static function child(string $name, ShapeContract $shape): self
     {
-        return new self(SlotKind::Child, $name, $shape, true, null, $map);
+        return new self(SlotKind::Child, $name, $shape, true, null);
     }
 
     /**
-     * List slot: the value is an iterable of arrays, each rendered by $shape.
-     *
-     * With $map the nested scope of each item is `$map($item)`.
+     * List slot: the value is an iterable of arrays, each rendered by $shape
+     * and each being the nested scope of its item.
      *
      * @param string $name The slot name.
      * @param ShapeContract $shape The shape for rendering each item.
-     * @param Closure(mixed): array<string, mixed>|null $map
      * @return self
      */
-    public static function each(string $name, ShapeContract $shape, ?Closure $map = null): self
+    public static function each(string $name, ShapeContract $shape): self
     {
-        return new self(SlotKind::Each, $name, $shape, true, null, $map);
+        return new self(SlotKind::Each, $name, $shape, true, null);
     }
 
     /**
@@ -113,7 +105,7 @@ final class Slot
      */
     public static function if(string $name, ShapeContract $then, ?ShapeContract $else = null): self
     {
-        return new self(SlotKind::If, $name, $then, false, false, null, $else);
+        return new self(SlotKind::If, $name, $then, false, false, $else);
     }
 
     /**
@@ -127,10 +119,9 @@ final class Slot
      * @param string $name The slot name.
      * @param array<array-key, ShapeContract> $shapes
      * @param string $kindKey The key used to dispatch items by kind.
-     * @param Closure(mixed): array<string, mixed>|null $map
      * @return self
      */
-    public static function eachKind(string $name, array $shapes, string $kindKey = 'kind', ?Closure $map = null): self
+    public static function eachKind(string $name, array $shapes, string $kindKey = 'kind'): self
     {
         if ($shapes === []) {
             throw new InvalidArgumentException("slot '{$name}' eachKind requires at least one shape.");
@@ -142,7 +133,7 @@ final class Slot
             }
         }
 
-        return new self(SlotKind::EachKind, $name, null, true, null, $map, null, $shapes, $kindKey);
+        return new self(SlotKind::EachKind, $name, null, true, null, null, $shapes, $kindKey);
     }
 
     /**
@@ -157,7 +148,7 @@ final class Slot
             throw new LogicException("slot '{$this->name}' is a condition slot; required() does not apply.");
         }
 
-        return new self($this->kind, $this->name, $this->shape, $required, $this->default, $this->map, $this->else, $this->variants, $this->kindKey);
+        return new self($this->kind, $this->name, $this->shape, $required, $this->default, $this->else, $this->variants, $this->kindKey);
     }
 
     /**
@@ -182,7 +173,7 @@ final class Slot
             );
         }
 
-        return new self($this->kind, $this->name, $this->shape, false, $value, $this->map, $this->else, $this->variants, $this->kindKey);
+        return new self($this->kind, $this->name, $this->shape, false, $value, $this->else, $this->variants, $this->kindKey);
     }
 
     private static function isValueType(mixed $value): bool

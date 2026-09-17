@@ -112,9 +112,9 @@ Key properties:
 - **Optional disk cache** — `Compile::cachePath($dir)` stores compiled
   renderers so warm workers load code instead of generating it.
 
-`Shape::id()` is a structural fingerprint (tags, attributes, slots, nested
-shapes and map closures) that is available without compiling; it is used as the
-cache file name and as a component cache key.
+`Shape::id()` is a structural fingerprint (tags, attributes, slots and nested
+shapes) that is available without compiling; it is used as the cache file name
+and as a component cache key.
 
 ## Data Binding and Scope
 

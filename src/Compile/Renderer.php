@@ -14,11 +14,10 @@ final class Renderer
     /**
      * @internal Renderers are created by the compiler, not by user code.
      *
-     * @param Closure(array<string, mixed>, array<int, Closure>): string $closure
+     * @param Closure(array<string, mixed>): string $closure
      * @param string $source Generated PHP source, for debugging; empty for
      *     artifacts, whose file is the source.
      * @param string $id Structure fingerprint shared by the shape and its cached renderer.
-     * @param array<int, Closure> $maps
      * @param string $header Document header captured at compile time; empty for
      *     renderers compiled at runtime, where Shape::save() passes the header
      *     of the root tag explicitly.
@@ -27,7 +26,6 @@ final class Renderer
         private readonly Closure $closure,
         public readonly string $source,
         public readonly string $id,
-        private readonly array $maps = [],
         public readonly string $header = '',
     ) {
     }
@@ -40,7 +38,7 @@ final class Renderer
      */
     public function render(array $data): string
     {
-        return ($this->closure)($data, $this->maps);
+        return ($this->closure)($data);
     }
 
     /**

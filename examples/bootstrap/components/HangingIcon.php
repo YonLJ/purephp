@@ -18,7 +18,7 @@ function HangingIconShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape())
             )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
             div(
                 h3(Slot::text('title'))->class('fs-2'),

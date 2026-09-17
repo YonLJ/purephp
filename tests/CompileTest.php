@@ -5,7 +5,6 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\SlotRuntime;
-use Pure\Compile\Shape;
 use Pure\Core\HTML;
 use Pure\Core\MissingSlotException;
 use Pure\Core\Raw;
@@ -204,26 +203,6 @@ class CompileTest extends TestCase
             '<div><div class="card"><span>n</span></div>!</div>',
             $shape(['card' => ['name' => 'n'], 'after' => '!'])
         );
-    }
-
-    public function testChildSlotMapDerivesChildProps(): void
-    {
-        $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
-        $shape = Compile::shape(div(
-            Slot::child('user', $badge, static fn (array $d): array => ['label' => strtoupper((string)$d['name'])])
-        ));
-
-        $this->assertSame('<div><span class="badge">ADA</span></div>', $shape(['name' => 'ada']));
-    }
-
-    public function testEachSlotMapDerivesItemScope(): void
-    {
-        $item = Compile::shape(li(Slot::text('label')));
-        $shape = Compile::shape(ul(
-            Slot::each('items', $item, static fn (mixed $item): array => ['label' => (string)$item])
-        ));
-
-        $this->assertSame('<ul><li>a</li><li>b</li></ul>', $shape(['items' => ['a', 'b']]));
     }
 
     public function testNestedEachSlotsDoNotCollide(): void
@@ -450,28 +429,6 @@ class CompileTest extends TestCase
         $this->assertSame('<div>c</div>', $first(['title' => 'c']));
     }
 
-    public function testRebuiltShapeWithAMapUsesTheLiveClosure(): void
-    {
-        $make = static function (string $suffix): Shape {
-            return Compile::shape(
-                div(
-                    Slot::child(
-                        'child',
-                        Compile::shape(span(Slot::text('x'))),
-                        static fn (array $data): array => ['x' => (string)$data['v'] . $suffix]
-                    )
-                )
-            );
-        };
-
-        $first = $make('-a');
-        $second = $make('-b');
-
-        $this->assertSame('<div><span>v-a</span></div>', $first(['v' => 'v']));
-        $this->assertSame('<div><span>v-b</span></div>', $second(['v' => 'v']));
-        $this->assertSame('<div><span>v-c</span></div>', $make('-c')(['v' => 'v']));
-    }
-
     public function testSourceMemoDropsTheOldestEntriesBeyondItsByteBudget(): void
     {
         $limit = (new ReflectionClassConstant(Compile::class, 'MEMO_BYTES'))->getValue();
@@ -482,7 +439,7 @@ class CompileTest extends TestCase
         $sources = new ReflectionProperty(Compile::class, 'sources');
         $bytes = new ReflectionProperty(Compile::class, 'memoBytes');
 
-        $seed = 'static function (array $v, array $maps): string { return \'\'; }';
+        $seed = 'static function (array $v): string { return \'\'; }';
         $sources->setValue(null, ['seed' => $seed]);
         $bytes->setValue(null, $limit + strlen($seed));
 

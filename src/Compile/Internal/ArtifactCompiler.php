@@ -16,11 +16,11 @@ use Throwable;
  * Builds precompiled artifacts: plain PHP files that return a Renderer, and
  * plain views that need no library at render time.
  *
- * An artifact carries the compiled closure, the map closures it needs, the
- * shape fingerprint and the document header of the root tag, so loading it
- * needs neither the shape tree nor the compile cache. A plain view carries the
- * document header and the markup itself, and reads its slots from locals, so
- * production can serve it without purephp installed.
+ * An artifact carries the compiled closure, the shape fingerprint and the
+ * document header of the root tag, so loading it needs neither the shape tree
+ * nor the compile cache. A plain view carries the document header and the
+ * markup itself, and reads its slots from locals, so production can serve it
+ * without purephp installed.
  *
  * @internal
  */
@@ -133,28 +133,11 @@ final class ArtifactCompiler
     {
         $shape = self::load($shapeFile);
         $tree = $shape->tree();
-        $index = ShapeIndex::of($tree);
-        $maps = [];
-        $blocks = '';
-        $inline = '';
-
-        foreach ($index->maps() as $mapKey => $map) {
-            $variable = '$pureMap' . count($maps);
-            $snippet = ClosureSource::of($map, self::slotPath($mapKey));
-            $maps[] = $variable;
-
-            if ($snippet->namespace === null && $snippet->imports === []) {
-                $inline .= $variable . ' = ' . $snippet->code . ";\n";
-            } else {
-                $blocks .= self::mapBlock($snippet, $variable);
-            }
-        }
-
-        $id = $index->id();
+        $id = ShapeIndex::of($tree)->id();
 
         return [
-            'artifact' => self::artifactFile($shapeFile, $tree, $index, $id, $maps, $blocks, $inline),
-            'plain' => $plain ? self::plainFile($shapeFile, $tree, $index, $id, $maps, $blocks, $inline) : null,
+            'artifact' => self::artifactFile($shapeFile, $tree, $id),
+            'plain' => $plain ? self::plainFile($shapeFile, $tree, $id) : null,
             'id' => $id,
         ];
     }
@@ -164,54 +147,34 @@ final class ArtifactCompiler
      *
      * @param string $shapeFile The shape file path.
      * @param Tag $tree The shape tree.
-     * @param ShapeIndex $index The structure index of the tree.
      * @param string $id The structure fingerprint.
-     * @param list<string> $maps The map variables in index order.
-     * @param string $blocks Namespace blocks holding namespaced map closures.
-     * @param string $inline Plain map assignments.
      * @return string The artifact source.
      */
-    private static function artifactFile(
-        string $shapeFile,
-        Tag $tree,
-        ShapeIndex $index,
-        string $id,
-        array $maps,
-        string $blocks,
-        string $inline
-    ): string {
-        $source = TemplateGenerator::source($tree, $index, 1);
+    private static function artifactFile(string $shapeFile, Tag $tree, string $id): string
+    {
+        $source = TemplateGenerator::source($tree);
         $header = $tree->documentHeader();
 
         $artifact = "<?php\n";
         $artifact .= "/**\n * Compiled from " . basename($shapeFile) . ", do not edit.\n"
             . " * Run `pure compile` to rebuild after changing the shape.\n */\n";
-        $artifact .= "// purephp-shape id={$id} maps=" . count($maps)
+        $artifact .= "// purephp-shape id={$id}"
             . ' v=' . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
             . ' header=' . ($header === '' ? '-' : base64_encode($header)) . "\n\n";
         $artifact .= "declare(strict_types=1);\n\n";
-        $artifact .= $blocks;
-        $artifact .= "namespace {\n";
-        $artifact .= "    use Pure\\Compile\\Renderer;\n";
+        $artifact .= "use Pure\\Compile\\Renderer;\n";
 
         foreach (TemplateGenerator::imports($source) as $import) {
-            $artifact .= '    ' . $import . "\n";
+            $artifact .= $import . "\n";
         }
 
-        $artifact .= self::indent($inline);
-
-        if ($inline !== '' || $source !== '') {
-            $artifact .= "\n";
-        }
-
-        $artifact .= '    $pureBody = ' . $source . ";\n\n";
-        $artifact .= "    return new Renderer(\n";
-        $artifact .= "        \$pureBody,\n";
-        $artifact .= "        '',\n";
-        $artifact .= '        ' . var_export($id, true) . ",\n";
-        $artifact .= '        [' . implode(', ', $maps) . "],\n";
-        $artifact .= '        ' . var_export($header, true) . "\n";
-        $artifact .= "    );\n}\n";
+        $artifact .= "\n\$pureBody = " . $source . ";\n\n";
+        $artifact .= "return new Renderer(\n";
+        $artifact .= "    \$pureBody,\n";
+        $artifact .= "    '',\n";
+        $artifact .= '    ' . var_export($id, true) . ",\n";
+        $artifact .= '    ' . var_export($header, true) . "\n";
+        $artifact .= ");\n";
 
         return $artifact;
     }
@@ -221,60 +184,29 @@ final class ArtifactCompiler
      *
      * @param string $shapeFile The shape file path.
      * @param Tag $tree The shape tree.
-     * @param ShapeIndex $index The structure index of the tree.
      * @param string $id The structure fingerprint.
-     * @param list<string> $maps The map variables in index order.
-     * @param string $blocks Namespace blocks holding namespaced map closures.
-     * @param string $inline Plain map assignments.
      * @return string The plain view source.
      */
-    private static function plainFile(
-        string $shapeFile,
-        Tag $tree,
-        ShapeIndex $index,
-        string $id,
-        array $maps,
-        string $blocks,
-        string $inline
-    ): string {
-        // Namespaced map closures force a namespace block for everything, and
-        // a namespace block must hold all of the view's code and markup.
-        $wrapped = $blocks !== '';
-
+    private static function plainFile(string $shapeFile, Tag $tree, string $id): string
+    {
         $file = "<?php\n";
         $file .= "/**\n * Compiled from " . basename($shapeFile) . ", do not edit.\n"
             . " * Plain view: render it with the view data extracted into locals; no library\n"
-            . " * is needed at load time. Root slots become the local variables of the view,\n"
-            . " * so static analyzers may want `@var` annotations or an exclusion per view.\n"
+            . " * is needed at load time. Root slots become the local variables of the view\n"
+            . " * and carry `@var` annotations derived from the shape, so static analyzers\n"
+            . " * can follow them without an exclusion.\n"
             . " * Run `pure compile --plain` to rebuild after changing the shape.\n */\n";
-        $file .= "// purephp-shape id={$id} maps=" . count($maps)
+        $file .= "// purephp-shape id={$id}"
             . ' v=' . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\n\n";
         $file .= "declare(strict_types=1);\n\n";
-        $file .= $blocks;
 
-        if ($wrapped) {
-            $file .= "namespace {\n" . self::indent($inline) . "\n" . PlainGenerator::view($tree, $index, true) . "\n}\n";
-        } else {
-            $file .= $inline . "\n" . PlainGenerator::view($tree, $index);
+        $annotation = ScopeTypes::docblock($tree);
+
+        if ($annotation !== '') {
+            $file .= $annotation . "\n";
         }
 
-        return $file;
-    }
-
-    /**
-     * Indent every non-empty line of generated code by one level.
-     */
-    private static function indent(string $code): string
-    {
-        $lines = explode("\n", $code);
-
-        foreach ($lines as $position => $line) {
-            if ($line !== '') {
-                $lines[$position] = '    ' . $line;
-            }
-        }
-
-        return implode("\n", $lines);
+        return $file . PlainGenerator::view($tree);
     }
 
     /**
@@ -309,36 +241,6 @@ final class ArtifactCompiler
 
             throw $error;
         }
-    }
-
-    /**
-     * One namespace block holding a map closure, with the namespace and the
-     * used imports of the file that defined it.
-     *
-     * @param ClosureSource $snippet The copied closure.
-     * @param string $variable The artifact variable to assign.
-     * @return string The namespace block source.
-     */
-    private static function mapBlock(ClosureSource $snippet, string $variable): string
-    {
-        $block = 'namespace' . ($snippet->namespace === null ? '' : ' ' . $snippet->namespace) . " {\n";
-
-        foreach ($snippet->imports as $import) {
-            $block .= '    ' . $import . "\n";
-        }
-
-        // The snippet is copied verbatim: indenting continuation lines would
-        // change multi-line string literals inside it.
-        $block .= '    ' . $variable . ' = ' . $snippet->code . ";\n}\n\n";
-
-        return $block;
-    }
-
-    private static function slotPath(string $mapKey): string
-    {
-        $slotPath = strstr($mapKey, '#', true);
-
-        return $slotPath === false ? $mapKey : $slotPath;
     }
 
     private static function load(string $shapeFile): Shape
