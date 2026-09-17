@@ -39,7 +39,7 @@ First public version. No tag has been cut yet.
 - `Pure\HTML\htmlVar()` for the `<var>` element: `var` is a PHP keyword and
   cannot name a function, so the helper carries the namespace prefix, as
   SVG already does for `<use>` (`svgUse()`) and `<switch>` (`svgSwitch()`);
-  `HTML::var()` and `HTML::customTag('var')` stay available.
+  the magic static surface (`HTML::var()`) covers the element too.
 - Compiled guide and API documentation (English and Chinese).
 
 ### Changed
