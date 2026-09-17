@@ -29,7 +29,7 @@ function PageHeaderShape(string $companyName): Shape
         div(
             h5($companyName)->class('my-0 mr-md-auto font-weight-normal'),
             nav(Slot::each('navs', NavLinkShape()))->class('my-2 my-md-0 mr-md-3'),
-            Slot::sub('signUp', NavLinkShape())
+            Slot::child('signUp', NavLinkShape())
         )->class('d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow')
     );
 }

@@ -54,7 +54,7 @@ interface ShapeVisitor
     public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void;
 
     /**
-     * Branch boundary: 0 then / 1 else for Slot::if, the kind string for Slot::eachAny.
+     * Branch boundary: 0 then / 1 else for Slot::if, the kind string for Slot::eachKind.
      *
      * @param string|int $label The branch label (0, 1 or a kind string).
      */

@@ -17,7 +17,7 @@ function PageFooterShape(): Shape
     return $shape ??= Compile::shape(
         footer(
             div(
-                Slot::sub('logo', ColLogoShape()),
+                Slot::child('logo', ColLogoShape()),
                 Slot::each('links', ColLinksShape())
             )->class('row'),
         )->class('pt-4 my-md-5 pt-md-5 border-top')

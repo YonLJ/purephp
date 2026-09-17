@@ -39,7 +39,7 @@ final class CodeGenerator implements ShapeVisitor
     private array $slotStack = [];
 
     /** @var list<array{itemVar: string, childVar: string, branchOpen: bool}> */
-    private array $eachAnyStack = [];
+    private array $eachKindStack = [];
 
     /** @var list<string> */
     private array $dataStack = ['$v'];
@@ -185,13 +185,13 @@ final class CodeGenerator implements ShapeVisitor
             return;
         }
 
-        if ($slot->kind !== SlotKind::EachAny) {
+        if ($slot->kind !== SlotKind::EachKind) {
             throw new LogicException("unexpected branch event for slot kind '{$slot->kind->name}'.");
         }
 
-        $context = array_pop($this->eachAnyStack);
+        $context = array_pop($this->eachKindStack);
         if ($context === null) {
-            throw new LogicException('eachAny branch without an open list.');
+            throw new LogicException('eachKind branch without an open list.');
         }
 
         if ($context['branchOpen']) {
@@ -204,7 +204,7 @@ final class CodeGenerator implements ShapeVisitor
         $this->statement($context['childVar'] . ' = ' . $this->scopeExpr($context['itemVar'], $current['slotPath'] . '[]', $context['itemVar'], $this->mapExpression($current['mapKey'])) . ';');
         $this->dataStack[] = $context['childVar'];
         $context['branchOpen'] = true;
-        $this->eachAnyStack[] = $context;
+        $this->eachKindStack[] = $context;
     }
 
     public function slotLeave(Slot $slot, string $slotPath): void
@@ -214,7 +214,7 @@ final class CodeGenerator implements ShapeVisitor
             case SlotKind::Attr:
             case SlotKind::Raw:
                 break;
-            case SlotKind::Sub:
+            case SlotKind::Child:
                 array_pop($this->dataStack);
 
                 break;
@@ -227,8 +227,8 @@ final class CodeGenerator implements ShapeVisitor
                 $this->statement('}');
 
                 break;
-            case SlotKind::EachAny:
-                $context = array_pop($this->eachAnyStack);
+            case SlotKind::EachKind:
+                $context = array_pop($this->eachKindStack);
                 if ($context !== null && $context['branchOpen']) {
                     $this->statement('break;');
                     array_pop($this->dataStack);
@@ -263,7 +263,7 @@ final class CodeGenerator implements ShapeVisitor
     private function enterScopeSlot(Slot $slot, string $slotPath, ?string $mapKey): void
     {
         switch ($slot->kind) {
-            case SlotKind::Sub:
+            case SlotKind::Child:
                 $childVar = '$v' . (++$this->scope);
                 $this->statement($childVar . ' = ' . $this->scopeExpr($this->valueAccess($slot, $this->data(), $slotPath), $slotPath, $this->data(), $this->mapExpression($mapKey)) . ';');
                 $this->dataStack[] = $childVar;
@@ -281,7 +281,7 @@ final class CodeGenerator implements ShapeVisitor
                 $this->statement('if ((bool)' . $this->conditionExpr($slot, $this->data()) . ') {');
 
                 return;
-            case SlotKind::EachAny:
+            case SlotKind::EachKind:
                 $itemVar = '$item' . (++$this->scope);
                 $childVar = '$v' . (++$this->scope);
                 $kindVar = '$kind' . $this->scope;
@@ -293,7 +293,7 @@ final class CodeGenerator implements ShapeVisitor
                 $this->statement('foreach (\Pure\Compile\Internal\SlotRuntime::items(' . $this->valueAccess($slot, $this->data(), $slotPath) . ', ' . var_export($slotPath, true) . ') as ' . $itemVar . ') {');
                 $this->statement($kindVar . ' = \Pure\Compile\Internal\SlotRuntime::kind(' . $itemVar . ', ' . var_export($slot->kindKey ?? 'kind', true) . ', ' . var_export($slotPath . '[]', true) . ', [' . implode(', ', $kinds) . ']);');
                 $this->statement('switch (' . $kindVar . ') {');
-                $this->eachAnyStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
+                $this->eachKindStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
 
                 return;
             default:
@@ -327,7 +327,7 @@ final class CodeGenerator implements ShapeVisitor
     }
 
     /**
-     * Expression producing the nested data scope of a sub/each slot.
+     * Expression producing the nested data scope of a child/each slot.
      */
     private function scopeExpr(string $value, string $scopePath, string $mapInput, ?string $mapExpression): string
     {
@@ -335,7 +335,7 @@ final class CodeGenerator implements ShapeVisitor
             $value = $mapExpression . '(' . $mapInput . ')';
         }
 
-        return '\Pure\Compile\Internal\SlotRuntime::sub(' . $value . ', ' . var_export($scopePath, true) . ')';
+        return '\Pure\Compile\Internal\SlotRuntime::scope(' . $value . ', ' . var_export($scopePath, true) . ')';
     }
 
     private function mapExpression(?string $mapKey): ?string

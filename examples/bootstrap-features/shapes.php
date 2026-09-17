@@ -42,7 +42,7 @@ function IconColumnShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::sub('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
             )->class('feature-icon d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-2 mb-3'),
             h3(Slot::text('title'))->class('fs-2'),
             p(Slot::text('content')),
@@ -61,7 +61,7 @@ function HangingIconShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::sub('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
             )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
             div(
                 h3(Slot::text('title'))->class('fs-2'),
@@ -106,7 +106,7 @@ function CellIconShape(): Shape
 
     return $shape ??= Compile::shape(
         div(
-            Slot::sub('icon', IconShape('bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'), static fn (array $data): array => ['href' => '#' . $data['icon']]),
+            Slot::child('icon', IconShape('bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'), static fn (array $data): array => ['href' => '#' . $data['icon']]),
             div(
                 h3(Slot::text('title'))->class('fw-bold mb-0 fs-4'),
                 p(Slot::text('content'))
@@ -135,7 +135,7 @@ function FeatureTitleShape(): Shape
     return $shape ??= Compile::shape(
         div(
             div(
-                Slot::sub('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
+                Slot::child('icon', IconShape(), static fn (array $data): array => ['href' => '#' . $data['icon']])
             )->class('feature-icon-small d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-4 rounded-3'),
             h4(Slot::text('title'))->class('fw-semibold mb-0'),
             p(Slot::text('content'))->class('text-muted')
@@ -164,7 +164,7 @@ function FeatureSectionShape(): Shape
         div(
             h2(Slot::text('title'))->class('pb-2 border-bottom'),
             div(
-                Slot::sub('main', MainFeatureShape()),
+                Slot::child('main', MainFeatureShape()),
                 div(
                     div(Slot::each('features', FeatureTitleShape()))->class('row row-cols-1 row-cols-sm-2 g-4')
                 )->class('col')
@@ -180,15 +180,15 @@ function FeaturePageShape(): Shape
     return $shape ??= Compile::shape(
         main(
             h1('Features examples')->class('visually-hidden'),
-            Slot::sub('columns', SectionShape(IconColumnShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
+            Slot::child('columns', SectionShape(IconColumnShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
             div()->class('b-example-divider'),
-            Slot::sub('hanging', SectionShape(HangingIconShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
+            Slot::child('hanging', SectionShape(HangingIconShape(), 'row g-4 py-5 row-cols-1 row-cols-lg-3')),
             div()->class('b-example-divider'),
-            Slot::sub('cards', SectionShape(CustomCardShape(), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5')),
+            Slot::child('cards', SectionShape(CustomCardShape(), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5')),
             div()->class('b-example-divider'),
-            Slot::sub('grid', SectionShape(CellIconShape(), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5')),
+            Slot::child('grid', SectionShape(CellIconShape(), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5')),
             div()->class('b-example-divider'),
-            Slot::sub('features', FeatureSectionShape()),
+            Slot::child('features', FeatureSectionShape()),
         )
     );
 }

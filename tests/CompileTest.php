@@ -22,9 +22,6 @@ use function Pure\HTML\td;
 use function Pure\HTML\tr;
 use function Pure\HTML\ul;
 
-use ReflectionClassConstant;
-use ReflectionProperty;
-
 class CompileTest extends TestCase
 {
     public function testStaticShapeMatchesRenderByteForByte(): void
@@ -198,10 +195,10 @@ class CompileTest extends TestCase
         );
     }
 
-    public function testSubSlotUsesNestedDataScope(): void
+    public function testChildSlotUsesNestedDataScope(): void
     {
         $card = Compile::shape(div(span(Slot::text('name')))->class('card'));
-        $shape = Compile::shape(div(Slot::sub('card', $card), Slot::text('after')));
+        $shape = Compile::shape(div(Slot::child('card', $card), Slot::text('after')));
 
         $this->assertSame(
             '<div><div class="card"><span>n</span></div>!</div>',
@@ -209,11 +206,11 @@ class CompileTest extends TestCase
         );
     }
 
-    public function testSubSlotMapDerivesChildProps(): void
+    public function testChildSlotMapDerivesChildProps(): void
     {
         $badge = Compile::shape(span(Slot::text('label'))->class('badge'));
         $shape = Compile::shape(div(
-            Slot::sub('user', $badge, static fn (array $d): array => ['label' => strtoupper((string)$d['name'])])
+            Slot::child('user', $badge, static fn (array $d): array => ['label' => strtoupper((string)$d['name'])])
         ));
 
         $this->assertSame('<div><span class="badge">ADA</span></div>', $shape(['name' => 'ada']));
@@ -260,10 +257,10 @@ class CompileTest extends TestCase
         $shape(['value' => ['array']]);
     }
 
-    public function testNonArraySubValueIsRejected(): void
+    public function testNonArrayChildValueIsRejected(): void
     {
         $card = Compile::shape(div(Slot::text('name')));
-        $shape = Compile::shape(div(Slot::sub('card', $card)));
+        $shape = Compile::shape(div(Slot::child('card', $card)));
 
         $this->expectException(InvalidArgumentException::class);
 
@@ -395,9 +392,9 @@ class CompileTest extends TestCase
         $this->assertSame(1, substr_count($source, '$out .='));
     }
 
-    public function testStaticSubShapeStillValidatesItsSlot(): void
+    public function testStaticChildShapeStillValidatesItsSlot(): void
     {
-        $shape = Compile::shape(div(Slot::sub('child', Compile::shape(span('static')))));
+        $shape = Compile::shape(div(Slot::child('child', Compile::shape(span('static')))));
 
         $this->assertSame('<div><span>static</span></div>', $shape(['child' => []]));
 
@@ -458,7 +455,7 @@ class CompileTest extends TestCase
         $make = static function (string $suffix): Shape {
             return Compile::shape(
                 div(
-                    Slot::sub(
+                    Slot::child(
                         'child',
                         Compile::shape(span(Slot::text('x'))),
                         static fn (array $data): array => ['x' => (string)$data['v'] . $suffix]

@@ -106,7 +106,7 @@ final class ShapeIndex implements ShapeVisitor
     {
         $this->parts[] = $this->describeSlot($slot, $slotPath);
 
-        if ($slot->kind === SlotKind::EachAny) {
+        if ($slot->kind === SlotKind::EachKind) {
             $this->parts[] = 'kindKey:' . ($slot->kindKey ?? 'kind');
         }
 

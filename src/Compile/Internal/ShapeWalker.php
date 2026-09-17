@@ -94,7 +94,7 @@ final class ShapeWalker
         $this->visitor->slotEnter($slot, $slotPath, $mapKey);
 
         switch ($slot->kind) {
-            case SlotKind::Sub:
+            case SlotKind::Child:
                 $this->tag(self::shapeTree($slot->shape, $slotPath), $slotPath);
 
                 break;
@@ -111,7 +111,7 @@ final class ShapeWalker
                 }
 
                 break;
-            case SlotKind::EachAny:
+            case SlotKind::EachKind:
                 foreach ($slot->variants as $kind => $variant) {
                     $this->visitor->slotBranch((string)$kind);
                     $this->tag($variant->tree(), $slotPath . '[]');
@@ -133,7 +133,7 @@ final class ShapeWalker
             return null;
         }
 
-        $mapPath = $slot->kind === SlotKind::Sub ? $slotPath : $slotPath . '[]';
+        $mapPath = $slot->kind === SlotKind::Child ? $slotPath : $slotPath . '[]';
         $occurrence = $this->mapCounts[$mapPath] = ($this->mapCounts[$mapPath] ?? 0) + 1;
 
         return $mapPath . '#' . $occurrence;
