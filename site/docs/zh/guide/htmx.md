@@ -51,7 +51,7 @@ function CounterShape(): Shape
 
     return $shape ??= Compile::shape(
         div(
-            Slot::sub('counter', CountShape()),
+            Slot::child('counter', CountShape()),
             button('Increment')
                 ->hxPost('/increment')
                 ->hxTarget('#counter')
@@ -146,7 +146,7 @@ function SearchBoxShape(): Shape
                 ->hxGet('/search')
                 ->hxTrigger('keyup changed delay:500ms')
                 ->hxTarget('#results'),
-            div(Slot::sub('list', ResultListShape()))->id('results')
+            div(Slot::child('list', ResultListShape()))->id('results')
         )->class('search-box')
     );
 }

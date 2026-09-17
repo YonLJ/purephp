@@ -207,9 +207,9 @@ function ContactFormShape(): Shape
 
     return $shape ??= Compile::shape(
         form(
-            Slot::sub('name', FormFieldShape('Name', 'name', 'text', 'Enter your name', true)),
-            Slot::sub('email', FormFieldShape('Email', 'email', 'email', 'Enter your email', true)),
-            Slot::sub('message', FormFieldShape('Message', 'message', 'textarea', 'Enter your message')),
+            Slot::child('name', FormFieldShape('Name', 'name', 'text', 'Enter your name', true)),
+            Slot::child('email', FormFieldShape('Email', 'email', 'email', 'Enter your email', true)),
+            Slot::child('message', FormFieldShape('Message', 'message', 'textarea', 'Enter your message')),
             button('Submit')
                 ->type('submit')
                 ->class('w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200')
@@ -292,7 +292,7 @@ ButtonShape('primary', 'lg')->print($bindings);
 
 ### 主题切换
 
-主题决定静态类列表，因此它是传给提供者和切换按钮的函数参数；页面其余部分通过 `Slot::sub()` 传入：
+主题决定静态类列表，因此它是传给提供者和切换按钮的函数参数；页面其余部分通过 `Slot::child()` 传入：
 
 ```php
 <?php
@@ -337,8 +337,8 @@ function ThemeProviderShape(string $theme = 'light'): Shape
 
     return $shapes[$theme] ??= Compile::shape(
         div(
-            Slot::sub('toggle', ThemeToggleShape($theme)),
-            Slot::sub('page', PageShape())
+            Slot::child('toggle', ThemeToggleShape($theme)),
+            Slot::child('page', PageShape())
         )->class("min-h-screen {$themeClasses}")
     );
 }

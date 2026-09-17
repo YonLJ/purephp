@@ -210,9 +210,9 @@ function ContactFormShape(): Shape
 
     return $shape ??= Compile::shape(
         form(
-            Slot::sub('name', FormFieldShape('Name', 'name', 'text', 'Enter your name', true)),
-            Slot::sub('email', FormFieldShape('Email', 'email', 'email', 'Enter your email', true)),
-            Slot::sub('message', FormFieldShape('Message', 'message', 'textarea', 'Enter your message')),
+            Slot::child('name', FormFieldShape('Name', 'name', 'text', 'Enter your name', true)),
+            Slot::child('email', FormFieldShape('Email', 'email', 'email', 'Enter your email', true)),
+            Slot::child('message', FormFieldShape('Message', 'message', 'textarea', 'Enter your message')),
             button('Submit')
                 ->type('submit')
                 ->class('w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200')
@@ -298,7 +298,7 @@ ButtonShape('primary', 'lg')->print($bindings);
 ### Theme Toggle
 
 The theme decides static class lists, so it is a function argument passed to the
-provider and the toggle; the rest of the page arrives through `Slot::sub()`:
+provider and the toggle; the rest of the page arrives through `Slot::child()`:
 
 ```php
 <?php
@@ -343,8 +343,8 @@ function ThemeProviderShape(string $theme = 'light'): Shape
 
     return $shapes[$theme] ??= Compile::shape(
         div(
-            Slot::sub('toggle', ThemeToggleShape($theme)),
-            Slot::sub('page', PageShape())
+            Slot::child('toggle', ThemeToggleShape($theme)),
+            Slot::child('page', PageShape())
         )->class("min-h-screen {$themeClasses}")
     );
 }

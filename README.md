@@ -141,8 +141,8 @@ CardShape()->print([
 ]);
 ```
 
-Nested components use `Slot::sub()`, lists use `Slot::each()` (or
-`Slot::eachAny()` for mixed item types), and conditionals use `Slot::if()`.
+Nested components use `Slot::child()`, lists use `Slot::each()` (or
+`Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
 Everything else is plain PHP.
 
 ## Examples

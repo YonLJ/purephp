@@ -102,7 +102,7 @@ $shape(['label' => 'Click me']);
 
 ## Child Components
 
-`Slot::sub()` embeds another shape and creates a nested data scope for it:
+`Slot::child()` embeds another shape and creates a nested data scope for it:
 
 ```php
 <?php
@@ -122,7 +122,7 @@ function ButtonShape(): Shape
 
     return $shape ??= Compile::shape(
         button(
-            Slot::sub('icon', IconShape()),
+            Slot::child('icon', IconShape()),
             Slot::text('label')
         )->class('btn')
     );
@@ -140,7 +140,7 @@ closure as the third argument; it derives the child scope from the parent data:
 ```php
 <?php
 
-Slot::sub('user', BadgeShape(), static fn (array $data): array => [
+Slot::child('user', BadgeShape(), static fn (array $data): array => [
     'label' => strtoupper((string)$data['name']),
 ]);
 ```
@@ -182,13 +182,13 @@ $shape([]);                 // <div><span>Guest</span></div>
 
 ## Mixed Lists
 
-`Slot::eachAny()` dispatches each item on a discriminator key (default
+`Slot::eachKind()` dispatches each item on a discriminator key (default
 `kind`):
 
 ```php
 <?php
 
-$shape = Compile::shape(div(Slot::eachAny('blocks', [
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
     'text' => Compile::shape(p(Slot::text('value'))),
     'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
 ])));
@@ -205,7 +205,7 @@ An item without the discriminator or with an unknown kind raises an
 ## Component Composition
 
 Components compose by nesting shapes — either directly in a parent shape or
-through `Slot::sub()`:
+through `Slot::child()`:
 
 ```php
 <?php
@@ -216,7 +216,7 @@ function PageShape(): Shape
 
     return $shape ??= Compile::shape(
         main(
-            Slot::sub('header', HeaderShape()),
+            Slot::child('header', HeaderShape()),
             Slot::each('cards', CardShape())
         )->class('page')
     );

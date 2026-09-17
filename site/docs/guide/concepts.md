@@ -75,10 +75,10 @@ Slot types:
 | `Slot::text()` | stringable value, escaped | no |
 | `Slot::attr()` | attribute value, escaped | no |
 | `Slot::raw()` | stringable value, verbatim | no |
-| `Slot::sub()` | array | yes |
+| `Slot::child()` | array | yes |
 | `Slot::each()` | iterable of arrays | yes, per item |
 | `Slot::if()` | truthy condition | no (branches share the scope) |
-| `Slot::eachAny()` | iterable of arrays with a discriminator | yes, per item |
+| `Slot::eachKind()` | iterable of arrays with a discriminator | yes, per item |
 
 A slot name is always the **data key** (and the error path), never a tag or
 attribute name: in `a(Slot::text('label'))->class(Slot::attr('classList'))` the
@@ -129,7 +129,7 @@ $list = Compile::shape(ul(Slot::each('items', $item)));
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```
 
-`Slot::sub()` and `Slot::each()` establish a nested scope, so inside `li` the
+`Slot::child()` and `Slot::each()` establish a nested scope, so inside `li` the
 slot `title` resolves against the current item. Missing required keys throw
 `Pure\Core\MissingSlotException` with the full path
 (`slot 'items[].title' is required but was not provided.`); use

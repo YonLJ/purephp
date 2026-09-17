@@ -39,7 +39,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
 | `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
-| `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `sub`, `each`, `if`, `eachAny`) and modifiers |
+| `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
 ## Shape vs. Data
@@ -56,7 +56,7 @@ never inside a request handler.
 | `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::sub('child', ChildShape())` or a component map |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` or a component map |
 
 Static child components need no slot at all — build them inside the shape and
 they are compiled into literals:
@@ -72,18 +72,18 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 | `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders as empty content |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
 | `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
-| `Slot::sub($name, $shape)` | array | nested data scope for `$shape` |
+| `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
-| `Slot::eachAny($name, ['kind' => $shape], $kindKey = 'kind')` | iterable of arrays | dispatches each item on `$item[$kindKey]`; unknown kinds throw an `InvalidArgumentException` |
+| `Slot::eachKind($name, ['kind' => $shape], $kindKey = 'kind')` | iterable of arrays | dispatches each item on `$item[$kindKey]`; unknown kinds throw an `InvalidArgumentException` |
 
 Modifiers:
 
 - `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
-- `Slot::sub($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
-  `Slot::eachAny(..., $map)` — derive the nested scope with a closure instead
+- `Slot::child($name, $shape, $map)` / `Slot::each($name, $shape, $map)` /
+  `Slot::eachKind(..., $map)` — derive the nested scope with a closure instead
   of reading `$data[$name]`; this is how a component maps its own props to a
   child component (for example `fn (array $d) => ['href' => '#' . $d['icon']]`).
 
@@ -184,8 +184,12 @@ process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
   for example `slot 'items[].title' is required but was not provided.`
 - Wrong placement (`Slot::attr` as a child, `Slot::text` as an attribute value)
   or a missing shape: `LogicException` at compile time.
-- Non-iterable list, non-array item or scope, unknown `eachAny` kind,
-  non-stringable value: `InvalidArgumentException` at render time.
+- `Slot::eachKind()` with no variants or with an empty/numeric kind key:
+  `InvalidArgumentException` at build time (and `required()`/`default()` on
+  `Slot::if()` throw a `LogicException`).
+- Non-iterable list, non-array item or scope, an item whose discriminator is
+  missing or unknown, non-stringable value: `InvalidArgumentException` at render
+  time.
 
 ## Trees with Slots Cannot Use Other Output Paths
 
@@ -217,7 +221,7 @@ php examples/bootstrap-features/bench.php
 ## Limitations
 
 - Tag names cannot depend on data: a shape always uses the same tags. Use
-  `Slot::if()` / `Slot::eachAny()` for structural variation, or normalize the
+  `Slot::if()` / `Slot::eachKind()` for structural variation, or normalize the
   data before rendering.
 - Shapes only persist for the lifetime of a PHP process. In long-running
   workers (or with `opcache.preload`) that is once per worker; under standard

@@ -54,17 +54,17 @@ paths share the same escaping implementation.
 | `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders empty content |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
 | `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
-| `Slot::sub($name, $shape)` | array | nested data scope for `$shape` |
+| `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
-| `Slot::eachAny($name, ['kind' => $shape, ...])` | iterable of arrays | dispatches every item on `$item['kind']`; an unknown kind throws an `InvalidArgumentException` |
+| `Slot::eachKind($name, ['kind' => $shape, ...])` | iterable of arrays | dispatches every item on `$item['kind']`; an unknown kind throws an `InvalidArgumentException` |
 
 Modifiers:
 
 - `->required(false)` — the slot may be missing.
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
-- `Slot::sub(..., $map)` / `Slot::each(..., $map)` / `Slot::eachAny(..., $map)` — derive
+- `Slot::child(..., $map)` / `Slot::each(..., $map)` / `Slot::eachKind(..., $map)` — derive
   the nested scope with a closure instead of reading `$data[$name]`; this is how a
   component maps its own props to a child component.
 
@@ -74,13 +74,13 @@ text/attribute/raw slots; arrays and other objects raise an
 
 ## Scope and Missing Data
 
-`Slot::sub()` and `Slot::each()` create a nested data scope; inside it, slots
+`Slot::child()` and `Slot::each()` create a nested data scope; inside it, slots
 resolve against that scope. Missing required keys throw
 `Pure\Core\MissingSlotException` with the full path, for example
 `slot 'items[].title' is required but was not provided.` Use `default()` or
 `required(false)` for optional data.
 
-`Slot::if()` and `Slot::eachAny()` branches share the current scope, so this
+`Slot::if()` and `Slot::eachKind()` branches share the current scope, so this
 works naturally:
 
 ```php
@@ -124,7 +124,7 @@ function PageShape(): Shape
 
     return $shape ??= Compile::shape(
         div(
-            Slot::sub('card', CardShape('card shadow'))
+            Slot::child('card', CardShape('card shadow'))
         )->class('container')
     );
 }
@@ -134,8 +134,8 @@ PageShape()->print([
 ]);
 ```
 
-Nested components use `Slot::sub()`, lists use `Slot::each()`, mixed lists use
-`Slot::eachAny()`, and optional/conditional markup uses `Slot::if()`.
+Nested components use `Slot::child()`, lists use `Slot::each()`, mixed lists use
+`Slot::eachKind()`, and optional/conditional markup uses `Slot::if()`.
 
 ### Lists
 
@@ -152,7 +152,7 @@ $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 $text = Compile::shape(p(Slot::text('value')));
 $link = Compile::shape(a(Slot::text('value'))->href(Slot::attr('href')));
 
-$shape = Compile::shape(div(Slot::eachAny('blocks', [
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
     'text' => $text,
     'link' => $link,
 ])));
@@ -164,7 +164,7 @@ $shape(['blocks' => [
 ```
 
 Every item must be an array carrying the discriminator key (`kind` by default;
-pass a different key as the third argument of `Slot::eachAny()`).
+pass a different key as the third argument of `Slot::eachKind()`).
 
 ## Caching
 
@@ -226,7 +226,7 @@ php examples/bootstrap-features/bench.php
 ## Limitations
 
 - Tag names cannot depend on data: a shape always uses the same tags. Use
-  `Slot::if()` / `Slot::eachAny()` for structural variation, or normalize the
+  `Slot::if()` / `Slot::eachKind()` for structural variation, or normalize the
   data before rendering.
 - Compiled code is tied to the shape structure; changing a shape changes its
   `id()` and therefore its cache file.
@@ -249,7 +249,7 @@ php examples/bootstrap-features/bench.php
 | `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::sub('child', ChildShape())` or a map |
+| `<Child($props)>` | `Slot::child('props', ChildShape())` or a map |
 
 Immediate (`render()`) tag trees remain available for snippets and debugging;
 see [Basic Usage](/guide/basic-usage).

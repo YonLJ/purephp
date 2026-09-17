@@ -92,7 +92,7 @@ $shape(['label' => 'Click me']);
 
 ## 子组件
 
-`Slot::sub()` 会嵌入另一个形状，并为其创建嵌套数据作用域：
+`Slot::child()` 会嵌入另一个形状，并为其创建嵌套数据作用域：
 
 ```php
 <?php
@@ -112,7 +112,7 @@ function ButtonShape(): Shape
 
     return $shape ??= Compile::shape(
         button(
-            Slot::sub('icon', IconShape()),
+            Slot::child('icon', IconShape()),
             Slot::text('label')
         )->class('btn')
     );
@@ -129,7 +129,7 @@ ButtonShape()->print([
 ```php
 <?php
 
-Slot::sub('user', BadgeShape(), static fn (array $data): array => [
+Slot::child('user', BadgeShape(), static fn (array $data): array => [
     'label' => strtoupper((string)$data['name']),
 ]);
 ```
@@ -168,12 +168,12 @@ $shape([]);                 // <div><span>Guest</span></div>
 
 ## 混合列表
 
-`Slot::eachAny()` 按判别键逐项分派（默认为 `kind`）：
+`Slot::eachKind()` 按判别键逐项分派（默认为 `kind`）：
 
 ```php
 <?php
 
-$shape = Compile::shape(div(Slot::eachAny('blocks', [
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
     'text' => Compile::shape(p(Slot::text('value'))),
     'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
 ])));
@@ -188,7 +188,7 @@ $shape(['blocks' => [
 
 ## 组件组合
 
-组件通过嵌套形状来组合——既可以直接嵌套在父形状中，也可以通过 `Slot::sub()`：
+组件通过嵌套形状来组合——既可以直接嵌套在父形状中，也可以通过 `Slot::child()`：
 
 ```php
 <?php
@@ -199,7 +199,7 @@ function PageShape(): Shape
 
     return $shape ??= Compile::shape(
         main(
-            Slot::sub('header', HeaderShape()),
+            Slot::child('header', HeaderShape()),
             Slot::each('cards', CardShape())
         )->class('page')
     );

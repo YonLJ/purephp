@@ -64,10 +64,10 @@ $shape = Compile::shape(
 | `Slot::text()` | 可字符串化的值，会转义 | 否 |
 | `Slot::attr()` | 属性值，会转义 | 否 |
 | `Slot::raw()` | 可字符串化的值，原样输出 | 否 |
-| `Slot::sub()` | 数组 | 是 |
+| `Slot::child()` | 数组 | 是 |
 | `Slot::each()` | 数组的可迭代集合 | 是，逐项 |
 | `Slot::if()` | 真值条件 | 否（各分支共享作用域） |
-| `Slot::eachAny()` | 带判别键的数组的可迭代集合 | 是，逐项 |
+| `Slot::eachKind()` | 带判别键的数组的可迭代集合 | 是，逐项 |
 
 槽位名字始终是**数据键**（也是错误路径），而不是标签名或属性名：在 `a(Slot::text('label'))->class(Slot::attr('classList'))` 中，文本绑定 `label`，class 属性绑定 `classList`，而 `a` 与 `class` 来自树本身。
 
@@ -105,7 +105,7 @@ $list = Compile::shape(ul(Slot::each('items', $item)));
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```
 
-`Slot::sub()` 与 `Slot::each()` 会建立嵌套作用域，因此在 `li` 内部，槽位 `title` 针对当前项解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`（`slot 'items[].title' is required but was not provided.`）；可选数据请使用 `->default($value)` 或 `->required(false)`。
+`Slot::child()` 与 `Slot::each()` 会建立嵌套作用域，因此在 `li` 内部，槽位 `title` 针对当前项解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`（`slot 'items[].title' is required but was not provided.`）；可选数据请使用 `->default($value)` 或 `->required(false)`。
 
 ## 组件
 
