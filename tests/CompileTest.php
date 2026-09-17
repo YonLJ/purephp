@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\SlotRuntime;
+use Pure\Compile\Shape;
 use Pure\Core\HTML;
 use Pure\Core\MissingSlotException;
 use Pure\Core\Raw;
@@ -20,6 +21,9 @@ use function Pure\HTML\table;
 use function Pure\HTML\td;
 use function Pure\HTML\tr;
 use function Pure\HTML\ul;
+
+use ReflectionClassConstant;
+use ReflectionProperty;
 
 class CompileTest extends TestCase
 {
@@ -435,5 +439,64 @@ class CompileTest extends TestCase
 
         $this->assertNotFalse(Compile::shape(XML::root(Slot::text('v')))->save($path, ['v' => 'x']));
         $this->assertSame('<?xml version="1.0"?><root>x</root>', file_get_contents($path));
+    }
+
+    public function testRebuiltShapeRendersItsOwnData(): void
+    {
+        $tree = static fn () => div(Slot::text('title'));
+
+        $first = Compile::shape($tree());
+        $second = Compile::shape($tree());
+
+        $this->assertSame('<div>a</div>', $first(['title' => 'a']));
+        $this->assertSame('<div>b</div>', $second(['title' => 'b']));
+        $this->assertSame('<div>c</div>', $first(['title' => 'c']));
+    }
+
+    public function testRebuiltShapeWithAMapUsesTheLiveClosure(): void
+    {
+        $make = static function (string $suffix): Shape {
+            return Compile::shape(
+                div(
+                    Slot::sub(
+                        'child',
+                        Compile::shape(span(Slot::text('x'))),
+                        static fn (array $data): array => ['x' => (string)$data['v'] . $suffix]
+                    )
+                )
+            );
+        };
+
+        $first = $make('-a');
+        $second = $make('-b');
+
+        $this->assertSame('<div><span>v-a</span></div>', $first(['v' => 'v']));
+        $this->assertSame('<div><span>v-b</span></div>', $second(['v' => 'v']));
+        $this->assertSame('<div><span>v-c</span></div>', $make('-c')(['v' => 'v']));
+    }
+
+    public function testSourceMemoDropsTheOldestEntriesBeyondItsByteBudget(): void
+    {
+        $limit = (new ReflectionClassConstant(Compile::class, 'MEMO_BYTES'))->getValue();
+        if (!is_int($limit)) {
+            $this->fail('Compile::MEMO_BYTES must be an int.');
+        }
+
+        $sources = new ReflectionProperty(Compile::class, 'sources');
+        $bytes = new ReflectionProperty(Compile::class, 'memoBytes');
+
+        $seed = 'static function (array $v, array $maps): string { return \'\'; }';
+        $sources->setValue(null, ['seed' => $seed]);
+        $bytes->setValue(null, $limit + strlen($seed));
+
+        $this->assertSame(
+            '<div><span>x</span></div>',
+            Compile::shape(div(span(Slot::text('memo'))))(['memo' => 'x'])
+        );
+
+        /** @var array<string, string> $remaining */
+        $remaining = $sources->getValue();
+        $this->assertArrayNotHasKey('seed', $remaining);
+        $this->assertLessThanOrEqual($limit, $bytes->getValue());
     }
 }

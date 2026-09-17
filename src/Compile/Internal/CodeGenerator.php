@@ -71,12 +71,30 @@ final class CodeGenerator implements ShapeVisitor
 
         $source = "static function (array \$v, array \$maps): string {\n    " . implode("\n    ", $generator->lines) . "\n}";
 
+        return self::fromSource($source, $index->id(), $generator->maps);
+    }
+
+    /**
+     * Build a renderer from generated source, binding the given map closures.
+     *
+     * The source depends only on the tree structure, so a cached string can be
+     * reused for a tree with the same fingerprint while the maps stay live.
+     *
+     * @internal
+     *
+     * @param string $source The generated PHP source.
+     * @param string $id The shape fingerprint.
+     * @param array<int, Closure> $maps
+     * @return Renderer The compiled renderer.
+     */
+    public static function fromSource(string $source, string $id, array $maps): Renderer
+    {
         $closure = eval('return ' . $source . ';');
         if (!$closure instanceof Closure) {
             throw new LogicException('failed to compile shape renderer.');
         }
 
-        return new Renderer($closure, $source, $index->id(), $generator->maps);
+        return new Renderer($closure, $source, $id, $maps);
     }
 
     /**
