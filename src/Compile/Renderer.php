@@ -13,54 +13,32 @@ final class Renderer
 {
     /**
      * @param Closure(array<string, mixed>, array<int, Closure>): string $closure
+     * @param string $source Generated PHP source, for debugging.
+     * @param string $id Structure fingerprint shared by the shape and its cached renderer.
      * @param array<int, Closure> $maps
      */
     public function __construct(
         private readonly Closure $closure,
-        private readonly string $source,
-        private readonly string $id,
+        public readonly string $source,
+        public readonly string $id,
         private readonly array $maps = [],
     ) {
     }
 
     /**
+     * Render the compiled shape with the given data.
+     *
      * @param array<string, mixed> $data The rendering data.
      * @return string The rendered output.
      */
-    public function __invoke(array $data): string
+    public function render(array $data): string
     {
         return ($this->closure)($data, $this->maps);
     }
 
     /**
-     * Structure fingerprint shared by the shape and its cached renderer.
+     * Render the shape with the given data and write the output to a file.
      *
-     * @return string The fingerprint.
-     */
-    public function id(): string
-    {
-        return $this->id;
-    }
-
-    /**
-     * Generated PHP source, for debugging.
-     *
-     * @return string The source code.
-     */
-    public function source(): string
-    {
-        return $this->source;
-    }
-
-    /**
-     * @param array<string, mixed> $data The rendering data.
-     */
-    public function print(array $data): void
-    {
-        echo $this->__invoke($data);
-    }
-
-    /**
      * @param string $path The file path to save to.
      * @param array<string, mixed> $data The rendering data.
      * @param string $header Optional document header to prepend.
@@ -68,6 +46,6 @@ final class Renderer
      */
     public function save(string $path, array $data, string $header = ''): int|false
     {
-        return file_put_contents($path, $header . $this->__invoke($data));
+        return file_put_contents($path, $header . $this->render($data));
     }
 }

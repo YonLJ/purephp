@@ -72,8 +72,9 @@ All Tag-based classes share these common methods:
 - `getTagName()`, `getAttrs()`, `getChildren()` - Get information
 - `toJSON()`, `render()`, `toPrint()`, `__toString()` - Output methods (snippets/debugging)
 
-`Pure\Compile\Shape` and `Pure\Compile\Renderer` provide the production output
-methods: `__invoke($data)`, `print($data)` and `save($path, $data)`.
+`Pure\Compile\Shape` provides `__invoke($data)`, `print($data)` and
+`compile()`; `Pure\Compile\Renderer` provides `render($data)`,
+`save($path, $data)` and the readonly `source` / `id` properties.
 
 ### Performance Guidelines
 

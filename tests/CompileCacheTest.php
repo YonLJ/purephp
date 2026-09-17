@@ -55,7 +55,7 @@ class CompileCacheTest extends TestCase
     {
         $shape = Compile::shape(div(span(Slot::text('v')))->class('c'));
         $first = $shape(['v' => 'a & b']);
-        $source = $shape->compile()->source();
+        $source = $shape->compile()->source;
         $file = $this->dir . '/' . $shape->id() . '.php';
 
         $this->assertFileExists($file);
@@ -67,7 +67,7 @@ class CompileCacheTest extends TestCase
 
         $this->assertSame($first, $second);
         $this->assertSame($shape->id(), $reloaded->id());
-        $this->assertSame($source, $reloaded->compile()->source());
+        $this->assertSame($source, $reloaded->compile()->source);
     }
 
     public function testCacheReloadsShapesWithMapsByteIdentically(): void
@@ -75,7 +75,7 @@ class CompileCacheTest extends TestCase
         $item = Compile::shape(li(Slot::text('label')));
         $shape = $this->mappedListShape($item);
         $first = $shape(['items' => ['a', 'b']]);
-        $source = $shape->compile()->source();
+        $source = $shape->compile()->source;
         $file = $this->dir . '/' . $shape->id() . '.php';
 
         $this->assertFileExists($file);
@@ -86,7 +86,7 @@ class CompileCacheTest extends TestCase
 
         $this->assertSame($shape->id(), $reloaded->id());
         $this->assertSame($first, $reloaded(['items' => ['a', 'b']]));
-        $this->assertSame($source, $reloaded->compile()->source());
+        $this->assertSame($source, $reloaded->compile()->source);
         $this->assertSame('<ul><li>A</li><li>B</li></ul>', $first);
     }
 
@@ -231,7 +231,7 @@ class CompileCacheTest extends TestCase
 
         $second = $shape->compile();
         $this->assertNotSame($first, $second);
-        $this->assertSame($first->id(), $second->id());
+        $this->assertSame($first->id, $second->id);
         $this->assertSame('<div>a</div>', $shape(['v' => 'a']));
     }
 

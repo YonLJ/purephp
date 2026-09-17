@@ -21,7 +21,7 @@ First public version. No tag has been cut yet.
 - `Pure\Core\MissingSlotException` with full slot paths for missing data, and
   `InvalidArgumentException` for non-stringable values and list contract
   violations.
-- Structure fingerprints (`Shape::id()` / `Renderer::id()`) computed without
+- Structure fingerprints (`Shape::id()` / `Renderer::$id`) computed without
   compiling, used as cache keys.
 - Optional on-disk renderer cache: `Compile::cachePath()`, `Compile::clearCache()`
   and `Compile::flush()`; cache files are content-addressed, written atomically
@@ -35,6 +35,11 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- `Renderer::__invoke()` is now the named `Renderer::render($data)`, the
+  `Renderer::print()` alias was removed, and `Renderer::$source` / `Renderer::$id`
+  are public readonly properties instead of `source()` / `id()` getters, so the
+  invokable and echo surfaces stay on the user-facing `Shape`;
+  `Shape::__invoke()` and `Shape::print()` delegate to `Renderer::render()`.
 - `Tag::toJSON()` now returns a nested structure (`tagName`, `attrs`, `children`)
   so an attribute can no longer overwrite the structural keys.
 - `Tag::getAttr()` returns `null` for a missing attribute instead of emitting a

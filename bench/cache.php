@@ -35,5 +35,5 @@ printf(
     $warm ? 'warm (loaded) ' : 'cold (written)',
     $time,
     count(glob($dir . '/*.php') ?: []),
-    strlen($compiled->source())
+    strlen($compiled->source)
 );

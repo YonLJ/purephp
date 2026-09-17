@@ -72,8 +72,9 @@ $shape->print(['title' => 'Hello']);
 - `getTagName()`, `getAttrs()`, `getChildren()` - 获取信息
 - `toJSON()`, `render()`, `toPrint()`, `__toString()` - 输出方法（片段/调试）
 
-`Pure\Compile\Shape` 和 `Pure\Compile\Renderer` 提供生产环境的输出方法：
-`__invoke($data)`、`print($data)` 和 `save($path, $data)`。
+`Pure\Compile\Shape` 提供 `__invoke($data)`、`print($data)` 和 `compile()`；
+`Pure\Compile\Renderer` 提供 `render($data)`、`save($path, $data)`，以及只读属性
+`source` / `id`。
 
 ### 性能指南
 

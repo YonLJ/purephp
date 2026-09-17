@@ -38,7 +38,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | --- | --- |
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)` |
-| `Pure\Compile\Renderer` | The compiled renderer: `__invoke($data)`, `id()`, `source()`, `print($data)`, `save($path, $data, $header = '')` |
+| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
 | `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `sub`, `each`, `if`, `eachAny`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
@@ -119,11 +119,10 @@ $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
 ```php
 $compiled = $shape->compile();
 
-$compiled($data);                 // string
-$compiled->print($data);          // echo
+$compiled->render($data);         // string
 $compiled->save($path, $data);    // write to file, returns bytes written
-$compiled->source();              // generated PHP source, useful when debugging
-$compiled->id();                  // structure fingerprint (same as Shape::id())
+$compiled->source;                // generated PHP source, useful when debugging
+$compiled->id;                    // structure fingerprint (same as Shape::id())
 ```
 
 ## On-Disk Cache
