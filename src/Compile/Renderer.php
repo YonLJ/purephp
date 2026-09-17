@@ -15,15 +15,20 @@ final class Renderer
      * @internal Renderers are created by the compiler, not by user code.
      *
      * @param Closure(array<string, mixed>, array<int, Closure>): string $closure
-     * @param string $source Generated PHP source, for debugging.
+     * @param string $source Generated PHP source, for debugging; empty for
+     *     artifacts, whose file is the source.
      * @param string $id Structure fingerprint shared by the shape and its cached renderer.
      * @param array<int, Closure> $maps
+     * @param string $header Document header captured at compile time; empty for
+     *     renderers compiled at runtime, where Shape::save() passes the header
+     *     of the root tag explicitly.
      */
     public function __construct(
         private readonly Closure $closure,
         public readonly string $source,
         public readonly string $id,
         private readonly array $maps = [],
+        public readonly string $header = '',
     ) {
     }
 
@@ -43,11 +48,12 @@ final class Renderer
      *
      * @param string $path The file path to save to.
      * @param array<string, mixed> $data The rendering data.
-     * @param string $header Optional document header to prepend.
+     * @param string|null $header Optional document header to prepend; null uses
+     *     the header captured at compile time.
      * @return int|false The number of bytes written, or false on failure.
      */
-    public function save(string $path, array $data, string $header = ''): int|false
+    public function save(string $path, array $data, ?string $header = null): int|false
     {
-        return file_put_contents($path, $header . $this->render($data));
+        return file_put_contents($path, ($header ?? $this->header) . $this->render($data));
     }
 }
