@@ -26,50 +26,38 @@ composer require yonld/purephp
 
 ### 2. 创建动态组件
 
-计数器文本是绑定的槽位；端点用新的计数渲染同一个 `CounterValue()` 组件。模板是 shape 文件：
+计数器文本是绑定的槽位；端点用新的计数渲染同一个 `CounterValue()` 组件。每个组件都是自己的单元：
 
 ```php
 <?php
 
-// Count.shape.php
-return Compile::shape(
-    p('Current count: ', Slot::text('count'))->id('counter')
-);
-
-// Counter.shape.php
-return Compile::shape(
-    div(
-        Slot::raw('counter'),
-        button('Increment')
-            ->hxPost('/increment')
-            ->hxTarget('#counter')
-            ->hxSwap('innerHTML')
-    )->class('counter')
-);
-```
-
-```php
-<?php
-
+// components/CounterValue.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
 
-use function Pure\HTML\{button, div, p};
-use function Pure\Component\render;
+use function Pure\Component\{register, render};
+use function Pure\HTML\p;
+
+register('CounterValue', __FILE__, static fn (): Shape => Compile::shape(
+    p('Current count: ', Slot::text('count'))->id('counter')
+));
 
 function CounterValue(int $count): Raw
 {
-    return render(__DIR__ . '/Count.shape.php', count: $count);
+    return render('CounterValue', count: $count);
 }
+```
+```php
+<?php
 
-function Counter(int $count): Raw
-{
-    return render(__DIR__ . '/Counter.shape.php', counter: (string) CounterValue($count));
-}
+// index.php
 
 // 渲染页面
 echo Counter(0);
 
-// 处理 HTMX 请求
+// Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['REQUEST_URI'] === '/increment') {
     $count = (int)($_COOKIE['count'] ?? 0) + 1;
     setcookie('count', $count);
@@ -115,40 +103,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], '/to
 ```php
 <?php
 
-// SearchResult.shape.php
-return Compile::shape(
-    div(Slot::text('title'))->class('search-result')
-);
-
-// ResultList.shape.php
-return Compile::shape(div(Slot::raw('results')));
-
-// SearchBox.shape.php
-return Compile::shape(
-    div(
-        input()
-            ->type('text')
-            ->placeholder('Search...')
-            ->hxGet('/search')
-            ->hxTrigger('keyup changed delay:500ms')
-            ->hxTarget('#results'),
-        div(Slot::raw('list'))->id('results')
-    )->class('search-box')
-);
-```
-
-```php
-<?php
-
+// components/SearchResult.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
 
-use function Pure\HTML\{div, input};
-use function Pure\Component\render;
+use function Pure\Component\{register, render};
+use function Pure\HTML\div;
+
+register('SearchResult', __FILE__, static fn (): Shape => Compile::shape(
+    div(Slot::text('title'))->class('search-result')
+));
 
 function SearchResult(string $title): Raw
 {
-    return render(__DIR__ . '/SearchResult.shape.php', title: $title);
+    return render('SearchResult', title: $title);
 }
+```
+```php
+<?php
+
+// components/ResultList.cmp.php
+require_once __DIR__ . '/SearchResult.cmp.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\div;
+
+register('ResultList', __FILE__, static fn (): Shape => Compile::shape(div(Slot::raw('results'))));
 
 function ResultList(array $results): Raw
 {
@@ -158,28 +145,57 @@ function ResultList(array $results): Raw
         $items[] = (string) SearchResult($result['title']);
     }
 
-    return render(__DIR__ . '/ResultList.shape.php', results: implode('', $items));
+    return render('ResultList', results: implode('', $items));
 }
+```
+```php
+<?php
+
+// components/SearchBox.cmp.php
+require_once __DIR__ . '/ResultList.cmp.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, input};
+
+register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
+    div(
+        input()
+            ->type('text')
+            ->placeholder('Search...')
+            ->hxGet('/search')
+            ->hxTrigger('keyup changed delay:500ms')
+            ->hxTarget('#results'),
+        div(Slot::raw('list'))->id('results')
+    )->class('search-box')
+));
 
 function SearchBox(Raw $list): Raw
 {
-    return render(__DIR__ . '/SearchBox.shape.php', list: $list);
+    return render('SearchBox', list: $list);
 }
+```
+```php
+<?php
+
+// index.php
 
 // 用空结果列表渲染页面
 echo SearchBox(ResultList([]));
 
-// 处理 HTMX 请求
+// Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search') {
     $query = $_GET['q'] ?? '';
-    $results = searchItems($query); // 搜索项目
+    $results = searchItems($query); // Search items
 
     echo ResultList($results);
     exit;
 }
 ```
-
-
 
 ## 下一步
 

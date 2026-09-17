@@ -9,9 +9,10 @@ declare(strict_types=1);
  *   php bench/cache.php --clear   # clear cache, then compile and write
  *   php bench/cache.php           # load the cached renderer
  *
- * The shape measured is examples/bootstrap/views/features.shape.php, the page
- * skeleton the example precompiles with `pure compile`; the body of the page is
- * composed by the component functions and is not part of this shape.
+ * The shape measured is the page template of
+ * examples/bootstrap/views/features.cmp.php, the unit the example precompiles
+ * with `pure compile`; the body of the page is composed by the component
+ * functions and is not part of this shape.
  */
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -25,7 +26,9 @@ if (in_array('--clear', $argv, true)) {
     printf("cleared %d cache file(s)\n", Compile::clearCache());
 }
 
-$shape = require __DIR__ . '/../examples/bootstrap/views/features.shape.php';
+$unitFile = __DIR__ . '/../examples/bootstrap/views/features.cmp.php';
+require_once $unitFile;
+$shape = (Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
 $file = $dir . '/' . $shape->id() . '.php';
 $warm = is_file($file);
 

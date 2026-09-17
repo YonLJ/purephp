@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /**
- * The view data of the xml page, keyed by the slots of views/xml.shape.php.
+ * The view data of the xml page, keyed by the slots of views/xml.cmp.php.
  *
  * @return array<string, mixed>
  */

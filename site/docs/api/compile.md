@@ -44,42 +44,61 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 
 ## Function Components
 
-`Pure\Component\render()` and `Pure\Component\renderPage()` turn a template
-into `Raw` markup in one expression, which is what component and page functions
-are built on:
+A component unit registers a lazy template factory under a name; the component
+function next to it renders that name. `Pure\Component\render()` and
+`renderPage()` turn the registered template into `Raw` markup in one
+expression:
 
 ```php
 <?php
 
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
-use function Pure\Component\render;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
+    div(h2(Slot::text('title')), p(Slot::text('content')))->class('card')
+));
 
 function Card(string $title, string $content): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content);
+    return render('Card', title: $title, content: $content);
 }
 ```
 
 | Function | Behavior |
 | --- | --- |
-| `render(string $source, mixed ...$data): Raw` | Renders a component template; the binder is cached per path |
+| `register(string $name, string $file, Closure $factory, bool $override = false): void` | Registers a component unit; the factory must be lazy and return a `Shape` |
+| `registerPage(string $name, string $file, Closure $factory, bool $override = false): void` | Same, with the document header of the root tag |
+| `render(string $source, mixed ...$data): Raw` | Renders a unit by name or a template by path; the binder is cached |
 | `renderPage(string $source, array $data): Raw` | Same, prepending the document header of the root tag |
 | `component(Tag\|string $source): Closure` | Returns the `fn (array $data): Raw` binder of a fragment |
 | `page(Tag\|string $source): Closure` | Same, prepending the document header of the root tag |
 
-`render()` takes slot values as named arguments (`render($file, title: $title)`)
+`render()` takes slot values as named arguments (`render('Card', title: $title)`)
 or as an unpacked array with string keys; positional data is rejected with a
 `RuntimeException`. `component()` and `page()` are the lower-level helpers for
 inline trees or when you want to hold the binder in a `static` variable.
 
-A `Tag` source is compiled in place; a string is the path of a `*.shape.php`
-file. For a file, the sibling `*.pure.php` artifact is loaded when it exists and
-is at least as new as the shape file, so production skips building the shape
-tree and computing the fingerprint; otherwise the shape file is compiled (the
-disk cache still applies). Missing files, a template that does not return a
-`Shape` and an artifact that does not return a `Renderer` all raise a
-`RuntimeException` naming the file. Run `pure compile` to build artifacts and
-`pure compile --check` to keep them fresh in CI.
+A `Tag` source is compiled in place; a string is a registered name, the path of
+a `*.cmp.php` unit or the path of a `*.shape.php` template. Registering the same
+name for another file, or another name for the same file, throws unless
+`override: true` is passed; one unit file registers one component. A name and
+the path of its unit file resolve to the same binder.
+
+For a file, the sibling `*.pure.php` artifact is loaded when it exists and is at
+least as new as the unit or shape file, so production skips calling the factory
+and building the shape tree; otherwise the factory runs (once per compile
+generation) or the shape file is compiled (the disk cache still applies).
+Missing files, a template that does not return a `Shape` and an artifact that
+does not return a `Renderer` all raise a `RuntimeException` naming the file. Run
+`pure compile` to build artifacts for every `*.shape.php` and `*.cmp.php` file,
+`pure compile --list` to print the units found, and `pure compile --check` to
+keep artifacts fresh in CI.
 
 ## Shape vs. Data
 
@@ -91,7 +110,7 @@ function, never inside a request handler.
 
 | Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.shape.php` template |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.cmp.php` unit (function + template) |
 | `h2($title)` | `h2(Slot::text('title'))` |
 | `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject the joined markup through `Slot::raw()` |

@@ -1,0 +1,45 @@
+<?php declare(strict_types=1);
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{registerPage, renderPage};
+use function Pure\HTML\{button, div, h1, span};
+
+/**
+ * The counter page as a shape file: `pure compile` precompiles it into
+ * views/counter.pure.php, and app/controllers render the same shape without
+ * precompiling.
+ *
+ * `initial` is a slot so the controller can provide a server-random start.
+ */
+function CounterPageShape(): \Pure\Compile\Shape
+{
+    static $shape;
+
+    return $shape ??= Compile::shape(
+        div(
+            h1('JavaScript Counter App'),
+            div(
+                button('+')->id('add')->onclick('handleAdd()'),
+                span(Slot::text('initial'))->id('output'),
+                button('-')->id('subtract')
+            )->class('counter-container')
+        )
+    );
+}
+
+registerPage('Counter', __FILE__, static fn (): Shape => CounterPageShape());
+
+/**
+ * The counter page: the document skeleton comes from views/counter.shape.php
+ * (precompiled with `pure compile`).
+ *
+ * @param array<string, mixed> $data The page data from the controller.
+ */
+function counterPage(array $data): Raw
+{
+    return renderPage('Counter', ['initial' => $data['initial']]);
+}

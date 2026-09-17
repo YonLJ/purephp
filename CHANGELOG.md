@@ -11,12 +11,17 @@ First public version. No tag has been cut yet.
 
 ### Added
 
-- Component units: `Pure\Component\register()` / `registerPage()` register a
-  lazy template factory under a name, and `component()`, `page()`, `render()`
-  and `renderPage()` accept that name next to a file path. A name and the path
-  of its unit file resolve to the same binder, the factory is only called when
-  no fresh artifact serves the unit (and then once per compile generation), and
-  duplicate registrations throw unless `override: true` is passed.
+- Component units: a `*.cmp.php` file registers a lazy template factory with
+  `Pure\Component\register()` / `registerPage()` and defines the component
+  function next to it. `component()`, `page()`, `render()` and `renderPage()`
+  accept the registered name next to a file path; a name and the path of its
+  unit file resolve to the same binder, the factory is only called when no fresh
+  artifact serves the unit (and then once per compile generation), and duplicate
+  registrations throw unless `override: true` is passed. The examples ship as
+  units now.
+- `pure compile` discovers `*.cmp.php` units next to `*.shape.php` templates
+  and gained `--list` (`name -> file (component|page)`), so one command
+  compiles a unit file through its registered factory.
 - `ArtifactCompiler::buildUnit()` / `writeUnit()` compile a unit file
   (`*.shape.php` or `*.cmp.php`) whose shape is already known, so a `*.cmp.php`
   unit gets the same `*.pure.php` artifact and `*.plain.php` view as a shape

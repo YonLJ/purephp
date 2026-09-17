@@ -29,59 +29,54 @@ However, with Purephp:
 
 ## Quick start
 
-Describe the page once as a data-free **shape** (a tag tree with `Slot`
-placeholders), compile it once per process, then render it per request with
-plain data:
+A component is one file: a function with typed props that returns `Raw`, plus
+the template it renders, registered lazily so `pure compile` can precompile it:
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+// components/Card.cmp.php
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\HTML\{a, div, li, ul};
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
 
-function ItemShape(): Shape
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class('card')
+));
+
+function Card(string $title, string $content): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(li(Slot::text('label')));
+    return render('Card', title: $title, content: $content);
 }
 
-function PageShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            a('PHP')->href('https://www.php.net'),
-            ul(Slot::each('items', ItemShape()))
-        )->class('container')
-    );
-}
-
-PageShape()->print([
-    'items' => [['label' => 'Compiled'], ['label' => 'rendering']],
-]);
+echo Card('Card Title', 'Card Content');
 ```
 
 The above code will output:
 
 ```html
-<div class="container"><a href="https://www.php.net">PHP</a><ul><li>Compiled</li><li>rendering</li></ul></div>
+<div class="card"><h2>Card Title</h2><p>Card Content</p></div>
 ```
 
-Shapes are memoized in `static` variables and compiled once per PHP process;
-requests only bind data. In long-running workers (or with `opcache.preload`)
-that means once per worker. Under standard PHP-FPM every request starts fresh,
-so enable `Compile::cachePath()` to load generated renderers instead of
-rebuilding them. See the
-[compiled rendering guide](https://yonld.github.io/purephp/guide/compiled) for
-caching, conditionals and heterogeneous lists.
+`register()` only stores the factory; a request that finds a fresh artifact
+never builds the template. Run `vendor/bin/pure compile components` to
+precompile, and `pure compile --list` to see the units found. Pages register
+with `registerPage()` and render with `renderPage()`, which prepends the
+document header of the root tag.
 
-A shape renders with `$shape($data)` (string) or `$shape->print($data)`
-(stdout); `$shape->save($path, $data)` writes a file and prepends the document
-header of the root tag.
+Under standard PHP-FPM every request starts fresh, so enable
+`Compile::cachePath()` (or precompile with `pure compile`) to load generated
+renderers instead of rebuilding them; long-running workers keep them in memory.
+See the [compiled rendering guide](https://yonld.github.io/purephp/guide/compiled)
+for caching, conditionals and heterogeneous lists.
 
 ## Snippets and debugging
 
@@ -112,45 +107,18 @@ once instead of on every render.
 
 ## Compiled components
 
-Component shapes take static props as function arguments and dynamic props as
-slots:
-
-```php
-<?php
-
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
-
-use function Pure\HTML\{div, h2, p};
-
-function CardShape(string $classList = 'card'): Shape
-{
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
-}
-
-CardShape()->print([
-    'title' => 'Card Title',
-    'content' => 'Card Content',
-]);
-```
-
-Nested components use `Slot::child()`, lists use `Slot::each()` (or
-`Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
+Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`
+(or `Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
 Everything else is plain PHP.
 
-For production, `pure compile` precompiles shape files into `*.pure.php`
-artifacts that return a `Renderer` without building the shape tree:
+For production, `pure compile` precompiles every `*.cmp.php` unit (and every
+lower-level `*.shape.php` template) into a `*.pure.php` artifact that returns a
+`Renderer` without building the shape tree:
 
 ```bash
-vendor/bin/pure compile src/shapes            # *.pure.php: the compiled renderer
-vendor/bin/pure compile --plain src/shapes    # + *.plain.php: a dependency-free view
+vendor/bin/pure compile components            # *.pure.php: the compiled renderer
+vendor/bin/pure compile --plain components    # + *.plain.php: a dependency-free view
+vendor/bin/pure compile --list components     # name -> file (component|page)
 ```
 
 ```php
@@ -178,12 +146,12 @@ contract and the map closures it can copy.
 ## Examples
 
 `examples/bootstrap` is a small MVC setup with three pages behind one router.
-`views/features.shape.php` and `views/pricing.shape.php` compile into a strict
-artifact (`*.pure.php`, loaded by `view()`) and a dependency-free view
-(`*.plain.php`, loaded by `plain()`); the two controllers of a page share its
-view data through `featuresData()` / `pricingData()`. The cover page is static
-markup through the string renderer (`views/cover.php`), so it has neither
-variant. Routes:
+`views/features.cmp.php` and `views/pricing.cmp.php` are page units that compile
+into a strict artifact (`*.pure.php`, loaded by `renderPage()`) and a
+dependency-free view (`*.plain.php`, loaded by `plain()`); the two controllers
+of a page share its view data through `featuresData()` / `pricingData()`. The
+cover page is static markup through the string renderer (`views/cover.php`), so
+it has neither variant. Routes:
 
 ```
 /cover             the static cover page
@@ -202,11 +170,11 @@ php -S localhost:8000 -t examples/bootstrap/public \
 
 A request that matches nothing gets a 404 that lists every route.
 
-`event-counter` and `xml` follow the same layout — `views/<page>.shape.php` plus
-a `public/index.php` router for `/`, `/pure` and `/plain` — and `xml` adds
-`write.php`, the CLI entry that writes `example.xml`.
+`event-counter` and `xml` follow the same layout — a `views/<page>.cmp.php`
+unit plus a `public/index.php` router for `/`, `/pure` and `/plain` — and `xml`
+adds `write.php`, the CLI entry that writes `example.xml`.
 
-Every artifact is byte-identical to its shape, and every plain view to its
+Every artifact is byte-identical to its template, and every plain view to its
 artifact. See [here](https://github.com/YonLD/purephp/tree/master/examples).
 
 ## License

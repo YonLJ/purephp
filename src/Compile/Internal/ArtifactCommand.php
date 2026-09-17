@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Closure;
 use InvalidArgumentException;
+use Pure\Compile\Shape;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 use Throwable;
 
 /**
- * The `pure compile` command: turns shape files into artifacts.
+ * The `pure compile` command: turns shape and unit files into artifacts.
  *
  * @internal
  */
@@ -21,17 +24,32 @@ final class ArtifactCommand
         Pure shape compiler.
 
         Usage:
-          pure compile <path>... [--check] [--plain]
+          pure compile <path>... [--check] [--plain] [--list]
 
-        Compiles every *.shape.php file that returns a Pure\Compile\Shape into a
-        sibling *.pure.php artifact. Directories are searched recursively.
+        Compiles every *.shape.php file that returns a Pure\Compile\Shape and
+        every *.cmp.php unit that registers a component into a sibling
+        *.pure.php artifact. Directories are searched recursively.
 
           --check      report stale or missing files without writing (exit 1)
           --plain      also write a *.plain.php view: markup and native PHP that
                        renders without purephp installed
+          --list       print the components and shape files found, without compiling
           -h, --help   show this help
 
+        A *.cmp.php unit registers exactly one component with
+        Pure\Component\register() / registerPage(); compiling it requires the
+        file, so run the compiler through bin/pure, which wires the registry.
+
         USAGE;
+
+    /**
+     * @param (Closure(string): array<string, array{factory: Closure(): mixed, document: bool}>)|null $units
+     *     Resolves the units registered by a `*.cmp.php` file; null disables
+     *     unit support (plain ArtifactCompiler use).
+     */
+    public function __construct(private readonly ?Closure $units = null)
+    {
+    }
 
     /**
      * @param list<string> $argv The raw arguments, including the program name.
@@ -67,6 +85,7 @@ final class ArtifactCommand
 
         $check = false;
         $plain = false;
+        $list = false;
         $paths = [];
 
         foreach ($arguments as $argument) {
@@ -78,6 +97,12 @@ final class ArtifactCommand
 
             if ($argument === '--plain') {
                 $plain = true;
+
+                continue;
+            }
+
+            if ($argument === '--list') {
+                $list = true;
 
                 continue;
             }
@@ -108,7 +133,7 @@ final class ArtifactCommand
 
         foreach ($paths as $path) {
             try {
-                $files = self::shapeFiles($path);
+                $files = self::unitFiles($path);
             } catch (Throwable $error) {
                 $failed++;
                 fwrite($stderr, "pure: {$error->getMessage()}\n");
@@ -118,41 +143,41 @@ final class ArtifactCommand
 
             foreach ($files as $file) {
                 try {
-                    if ($check) {
-                        $sources = ArtifactCompiler::buildAll($file, $plain);
-                        $targets = [ArtifactCompiler::artifactPath($file) => $sources['artifact']];
+                    $units = $this->unitsOf($file);
 
-                        if ($sources['plain'] !== null) {
-                            $targets[ArtifactCompiler::plainPath($file)] = $sources['plain'];
-                        }
-
-                        foreach ($targets as $target => $expected) {
-                            $current = @file_get_contents($target);
-
-                            if ($current === false) {
-                                $stale++;
-                                fwrite($stdout, "missing: {$target}\n");
-                            } elseif ($current === $expected) {
-                                fwrite($stdout, "up to date: {$target}\n");
-                            } else {
-                                $stale++;
-                                fwrite($stdout, "stale: {$target}\n");
-                            }
-                        }
+                    if ($list) {
+                        self::printList($stdout, $file, $units);
 
                         continue;
                     }
 
-                    $written = ArtifactCompiler::writeChanged($file, $plain);
-
-                    if (!$written['artifactWritten'] && !$written['plainWritten']) {
-                        fwrite($stdout, "unchanged: {$file}\n");
+                    if ($units === null) {
+                        self::compile($file, null, $check, $plain, $stdout, $stale);
 
                         continue;
                     }
 
-                    $targets = $written['artifact'] . ($written['plain'] === null ? '' : ', ' . $written['plain']);
-                    fwrite($stdout, "compiled: {$file} -> {$targets}\n");
+                    if ($units === []) {
+                        throw new InvalidArgumentException(
+                            'no component unit is registered here; call Pure\Component\register() or registerPage() in the file.'
+                        );
+                    }
+
+                    if (count($units) > 1) {
+                        throw new InvalidArgumentException(
+                            count($units) . ' component units are registered here; a unit file registers one component.'
+                        );
+                    }
+
+                    $shape = (reset($units)['factory'])();
+
+                    if (!$shape instanceof Shape) {
+                        throw new InvalidArgumentException(
+                            'the unit factory must return a Pure\\Compile\\Shape, got ' . get_debug_type($shape) . '.'
+                        );
+                    }
+
+                    self::compile($file, $shape, $check, $plain, $stdout, $stale);
                 } catch (Throwable $error) {
                     $failed++;
                     fwrite($stderr, "pure: {$file}: {$error->getMessage()}\n");
@@ -168,10 +193,113 @@ final class ArtifactCommand
     }
 
     /**
-     * @param string $path A file or directory argument.
-     * @return list<string> The `*.shape.php` files to compile.
+     * Compile one file: a shape file when `$shape` is null (the file is loaded
+     * by the compiler), a unit with the given shape otherwise.
+     *
+     * @param string $file The shape or unit file.
+     * @param Shape|null $shape The unit template, when compiling a `*.cmp.php`.
+     * @param bool $check Report instead of writing.
+     * @param bool $plain Also handle the plain view.
+     * @param resource $stdout The output stream.
+     * @param int $stale The stale counter to update.
      */
-    private static function shapeFiles(string $path): array
+    private static function compile(string $file, ?Shape $shape, bool $check, bool $plain, $stdout, int &$stale): void
+    {
+        if ($check) {
+            $sources = $shape === null
+                ? ArtifactCompiler::buildAll($file, $plain)
+                : ArtifactCompiler::buildUnit($file, $shape, $plain);
+            $targets = [ArtifactCompiler::artifactPath($file) => $sources['artifact']];
+
+            if ($sources['plain'] !== null) {
+                $targets[ArtifactCompiler::plainPath($file)] = $sources['plain'];
+            }
+
+            foreach ($targets as $target => $expected) {
+                $current = @file_get_contents($target);
+
+                if ($current === false) {
+                    $stale++;
+                    fwrite($stdout, "missing: {$target}\n");
+                } elseif ($current === $expected) {
+                    fwrite($stdout, "up to date: {$target}\n");
+                } else {
+                    $stale++;
+                    fwrite($stdout, "stale: {$target}\n");
+                }
+            }
+
+            return;
+        }
+
+        $written = $shape === null
+            ? ArtifactCompiler::writeChanged($file, $plain)
+            : ArtifactCompiler::writeUnit($file, $shape, $plain);
+
+        if (!$written['artifactWritten'] && !$written['plainWritten']) {
+            fwrite($stdout, "unchanged: {$file}\n");
+
+            return;
+        }
+
+        $targets = $written['artifact'] . ($written['plain'] === null ? '' : ', ' . $written['plain']);
+        fwrite($stdout, "compiled: {$file} -> {$targets}\n");
+    }
+
+    /**
+     * The units a file registers: null for a shape file, the unit map for a
+     * `*.cmp.php` file.
+     *
+     * @param string $file The discovered file.
+     * @return array<string, array{factory: Closure(): mixed, document: bool}>|null
+     */
+    private function unitsOf(string $file): ?array
+    {
+        if (!str_ends_with($file, '.cmp.php')) {
+            return null;
+        }
+
+        if ($this->units === null) {
+            throw new RuntimeException('unit files need the component registry; run `pure compile` through bin/pure.');
+        }
+
+        $level = ob_get_level();
+        ob_start();
+
+        try {
+            (static fn (string $path): mixed => require_once $path)($file);
+        } finally {
+            while (ob_get_level() > $level) {
+                ob_end_clean();
+            }
+        }
+
+        return ($this->units)($file);
+    }
+
+    /**
+     * @param resource $stdout The output stream.
+     * @param array<string, array{factory: Closure(): mixed, document: bool}>|null $units
+     */
+    private static function printList($stdout, string $file, ?array $units): void
+    {
+        if ($units === null) {
+            fwrite($stdout, "{$file} (shape)\n");
+
+            return;
+        }
+
+        foreach ($units as $name => $unit) {
+            $kind = $unit['document'] ? 'page' : 'component';
+            fwrite($stdout, "{$name} -> {$file} ({$kind})\n");
+        }
+    }
+
+    /**
+     * @param string $path A file or directory argument.
+     * @return list<string> The `*.shape.php` and `*.cmp.php` files to compile.
+     */
+    private static function unitFiles(string $path): array
     {
         if (is_file($path)) {
             ArtifactCompiler::artifactPath($path);
@@ -186,13 +314,23 @@ final class ArtifactCommand
             );
 
             foreach ($iterator as $file) {
-                if ($file instanceof SplFileInfo && $file->isFile() && str_ends_with($file->getPathname(), ArtifactCompiler::SUFFIX)) {
-                    $found[] = $file->getPathname();
+                if (!$file instanceof SplFileInfo || !$file->isFile()) {
+                    continue;
+                }
+
+                foreach (ArtifactCompiler::UNIT_SUFFIXES as $suffix) {
+                    if (str_ends_with($file->getPathname(), $suffix)) {
+                        $found[] = $file->getPathname();
+
+                        break;
+                    }
                 }
             }
 
             if ($found === []) {
-                throw new InvalidArgumentException("no *" . ArtifactCompiler::SUFFIX . " files found in '{$path}'.");
+                throw new InvalidArgumentException(
+                    "no " . implode(' or ', array_map(static fn (string $s): string => '*' . $s, ArtifactCompiler::UNIT_SUFFIXES)) . " files found in '{$path}'."
+                );
             }
 
             sort($found);

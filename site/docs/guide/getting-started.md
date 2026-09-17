@@ -56,39 +56,31 @@ composer require yonld/purephp
 
 ### 2. Create Entry File
 
-Create `page.shape.php`, the page template — static markup plus slots:
+Create `index.php`, the entry file: a page unit (a registered template plus the
+page function) and its output:
 
 ```php
 <?php
 
 use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\{registerPage, renderPage};
 use function Pure\HTML\{div, h1, p};
 
-return Compile::shape(
+registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h1(Slot::text('heading')),
         p(Slot::text('lead')),
         p(Slot::text('body'))
     )->class('container')
-);
-```
-
-Then `index.php`, the page function that binds the data:
-
-```php
-<?php
-
-require 'vendor/autoload.php';
-
-use Pure\Core\Raw;
-
-use function Pure\Component\{page, renderPage};
+));
 
 function pageView(array $data): Raw
 {
-    return renderPage(__DIR__ . '/page.shape.php', [
+    return renderPage('Page', [
         'heading' => $data['heading'],
         'lead' => $data['lead'],
         'body' => $data['body'],
@@ -142,33 +134,32 @@ own template:
 ```php
 <?php
 
+// Card.cmp.php
+
 require 'vendor/autoload.php';
 
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
 
+use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
-use function Pure\Component\render;
 
-function Card(string $title, string $content, string $class = 'card'): Raw
-{
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
-}
-
-// Render the component with data
-echo Card('Card Title', 'This is the card content');
-```
-
-```php
-<?php
-
-// Card.shape.php
-
-return Compile::shape(
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
+));
+
+function Card(string $title, string $content, string $class = 'card'): Raw
+{
+    return render('Card', title: $title, content: $content, class: $class);
+}
+
+// Render the component with data
+echo Card('Card Title', 'This is the card content');
 ```
 
 ### Setting Attributes

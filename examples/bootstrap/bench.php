@@ -34,7 +34,9 @@ $data = featuresData();
 // One-time costs: the page skeleton compiles once per process, the artifact is
 // loaded once, and the component functions compile on their first render.
 $shapeStart = hrtime(true);
-$pageShape = require __DIR__ . '/views/features.shape.php';
+require_once __DIR__ . '/views/features.cmp.php';
+$unitFile = __DIR__ . '/views/features.cmp.php';
+$pageShape = (\Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
 $pageShape->compile();
 $shapeTime = (hrtime(true) - $shapeStart) / 1000;
 

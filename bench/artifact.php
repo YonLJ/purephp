@@ -26,9 +26,11 @@ if (!is_dir($dir)) {
 }
 
 if (in_array('--write', $argv, true)) {
+    $unitFile = var_export($root . '/examples/bootstrap/views/features.cmp.php', true);
     file_put_contents(
         $shapeFile,
-        "<?php\n\nreturn require " . var_export($root . '/examples/bootstrap/views/features.shape.php', true) . ";\n"
+        "<?php\n\nrequire_once {$unitFile};\n\n"
+        . "return (\\Pure\\Component\\Registry::unitsFor({$unitFile})['Features']['factory'])();\n"
     );
 
     $start = hrtime(true);
@@ -52,7 +54,7 @@ touch($artifactFile, time() - 5);
 $iterations = (int)($argv[1] ?? 3000);
 require $root . '/examples/bootstrap/app/bootstrap.php';
 require $root . '/examples/bootstrap/app/controllers/FeaturesController.php';
-require_once $root . '/examples/bootstrap/views/features.php';
+require_once $root . '/examples/bootstrap/views/features.cmp.php';
 $data = featuresBindings(featuresData());
 
 $start = hrtime(true);
@@ -72,7 +74,9 @@ for ($i = 0; $i < $iterations; $i++) {
 $artifactRender = (hrtime(true) - $start) / 1000 / $iterations;
 
 $start = hrtime(true);
-$shape = require $root . '/examples/bootstrap/views/features.shape.php';
+$unitFile = $root . '/examples/bootstrap/views/features.cmp.php';
+require_once $unitFile;
+$shape = (\Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
 $shape->compile();
 $compile = (hrtime(true) - $start) / 1000;
 

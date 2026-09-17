@@ -54,39 +54,30 @@ composer require yonld/purephp
 
 ### 2. 创建入口文件
 
-先创建页面模板 `page.shape.php`——静态标记加槽位：
+创建 `index.php` 入口文件：一个页面单元（注册的模板加页面函数）及其输出：
 
 ```php
 <?php
 
 use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\{registerPage, renderPage};
 use function Pure\HTML\{div, h1, p};
 
-return Compile::shape(
+registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h1(Slot::text('heading')),
         p(Slot::text('lead')),
         p(Slot::text('body'))
     )->class('container')
-);
-```
-
-再创建绑定数据的页面函数 `index.php`：
-
-```php
-<?php
-
-require 'vendor/autoload.php';
-
-use Pure\Core\Raw;
-
-use function Pure\Component\{page, renderPage};
+));
 
 function pageView(array $data): Raw
 {
-    return renderPage(__DIR__ . '/page.shape.php', [
+    return renderPage('Page', [
         'heading' => $data['heading'],
         'lead' => $data['lead'],
         'body' => $data['body'],
@@ -100,9 +91,9 @@ echo pageView([
 ]);
 ```
 
-`renderPage()` 每进程只加载一次模板，并附加文档声明。标准 PHP-FPM 下请启用
-`Compile::cachePath()`，让请求加载已编译的渲染器而不是重建；也可以用
-`vendor/bin/pure compile .` 预编译模板，让绑定器直接加载产物。
+`renderPage()` 每进程只加载一次模板并附加文档声明。标准 PHP-FPM 下请启用
+`Compile::cachePath()`，让请求加载已编译的渲染器而不是重新构建；或者用
+`vendor/bin/pure compile .` 预编译，让绑定器直接加载产物。
 
 ### 3. 运行应用
 
@@ -131,38 +122,37 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 ### 使用组件
 
-组件是带类型化参数、返回 `Raw` 的函数，背后有自己的模板：
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性模板工厂：
 
 ```php
 <?php
+
+// Card.cmp.php
 
 require 'vendor/autoload.php';
 
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
 
+use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
-use function Pure\Component\render;
 
-function Card(string $title, string $content, string $class = 'card'): Raw
-{
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
-}
-
-// 使用数据渲染组件
-echo Card('Card Title', 'This is the card content');
-```
-
-```php
-<?php
-
-// Card.shape.php
-
-return Compile::shape(
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
+));
+
+function Card(string $title, string $content, string $class = 'card'): Raw
+{
+    return render('Card', title: $title, content: $content, class: $class);
+}
+
+// 使用数据渲染组件
+echo Card('Card Title', 'This is the card content');
 ```
 
 ### 设置属性

@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/FeaturesData.php';
-require_once __DIR__ . '/../../views/features.php';
+require_once __DIR__ . '/../../views/features.cmp.php';
 
 /**
  * The features page controller for the plain view: the same bindings through
