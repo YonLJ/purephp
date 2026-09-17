@@ -6,63 +6,53 @@ namespace Pure\Compile\Internal;
 
 use Closure;
 use LogicException;
-use Pure\Compile\CompileException;
 use Pure\Compile\Renderer;
-use Pure\Core\Escaper;
-use Pure\Core\Raw;
-use Pure\Core\Slot;
-use Pure\Core\SlotKind;
 use Pure\Core\Tag;
-use WeakMap;
 
 /**
- * Generates a flat PHP renderer by consuming the shared shape traversal.
+ * Generates the runtime renderer source: flat `$out .= ...;` statements.
  *
- * Static markup is escaped once at compile time and emitted as literal string
- * chunks; subtrees without slots are folded into single literals through the
- * shared string renderer, so only slots remain as runtime work.
+ * This is the hot path used by the in-process compiler and the on-disk cache;
+ * TemplateGenerator writes the same renderer as a readable template for
+ * artifacts.
  *
  * @internal
  */
-final class CodeGenerator implements ShapeVisitor
+final class CodeGenerator extends RendererGenerator
 {
-    /** @var string[] */
-    private array $lines = [];
-
-    /** @var array<int, Closure> */
-    private array $maps = [];
-
-    /** @var array<string, int> */
-    private array $mapIndex = [];
-
-    /** @var list<array{slot: Slot, slotPath: string, mapKey: ?string}> */
-    private array $slotStack = [];
-
-    /** @var list<array{itemVar: string, childVar: string, branchOpen: bool}> */
-    private array $eachKindStack = [];
-
     /** @var list<string> */
-    private array $dataStack = ['$v'];
-
-    /** @var WeakMap<Tag, bool> */
-    private WeakMap $slotCache;
-
-    private string $literal = '';
-
-    private int $scope = 0;
-
-    private function __construct()
-    {
-        $this->slotCache = new WeakMap();
-    }
+    private array $lines = [];
 
     public static function compile(Tag $tree, ShapeIndex $index): Renderer
     {
+        [$source, $maps] = self::generate($tree, $index);
+
+        return self::fromSource($source, $index->id(), $maps);
+    }
+
+    /**
+     * Generate the renderer source without evaluating it.
+     *
+     * @internal
+     *
+     * @param Tag $tree The shape tree to compile.
+     * @param ShapeIndex $index The structure index of the tree.
+     * @return string The generated PHP source.
+     */
+    public static function source(Tag $tree, ShapeIndex $index): string
+    {
+        return self::generate($tree, $index)[0];
+    }
+
+    /**
+     * @param Tag $tree The shape tree to compile.
+     * @param ShapeIndex $index The structure index of the tree.
+     * @return array{string, array<int, Closure>} The generated source and the map closures.
+     */
+    private static function generate(Tag $tree, ShapeIndex $index): array
+    {
         $generator = new self();
-        $generator->maps = array_values($index->maps());
-        foreach (array_keys($index->maps()) as $position => $key) {
-            $generator->mapIndex[$key] = $position;
-        }
+        self::prepare($generator, $index);
 
         $generator->emit('$out = \'\';');
         (new ShapeWalker($generator))->walk($tree);
@@ -71,7 +61,7 @@ final class CodeGenerator implements ShapeVisitor
 
         $source = "static function (array \$v, array \$maps): string {\n    " . implode("\n    ", $generator->lines) . "\n}";
 
-        return self::fromSource($source, $index->id(), $generator->maps);
+        return [$source, $generator->maps];
     }
 
     /**
@@ -97,359 +87,19 @@ final class CodeGenerator implements ShapeVisitor
         return new Renderer($closure, $source, $id, $maps);
     }
 
-    /**
-     * @param array{tagName: string, selfClose: bool, attrs: array<string, string|Slot>, children: array<int, mixed>} $export
-     */
-    public function tagOpen(Tag $tag, string $path, array $export): bool
+    protected function emitLiteral(string $text): void
     {
-        if (!$this->hasSlots($tag)) {
-            // Slot-free subtrees are static markup; the string renderer shares
-            // the escaping implementation, so folding is byte-identical.
-            $this->literal($tag->render());
-
-            return false;
-        }
-
-        $this->literal('<' . $export['tagName']);
-
-        return true;
+        $this->emit('$out .= ' . var_export($text, true) . ';');
     }
 
-    public function attribute(string $key, string|Slot $value, string $slotPath): void
+    protected function emitExpression(string $expression): void
     {
-        if ($value instanceof Slot) {
-            if ($value->kind !== SlotKind::Attr) {
-                throw CompileException::slotInAttributePosition($value->kind, $slotPath);
-            }
-
-            // Attribute slots keep the runtime helper: the ` name="value"` chunk
-            // format belongs to Escaper::attribute(), and duplicating it in
-            // generated code would split the escaping format across two places.
-            $this->expression(
-                '\Pure\Compile\Internal\SlotRuntime::attrOpen(' . var_export($key, true) . ', '
-                . $this->valueAccess($value, $this->data(), $slotPath) . ', '
-                . var_export($slotPath, true) . ')'
-            );
-
-            return;
-        }
-
-        $this->literal(Escaper::attribute($key, $value));
+        $this->emit('$out .= ' . $expression . ';');
     }
 
-    public function tagSelfClose(): void
+    protected function emitStatement(string $statement): void
     {
-        $this->literal(' />');
-    }
-
-    public function contentStart(): void
-    {
-        $this->literal('>');
-    }
-
-    public function tagClose(string $tagName): void
-    {
-        $this->literal('</' . $tagName . '>');
-    }
-
-    public function text(string $text): void
-    {
-        $this->literal(Escaper::text($text));
-    }
-
-    public function raw(Raw $raw): void
-    {
-        $this->literal((string)$raw);
-    }
-
-    public function slotEnter(Slot $slot, string $slotPath, ?string $mapKey): void
-    {
-        $this->slotStack[] = ['slot' => $slot, 'slotPath' => $slotPath, 'mapKey' => $mapKey];
-
-        if ($this->enterValueSlot($slot, $slotPath)) {
-            return;
-        }
-
-        $this->enterScopeSlot($slot, $slotPath, $mapKey);
-    }
-
-    public function slotBranch(string|int $label): void
-    {
-        $slot = $this->currentContext()['slot'];
-
-        if ($slot->kind === SlotKind::If) {
-            if ($label === 1) {
-                $this->statement('} else {');
-            }
-
-            return;
-        }
-
-        if ($slot->kind !== SlotKind::EachKind) {
-            throw new LogicException("unexpected branch event for slot kind '{$slot->kind->name}'.");
-        }
-
-        $context = array_pop($this->eachKindStack);
-        if ($context === null) {
-            throw new LogicException('eachKind branch without an open list.');
-        }
-
-        if ($context['branchOpen']) {
-            $this->statement('break;');
-            array_pop($this->dataStack);
-        }
-
-        $current = $this->currentContext();
-        $this->statement('case ' . var_export((string)$label, true) . ':');
-        $this->statement($context['childVar'] . ' = ' . $this->scopeExpr($context['itemVar'], $current['slotPath'] . '[]', $context['itemVar'], $this->mapExpression($current['mapKey'])) . ';');
-        $this->dataStack[] = $context['childVar'];
-        $context['branchOpen'] = true;
-        $this->eachKindStack[] = $context;
-    }
-
-    public function slotLeave(Slot $slot, string $slotPath): void
-    {
-        switch ($slot->kind) {
-            case SlotKind::Text:
-            case SlotKind::Attr:
-            case SlotKind::Raw:
-                break;
-            case SlotKind::Child:
-                array_pop($this->dataStack);
-
-                break;
-            case SlotKind::Each:
-                $this->statement('}');
-                array_pop($this->dataStack);
-
-                break;
-            case SlotKind::If:
-                $this->statement('}');
-
-                break;
-            case SlotKind::EachKind:
-                $context = array_pop($this->eachKindStack);
-                if ($context !== null && $context['branchOpen']) {
-                    $this->statement('break;');
-                    array_pop($this->dataStack);
-                }
-                $this->statement('}');
-                $this->statement('}');
-
-                break;
-        }
-
-        array_pop($this->slotStack);
-    }
-
-    private function enterValueSlot(Slot $slot, string $slotPath): bool
-    {
-        switch ($slot->kind) {
-            case SlotKind::Text:
-                $this->expression($this->valueExpr('text', $slot, $this->data(), $slotPath));
-
-                return true;
-            case SlotKind::Raw:
-                $this->expression($this->valueExpr('raw', $slot, $this->data(), $slotPath));
-
-                return true;
-            case SlotKind::Attr:
-                throw CompileException::attributeSlotInChildPosition($slotPath);
-            default:
-                return false;
-        }
-    }
-
-    private function enterScopeSlot(Slot $slot, string $slotPath, ?string $mapKey): void
-    {
-        switch ($slot->kind) {
-            case SlotKind::Child:
-                $childVar = '$v' . (++$this->scope);
-                $this->statement($childVar . ' = ' . $this->scopeExpr($this->valueAccess($slot, $this->data(), $slotPath), $slotPath, $this->data(), $this->mapExpression($mapKey)) . ';');
-                $this->dataStack[] = $childVar;
-
-                return;
-            case SlotKind::Each:
-                $itemVar = '$item' . (++$this->scope);
-                $childVar = '$v' . (++$this->scope);
-                $this->statement('foreach (\Pure\Compile\Internal\SlotRuntime::items(' . $this->valueAccess($slot, $this->data(), $slotPath) . ', ' . var_export($slotPath, true) . ') as ' . $itemVar . ') {');
-                $this->emit($childVar . ' = ' . $this->scopeExpr($itemVar, $slotPath . '[]', $itemVar, $this->mapExpression($mapKey)) . ';');
-                $this->dataStack[] = $childVar;
-
-                return;
-            case SlotKind::If:
-                $this->statement('if ((bool)' . $this->conditionExpr($slot, $this->data()) . ') {');
-
-                return;
-            case SlotKind::EachKind:
-                $itemVar = '$item' . (++$this->scope);
-                $childVar = '$v' . (++$this->scope);
-                $kindVar = '$kind' . $this->scope;
-                $kinds = [];
-                foreach (array_keys($slot->variants) as $kind) {
-                    $kinds[] = var_export((string)$kind, true);
-                }
-
-                $this->statement('foreach (\Pure\Compile\Internal\SlotRuntime::items(' . $this->valueAccess($slot, $this->data(), $slotPath) . ', ' . var_export($slotPath, true) . ') as ' . $itemVar . ') {');
-                $this->statement($kindVar . ' = \Pure\Compile\Internal\SlotRuntime::kind(' . $itemVar . ', ' . var_export($slot->kindKey ?? 'kind', true) . ', ' . var_export($slotPath . '[]', true) . ', [' . implode(', ', $kinds) . ']);');
-                $this->statement('switch (' . $kindVar . ') {');
-                $this->eachKindStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
-
-                return;
-            default:
-                throw new LogicException("slot kind '{$slot->kind->name}' is not supported in child position.");
-        }
-    }
-
-    /**
-     * Return the current slot stack context.
-     *
-     * @return array{slot: Slot, slotPath: string, mapKey: ?string}
-     */
-    private function currentContext(): array
-    {
-        $context = end($this->slotStack);
-        if ($context === false) {
-            throw new LogicException('slot event outside of a slot.');
-        }
-
-        return $context;
-    }
-
-    private function data(): string
-    {
-        $data = end($this->dataStack);
-        if ($data === false) {
-            throw new LogicException('missing data scope.');
-        }
-
-        return $data;
-    }
-
-    /**
-     * Expression producing the nested data scope of a child/each slot.
-     */
-    private function scopeExpr(string $value, string $scopePath, string $mapInput, ?string $mapExpression): string
-    {
-        if ($mapExpression !== null) {
-            $value = $mapExpression . '(' . $mapInput . ')';
-        }
-
-        return '\Pure\Compile\Internal\SlotRuntime::scope(' . $value . ', ' . var_export($scopePath, true) . ')';
-    }
-
-    private function mapExpression(?string $mapKey): ?string
-    {
-        if ($mapKey === null) {
-            return null;
-        }
-
-        if (!isset($this->mapIndex[$mapKey])) {
-            throw new LogicException("map '{$mapKey}' is missing from the shape index.");
-        }
-
-        return '($maps[' . $this->mapIndex[$mapKey] . '])';
-    }
-
-    private function conditionExpr(Slot $slot, string $dataVar): string
-    {
-        return '(' . $dataVar . '[' . var_export($slot->name, true) . '] ?? ' . var_export($slot->default, true) . ')';
-    }
-
-    private function valueAccess(Slot $slot, string $dataVar, string $slotPath): string
-    {
-        $key = var_export($slot->name, true);
-
-        if ($slot->required) {
-            return '(\array_key_exists(' . $key . ', ' . $dataVar . ') ? ' . $dataVar . '[' . $key . '] : throw \Pure\Core\MissingSlotException::forPath(' . var_export($slotPath, true) . '))';
-        }
-
-        return '(' . $dataVar . '[' . $key . '] ?? ' . var_export($slot->default, true) . ')';
-    }
-
-    private function valueExpr(string $kind, Slot $slot, string $dataVar, string $slotPath): string
-    {
-        $access = $this->valueAccess($slot, $dataVar, $slotPath);
-
-        if ($kind === 'text') {
-            // Scalars (the common case) are escaped inline with the shared
-            // Escaper constants. Everything else keeps the SlotRuntime::text()
-            // call, so null stays silent, Stringable values are coerced and
-            // arrays keep the InvalidArgumentException with the slot path.
-            return '(is_scalar($text = ' . $access . ')'
-                . ' ? htmlspecialchars((string)$text, \Pure\Core\Escaper::FLAGS, \Pure\Core\Escaper::ENCODING, false)'
-                . ' : \Pure\Compile\Internal\SlotRuntime::text($text, ' . var_export($slotPath, true) . '))';
-        }
-
-        return '\Pure\Compile\Internal\SlotRuntime::' . $kind . '(' . $access . ', ' . var_export($slotPath, true) . ')';
-    }
-
-    /**
-     * Whether the subtree contains any slot.
-     *
-     * Memoized per tag: without the cache this walks every descendant again for
-     * each ancestor and compile time turns quadratic (depth 800: ~32 ms vs
-     * ~1.5 ms memoized).
-     */
-    private function hasSlots(Tag $tag): bool
-    {
-        $cache = $this->slotCache;
-
-        if (isset($cache[$tag])) {
-            return $cache[$tag];
-        }
-
-        $export = $tag->export();
-        $hasSlots = false;
-
-        foreach ($export['attrs'] as $value) {
-            if ($value instanceof Slot) {
-                $hasSlots = true;
-
-                break;
-            }
-        }
-
-        if (!$hasSlots) {
-            foreach ($export['children'] as $child) {
-                if ($child instanceof Slot || ($child instanceof Tag && $this->hasSlots($child))) {
-                    $hasSlots = true;
-
-                    break;
-                }
-            }
-        }
-
-        $cache[$tag] = $hasSlots;
-
-        return $hasSlots;
-    }
-
-    private function literal(string $text): void
-    {
-        $this->literal .= $text;
-    }
-
-    private function expression(string $expr): void
-    {
-        $this->flushLiteral();
-        $this->emit('$out .= ' . $expr . ';');
-    }
-
-    private function statement(string $statement): void
-    {
-        $this->flushLiteral();
         $this->emit($statement);
-    }
-
-    private function flushLiteral(): void
-    {
-        if ($this->literal === '') {
-            return;
-        }
-
-        $this->emit('$out .= ' . var_export($this->literal, true) . ';');
-        $this->literal = '';
     }
 
     private function emit(string $line): void
