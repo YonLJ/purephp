@@ -23,7 +23,8 @@ final class Compile
     private static ?string $cachePath = null;
 
     /**
-     * Byte budget for the in-memory source memo. Entries are pure
+     * Default byte budget for the in-memory source memo, overridable with
+     * PURE_COMPILE_MEMO_BYTES (0 disables the memo). Entries are pure
      * (fingerprint -> generated source), so evicting one only costs code
      * generation time; a structure that varies per request cannot grow the
      * memo without limit.
@@ -33,7 +34,7 @@ final class Compile
     /**
      * Generated sources memoized per fingerprint, so a tree rebuilt in the
      * same process reuses the code instead of regenerating it. Bounded: the
-     * oldest entries are dropped once MEMO_BYTES is exceeded.
+     * oldest entries are dropped once the byte budget is exceeded.
      *
      * @var array<string, string>
      */
@@ -163,14 +164,15 @@ final class Compile
      */
     private static function memoize(string $id, string $source): void
     {
-        if (isset(self::$sources[$id])) {
+        $limit = self::memoLimit();
+        if ($limit <= 0 || isset(self::$sources[$id])) {
             return;
         }
 
         self::$sources[$id] = $source;
         self::$memoBytes += strlen($source);
 
-        while (self::$memoBytes > self::MEMO_BYTES) {
+        while (self::$memoBytes > $limit) {
             $oldest = array_key_first(self::$sources);
             if ($oldest === null) {
                 break;
@@ -179,5 +181,21 @@ final class Compile
             self::$memoBytes -= strlen(self::$sources[$oldest]);
             unset(self::$sources[$oldest]);
         }
+    }
+
+    /**
+     * The byte budget of the source memo: MEMO_BYTES unless
+     * PURE_COMPILE_MEMO_BYTES overrides it (0 disables the memo).
+     */
+    private static function memoLimit(): int
+    {
+        $raw = getenv('PURE_COMPILE_MEMO_BYTES');
+        if (!is_string($raw) || $raw === '') {
+            return self::MEMO_BYTES;
+        }
+
+        $limit = filter_var($raw, FILTER_VALIDATE_INT);
+
+        return $limit === false ? self::MEMO_BYTES : $limit;
     }
 }
