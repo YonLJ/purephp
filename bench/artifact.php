@@ -52,8 +52,8 @@ touch($artifactFile, time() - 5);
 $iterations = (int)($argv[1] ?? 3000);
 require $root . '/examples/bootstrap/app/bootstrap.php';
 require $root . '/examples/bootstrap/app/controllers/FeaturesController.php';
-require $root . '/examples/bootstrap/views/features.shape.php';
-$data = featuresData();
+require_once $root . '/examples/bootstrap/views/features.php';
+$data = featuresBindings(featuresData());
 
 $start = hrtime(true);
 $renderer = require $artifactFile;
@@ -72,7 +72,7 @@ for ($i = 0; $i < $iterations; $i++) {
 $artifactRender = (hrtime(true) - $start) / 1000 / $iterations;
 
 $start = hrtime(true);
-$shape = FeaturesPageShape();
+$shape = require $root . '/examples/bootstrap/views/features.shape.php';
 $shape->compile();
 $compile = (hrtime(true) - $start) / 1000;
 

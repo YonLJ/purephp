@@ -17,8 +17,8 @@ php bench/cache.php
 php bench/artifact.php --write
 php bench/artifact.php [iterations]
 
-# features page of examples/bootstrap: classic baseline (bench/fixtures) vs shape vs
-# precompiled index.pure.php artifact
+# features page of examples/bootstrap: classic baseline (bench/fixtures) vs the
+# page function, the precompiled features.pure.php artifact and the plain view
 php examples/bootstrap/bench.php [iterations]
 
 # with opcache
@@ -49,7 +49,13 @@ Recorded 2026-09-16.
 
 ### `examples/bootstrap/bench.php` — 3000 iterations
 
-| Path | no opcache | opcache | opcache + JIT |
+The rows below were recorded for the shape-based example; after the move to
+function components the benchmark prints the page function, the skeleton
+artifact and the plain view instead (the body is composed by component
+functions, so it no longer renders as one compiled shape). Re-run
+`php examples/bootstrap/bench.php` to record the current rows.
+
+| Path (previous shape-based example) | no opcache | opcache | opcache + JIT |
 | --- | --- | --- | --- |
 | classic build + `render()` | 188–204 µs | 183.6 µs | 147.8 µs |
 | compiled shape + data | 25–33 µs | 24.9 µs | 22.6 µs |
@@ -65,16 +71,23 @@ but they are includes, so their row only pays off with opcache enabled (the
 benchmark ages the freshly compiled view, because opcache revalidates a file
 whose mtime just changed on every include).
 
-### `bench/cache.php` — compile only, one page shape
+### `bench/cache.php` — compile only, the features page skeleton
+
+Measures `examples/bootstrap/views/features.shape.php`, the page skeleton the
+example precompiles with `pure compile`. The body of the page is composed by
+the component functions and is not part of this shape, so the numbers recorded
+for the previous body shape (~640–780 µs cold, ~340–480 µs warm) no longer
+apply.
 
 | Phase | Time |
 | --- | --- |
-| cold (generate + write cache file) | ~640–780 µs |
-| warm (read + `require` cached renderer) | ~340–480 µs |
+| cold (generate + write cache file) | ~0.8–1.1 ms |
+| warm (read + `require` cached renderer) | ~0.3–0.4 ms |
 
 The remaining warm cost is the structure fingerprint walk plus loading the
-generated file; the shape build itself (~0.8 ms for this page) dominates
-per-process startup either way.
+generated file; the shape build itself dominates per-process startup either
+way. (Recorded 2026-09-18 on PHP 8.1.34 CLI; re-run the two commands above to
+record your machine.)
 
 ## Notes
 

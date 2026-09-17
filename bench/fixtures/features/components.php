@@ -32,7 +32,7 @@ use function Pure\SVG\svgUse;
 /**
  * One icon, by symbol id.
  */
-function Icon(string $icon): SVG
+function classicIcon(string $icon): SVG
 {
     return svg(svgUse()->href("#{$icon}"));
 }
@@ -42,7 +42,7 @@ function Icon(string $icon): SVG
  *
  * @param list<HTML> $contents
  */
-function Section(string $title, array $contents, string $classList): HTML
+function classicSection(string $title, array $contents, string $classList): HTML
 {
     return (
         div(
@@ -55,7 +55,7 @@ function Section(string $title, array $contents, string $classList): HTML
 /**
  * A section separator.
  */
-function Divider(): HTML
+function classicDivider(): HTML
 {
     return div()->class('b-example-divider');
 }
@@ -63,18 +63,18 @@ function Divider(): HTML
 /**
  * @param array<string, string> $data
  */
-function IconColumn(array $data): HTML
+function classicIconColumn(array $data): HTML
 {
     return (
         div(
             div(
-                Icon($data['icon'])->class('bi')->width('1em')->height('1em')
+                classicIcon($data['icon'])->class('bi')->width('1em')->height('1em')
             )->class('feature-icon d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-2 mb-3'),
             h3($data['title'])->class('fs-2'),
             p($data['content']),
             a(
                 $data['linkText'],
-                Icon('chevron-right')->class('bi')->width('1em')->height('1em'),
+                classicIcon('chevron-right')->class('bi')->width('1em')->height('1em'),
             )->href($data['link'])->class('icon-link d-inline-flex align-items-center')
         )->class('feature col')
     );
@@ -83,12 +83,12 @@ function IconColumn(array $data): HTML
 /**
  * @param array<string, string> $data
  */
-function HangingIcon(array $data): HTML
+function classicHangingIcon(array $data): HTML
 {
     return (
         div(
             div(
-                Icon($data['icon'])->class('bi')->width('1em')->height('1em')
+                classicIcon($data['icon'])->class('bi')->width('1em')->height('1em')
             )->class('icon-square text-bg-light d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3'),
             div(
                 h3($data['title'])->class('fs-2'),
@@ -102,7 +102,7 @@ function HangingIcon(array $data): HTML
 /**
  * @param array<string, string> $data
  */
-function CustomCard(array $data): HTML
+function classicCustomCard(array $data): HTML
 {
     return (
         div(
@@ -114,11 +114,11 @@ function CustomCard(array $data): HTML
                             img()->src($data['icon'])->alt('Bootstrap')->width('32')->height('32')->class('rounded-circle border border-white')
                         )->class('me-auto'),
                         li(
-                            Icon('geo-fill')->class('bi me-2')->width('1em')->height('1em'),
+                            classicIcon('geo-fill')->class('bi me-2')->width('1em')->height('1em'),
                             small($data['location'])
                         )->class('d-flex align-items-center me-3'),
                         li(
-                            Icon('calendar3')->class('bi me-2')->width('1em')->height('1em'),
+                            classicIcon('calendar3')->class('bi me-2')->width('1em')->height('1em'),
                             small($data['date'])
                         )->class('d-flex align-items-center'),
                     )->class('d-flex list-unstyled mt-auto')
@@ -132,11 +132,11 @@ function CustomCard(array $data): HTML
 /**
  * @param array<string, string> $data
  */
-function CellIcon(array $data): HTML
+function classicCellIcon(array $data): HTML
 {
     return (
         div(
-            Icon($data['icon'])->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
+            classicIcon($data['icon'])->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
             div(
                 h3($data['title'])->class('fw-bold mb-0 fs-4'),
                 p($data['content'])
@@ -148,12 +148,12 @@ function CellIcon(array $data): HTML
 /**
  * @param array<string, string> $data
  */
-function FeatureTitle(array $data): HTML
+function classicFeatureTitle(array $data): HTML
 {
     return (
         div(
             div(
-                Icon($data['icon'])->class('bi')->width('1em')->height('1em')
+                classicIcon($data['icon'])->class('bi')->width('1em')->height('1em')
             )->class('feature-icon-small d-inline-flex align-items-center justify-content-center text-bg-primary bg-gradient fs-4 rounded-3'),
             h4($data['title'])->class('fw-semibold mb-0'),
             p($data['content'])->class('text-muted')
@@ -164,7 +164,7 @@ function FeatureTitle(array $data): HTML
 /**
  * The text column of the last section.
  */
-function MainFeature(string $title, string $content, string $link, string $linkText): HTML
+function classicMainFeature(string $title, string $content, string $link, string $linkText): HTML
 {
     return (
         div(

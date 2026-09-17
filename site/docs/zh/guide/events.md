@@ -200,21 +200,21 @@ function handleDelegatedClick(event) {
 
 ## 组件事件通信
 
-将事件处理程序作为静态事件属性传递给子组件；动态值通过槽位传递：
+事件处理程序写在组件的静态事件属性上；动态值通过槽位传入：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\component;
 use function Pure\HTML\{div, button, p};
 
-function ChildShape(): Shape
+function Child(string $message): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             p('Child Component'),
             button(Slot::text('message'))
@@ -224,29 +224,25 @@ function ChildShape(): Shape
         ->class('child-component')
         ->style('border: 1px solid #ddd; padding: 10px; margin: 10px 0;')
     );
+
+    return $render(['message' => $message]);
 }
 
-function ParentShape(): Shape
+function ParentComponent(Raw $child): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= component(
         div(
             p('Parent Component'),
-            Slot::child('child', ChildShape()),
+            Slot::raw('child'),
             p()->id('parent-output')->style('margin-top: 10px; color: #666;')
         )->class('parent-component')
     );
+
+    return $render(['child' => $child]);
 }
 
-// 父形状的绑定数据；子项从 `$data['child']` 渲染。
-$bindings = [
-    'child' => [
-        'message' => 'Click me from child!',
-    ],
-];
-
-ParentShape()->print($bindings);
+echo ParentComponent(Child('Click me from child!'));
 ?>
 <script>
 function handleChildClick(message) {

@@ -3,26 +3,28 @@
 require_once __DIR__ . '/MainFeature.php';
 require_once __DIR__ . '/FeatureTitle.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\h2;
+use function Pure\Component\render;
 
-function FeatureSectionShape(): Shape
+/**
+ * The "features with title" section.
+ *
+ * @param array{title: string, content: string, link: string, linkText: string} $main
+ * @param list<array{icon: string, title: string, content: string}> $features
+ */
+function FeatureSection(string $title, array $main, array $features): Raw
 {
-    static $shape;
+    $items = [];
 
-    return $shape ??= Compile::shape(
-        div(
-            h2(Slot::text('title'))->class('pb-2 border-bottom'),
-            div(
-                Slot::child('main', MainFeatureShape()),
-                div(
-                    div(Slot::each('features', FeatureTitleShape()))->class('row row-cols-1 row-cols-sm-2 g-4')
-                )->class('col')
-            )->class('row row-cols-1 row-cols-md-2 align-items-md-center g-5 py-5')
-        )->class('container px-4 py-5')
+    foreach ($features as $feature) {
+        $items[] = (string)FeatureTitle($feature);
+    }
+
+    return render(
+        __DIR__ . '/FeatureSection.shape.php',
+        title: $title,
+        main: (string)MainFeature($main),
+        features: implode('', $items),
     );
 }

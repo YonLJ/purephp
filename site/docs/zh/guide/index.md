@@ -25,32 +25,36 @@ PurePHP 有两条渲染路径：
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
+use function Pure\Component\page;
 use function Pure\HTML\{div, h1, p};
 
-function PageShape(): Shape
+function pageView(array $data): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
+    static $render;
+    $render ??= page(
         div(
             h1(Slot::text('heading')),
             p(Slot::text('lead'))
         )->class('container')
     );
+
+    return $render([
+        'heading' => $data['heading'],
+        'lead' => $data['lead'],
+    ]);
 }
 
-PageShape()->print([
-    'heading' => 'Welcome to PurePHP',
-    'lead' => 'A PHP template engine',
-]);
+echo pageView(['heading' => 'Welcome to PurePHP', 'lead' => 'A PHP template engine']);
 ```
 
-形状被记忆化到 `static` 变量中，每个进程只编译一次——这适用于长驻 worker。标准
-PHP-FPM 下每个请求都是全新的，请启用 `Compile::cachePath()`，请求就会加载已编译的
-渲染器而不是重建它。组件、列表、条件与缓存请参见[编译组件](/zh/guide/compiled)。
+renderer 被记忆化到 `static` 变量中，每个进程只编译一次——这适用于长驻 worker。标准
+PHP-FPM 下每个请求都是全新的，请启用 `Compile::cachePath()`，或用
+`vendor/bin/pure compile` 预编译模板，让请求加载产物而不是重建。
+组件、列表、条件与缓存请参见[组件](/zh/guide/components)与
+[编译组件](/zh/guide/compiled)。
 
 ## 即时渲染
 

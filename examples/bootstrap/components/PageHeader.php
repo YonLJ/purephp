@@ -1,35 +1,29 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+require_once __DIR__ . '/NavLink.php';
 
-use function Pure\HTML\a;
-use function Pure\HTML\div;
-use function Pure\HTML\h5;
-use function Pure\HTML\nav;
+use Pure\Core\Raw;
+
+use function Pure\Component\render;
 
 /**
- * Nav / sign-up link shape: bindings provide text, href and class.
+ * The page header: the company name, the nav links and the sign-up link.
+ *
+ * @param list<array{text: string, href: string, class: string}> $navs
+ * @param array{text: string, href: string, class: string} $signUp
  */
-function NavLinkShape(): Shape
+function PageHeader(string $companyName, array $navs, array $signUp): Raw
 {
-    static $shape;
+    $links = [];
 
-    return $shape ??= Compile::shape(
-        a(Slot::text('text'))->class(Slot::attr('class'))->href(Slot::attr('href'))
-    );
-}
+    foreach ($navs as $nav) {
+        $links[] = (string)NavLink($nav['text'], $nav['href'], $nav['class']);
+    }
 
-function PageHeaderShape(string $companyName): Shape
-{
-    static $shapes = [];
-
-    return $shapes[$companyName] ??= Compile::shape(
-        div(
-            h5($companyName)->class('my-0 mr-md-auto font-weight-normal'),
-            nav(Slot::each('navs', NavLinkShape()))->class('my-2 my-md-0 mr-md-3'),
-            Slot::child('signUp', NavLinkShape())
-        )->class('d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow')
+    return render(
+        __DIR__ . '/PageHeader.shape.php',
+        company: $companyName,
+        navs: implode('', $links),
+        signUp: (string)NavLink($signUp['text'], $signUp['href'], $signUp['class']),
     );
 }

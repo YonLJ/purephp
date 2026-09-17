@@ -40,23 +40,59 @@ echo $shape([
 | `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
+## 函数组件
+
+`Pure\Component\render()` 与 `Pure\Component\renderPage()` 在一个表达式里把模板变成
+`Raw` 标记，组件函数与页面函数都建立在它们之上：
+
+```php
+<?php
+
+use Pure\Core\Raw;
+use function Pure\Component\render;
+
+function Card(string $title, string $content): Raw
+{
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content);
+}
+```
+
+| 函数 | 行为 |
+| --- | --- |
+| `render(string $source, mixed ...$data): Raw` | 渲染组件模板；绑定器按路径缓存 |
+| `renderPage(string $source, array $data): Raw` | 同上，并附加根标签的文档声明 |
+| `component(Tag\|string $source): Closure` | 返回片段的 `fn (array $data): Raw` 绑定器 |
+| `page(Tag\|string $source): Closure` | 同上，并附加根标签的文档声明 |
+
+`render()` 的槽位值按名字传入（`render($file, title: $title)`），也可以传解包的字符串键
+数组；位置参数会被 `RuntimeException` 拒绝。`component()` 与 `page()` 是更底层的助手，
+用于内联树，或需要自己把绑定器存进 `static` 变量的场合。
+
+传入 `Tag` 时就地编译；传入字符串时视为 `*.shape.php` 路径。对文件而言，相邻的
+`*.pure.php` 产物存在且不早于 shape 文件时直接加载，生产环境因此跳过形状树构建与指纹计算；
+否则编译 shape 文件（磁盘缓存仍然生效）。文件缺失、模板未返回 `Shape`、产物未返回
+`Renderer` 都会抛出带文件名的 `RuntimeException`。用 `pure compile` 构建产物，
+用 `pure compile --check` 在 CI 中保证产物新鲜。
+
 ## 形状与数据
 
 形状就是普通标签树，只是把动态值替换为 `Slot` 占位符。形状里不能包含请求数据，并且必须
-**每进程只构建一次**——放进组件函数内的 `static` 变量中，绝不能放在请求处理器里。
+**每进程只构建一次**——文件形式由 `render()` 的路径缓存保证，内联树放进组件函数内的
+`static` 变量中，绝不能放在请求处理器里。
 标准 PHP-FPM 下 `static` 每个请求都会重置，因此请启用 `Compile::cachePath()`，让请求加载
 已编译的渲染器而不是重新生成。
 
-| 经典组件 | 编译组件 |
+| 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function CardShape(): Shape` |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.shape.php` 模板 |
 | `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | 静态 props 用 `->class($classList)`，动态 props 用 `->class(Slot::attr('classList'))` |
-| `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
+| `->class($classList)` | 静态值用 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
+| `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，把拼接好的标记经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` |
+| `<Child($props)>` | 调用 `Child(...)` 并把它的 `Raw` 经 `Slot::raw()` 注入 |
 
-静态子组件完全不需要槽位——直接放进形状里构建，它们会被编译成字面量：
+没有 props 的子组件也可以直接作为子节点传给模板：`Raw` 是合法的标签内容，该子树会被
+编译成字面量。
 
 ```php
 $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));

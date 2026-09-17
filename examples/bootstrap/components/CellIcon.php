@@ -2,25 +2,21 @@
 
 require_once __DIR__ . '/Icon.php';
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\h3;
-use function Pure\HTML\p;
+use function Pure\Component\render;
 
-function CellIconShape(): Shape
+/**
+ * One "icon grid" item.
+ *
+ * @param array{icon: string, title: string, content: string} $item
+ */
+function CellIcon(array $item): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            Slot::child('icon', IconShape('bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em')),
-            div(
-                h3(Slot::text('title'))->class('fw-bold mb-0 fs-4'),
-                p(Slot::text('content'))
-            )
-        )->class('col d-flex align-items-start')
+    return render(
+        __DIR__ . '/CellIcon.shape.php',
+        icon: (string)Icon('#' . $item['icon'], 'bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'),
+        title: $item['title'],
+        content: $item['content'],
     );
 }

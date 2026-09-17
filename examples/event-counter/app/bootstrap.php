@@ -2,28 +2,6 @@
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
 
-use Pure\Compile\Renderer;
-
-/**
- * The view layer: renders one compiled view with its data.
- *
- * @param string $name The view name, without the .php suffix.
- * @param array<string, mixed> $data The view data, keyed by slot name.
- * @return string The rendered document.
- */
-function view(string $name, array $data = []): string
-{
-    static $views = [];
-
-    $renderer = $views[$name] ??= require __DIR__ . '/../views/' . $name . '.php';
-
-    if (!$renderer instanceof Renderer) {
-        throw new RuntimeException("view '{$name}' must return a Renderer.");
-    }
-
-    return $renderer->header . $renderer->render($data);
-}
-
 /**
  * The loader of a plain view (compiled with `pure compile --plain`): markup and
  * native PHP, with the view data extracted into locals. Nothing of purephp is

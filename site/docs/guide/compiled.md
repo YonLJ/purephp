@@ -91,48 +91,34 @@ $item = Compile::shape(
 
 ## Components
 
-A component is a function that returns a `Shape`. Static props are function
-arguments, dynamic props are slots, and the shape is memoized in `static` so it
-is compiled once per process (see [Caching](#caching) for the PHP-FPM case):
+A component is a function with typed parameters returning `Raw`, backed by a
+`*.shape.php` template that `render()` binds and caches per path (see
+[Components](/guide/components) and [Caching](#caching) for the PHP-FPM case):
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// Card.shape.php
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 
-use function Pure\HTML\{div, h2, p};
+// Card.php
+use Pure\Core\Raw;
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
-
-function PageShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            Slot::child('card', CardShape('card shadow'))
-        )->class('container')
-    );
-}
-
-PageShape()->print([
-    'card' => ['title' => 'Hello', 'content' => 'Compiled card'],
-]);
 ```
 
-Nested components use `Slot::child()`, lists use `Slot::each()`, mixed lists use
-`Slot::eachKind()`, and optional/conditional markup uses `Slot::if()`.
+Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`,
+mixed lists use `Slot::eachKind()`, optional/conditional markup uses
+`Slot::if()`, and rendered child components enter through `Slot::raw()`.
 
 ### Lists
 
@@ -254,33 +240,36 @@ $pureBody = static function (array $v): string {
 ```
 
 `Renderer::$header` holds the document header captured at build time (the
-`<!DOCTYPE html>` of an `html()` root), so a request handler only has to print
-the view. `examples/bootstrap` is a small MVC setup built on that:
+`<!DOCTYPE html>` of an `html()` root). Components and pages in
+`examples/bootstrap` are ordinary functions built on that:
 
 ```php
-// app/controllers/FeaturesController.php: fetch data and fill the compiled view
-function featuresController(): string
+// components/Icon.php: typed props, backed by its precompiled template
+function Icon(string $href, string $class = 'bi'): Raw
 {
-    return view('features.pure', [
-        'title' => 'Features · Bootstrap v5.2',
-        'content' => [/* … */],
-    ]);
+    return render(__DIR__ . '/Icon.shape.php', href: $href, class: $class);
 }
 
-// app/bootstrap.php: features.pure maps to views/features.pure.php
-function view(string $name, array $data = []): string
+// views/features.php: the page skeleton plus the rendered body
+function featuresPage(array $data): Raw
 {
-    static $views = [];
-
-    $renderer = $views[$name] ??= require __DIR__ . '/../views/' . $name . '.php';
-
-    return $renderer->header . $renderer->render($data);
+    return renderPage(__DIR__ . '/features.shape.php', [
+        'title' => $data['title'],
+        'content' => (string) FeaturesBody($data['content']),
+    ]);
 }
 ```
 
-Its `PlainFeaturesController` returns the same `featuresData()` through
-`plain()` instead, and one router (`public/index.php`) serves every page in both
-flavors — `/pure/features` and `/pure/pricing` render the artifacts while
+`Pure\Component\render()` and `renderPage()` load the artifact of a shape file
+when one exists next to it and is at least as new as the shape file; otherwise
+they compile the shape file (the disk cache still applies). `renderPage()`
+prepends the document header, `render()` returns the fragment. The binder
+underneath is `component()` / `page()`, which you can hold yourself for inline
+trees.
+
+Its `PlainFeaturesController` passes the same bindings through `plain()`, and
+one router (`public/index.php`) serves every page in both flavors —
+`/pure/features` and `/pure/pricing` render the page functions while
 `/plain/features` and `/plain/pricing` render the plain views — so you can
 compare the flavors while developing.
 - Build artifacts with the same PHP minor version as production: the fingerprint
@@ -289,6 +278,28 @@ compare the flavors while developing.
   not verify the shape tree, so `--check` is the way to notice a stale artifact.
 - Output echoed while a shape file loads is discarded; build messages are the
   only thing `pure compile` writes.
+
+### Component Artifacts and Caching
+
+Every component template is a `*.shape.php` file, so `pure compile` builds it
+like any other shape. The binder checks the artifact mtime against the shape
+file: a fresh artifact is loaded as-is (no shape tree, no fingerprint), a stale
+or missing one falls back to compiling the shape file. In CI, `pure compile
+--check` reports stale artifacts with exit code 1.
+
+What to enable depends on the deployment:
+
+- **PHP-FPM** — enable `Compile::cachePath()` and build artifacts. Every
+  request otherwise rebuilds each component's shape tree and fingerprint
+  (roughly 14 µs per component in the examples), which adds up on
+  component-heavy pages; the artifact cuts that to a `require`.
+- **Long-running workers** (RoadRunner, Swoole, FrankenPHP) — enable
+  `Compile::cachePath()`; the per-path binder cache (built into `render()`,
+  `static $render` for inline trees) keeps the renderer in memory, so
+  artifacts are optional.
+- **`opcache.preload`** — preloading keeps code in memory but does not carry
+  static variables across requests (PHP's preload RFC states this explicitly),
+  so it is not a substitute for either of the above.
 
 ### Dependency-Free Views
 
@@ -322,6 +333,10 @@ compiled component, so the strict slot semantics stay with the artifact:
 - a `null` attribute prints an empty value instead of disappearing;
 - list slots are not checked for being iterable, and values are stringified by
   PHP rather than by `SlotRuntime`.
+
+With function components the controller renders the components first and passes
+their markup as the raw bindings the page shape prints, so the view file stays
+dependency-free while the request handler uses the library.
 
 The view declares every root slot with an `@var` annotation derived from the
 shape, so static analyzers read the extracted locals without an exclusion and
@@ -380,16 +395,16 @@ php examples/bootstrap/bench.php
   entirely.
 - Shapes must not contain request data — they are process-level artifacts.
 
-## Classic Component → Shape Mapping
+## Classic Component → PurePHP Mapping
 
-| Classic component | Compiled component |
+| Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function CardShape(): Shape` |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.shape.php` template |
 | `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | `->class($classList)` for static props, `->class(Slot::attr('classList'))` for dynamic ones |
-| `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
+| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
+| `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject through `Slot::raw()` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` |
+| `<Child($props)>` | call `Child(...)` and inject its `Raw` through `Slot::raw()` |
 
 Immediate (`render()`) tag trees remain available for snippets and debugging;
 see [Basic Usage](/guide/basic-usage).

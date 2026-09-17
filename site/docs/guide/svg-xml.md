@@ -115,21 +115,22 @@ saves or prints it.
 
 ### Compiled XML Documents
 
-`AddressShape()` renders one record; `city` is optional and only appears when
-the data provides it:
+`Address()` renders one record; `city` is optional and only appears when the
+data provides it:
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-function AddressShape(): Shape
-{
-    static $shape;
+use function Pure\Component\component;
 
-    return $shape ??= Compile::shape(
+function Address(array $address): Raw
+{
+    static $render;
+    $render ??= component(
         XML::address(
             XML::street(Slot::text('street')),
             Slot::if('city', Compile::shape(XML::city(Slot::text('city')))),
@@ -137,34 +138,43 @@ function AddressShape(): Shape
             XML::zip(Slot::text('zip'))
         )
     );
+
+    return $render($address);
 }
 
-$page = Compile::shape(
-    XML::customers(
-        XML::customer(
-            XML::name('Charter Group'),
-            Slot::each('addresses', AddressShape())
-        )->id('55000')
-    )
-);
+function Customers(array $addresses): Raw
+{
+    static $render;
+    $render ??= component(
+        XML::customers(
+            XML::customer(
+                XML::name('Charter Group'),
+                Slot::raw('addresses')
+            )->id('55000')
+        )
+    );
 
-$data = [
-    'addresses' => [
-        ['street' => '100 Main', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
-        ['street' => '720 Prospect', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
-        ['street' => '120 Ridge', 'state' => 'MA', 'zip' => '01760'],
-    ],
-];
+    $html = '';
 
-$page->save('./example.xml', $data);
+    foreach ($addresses as $address) {
+        $html .= (string)Address($address);
+    }
+
+    return $render(['addresses' => $html]);
+}
+
+echo Customers([
+    ['street' => '100 Main', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+    ['street' => '720 Prospect', 'city' => 'Framingham', 'state' => 'MA', 'zip' => '01701'],
+    ['street' => '120 Ridge', 'state' => 'MA', 'zip' => '01760'],
+]);
 ```
 
-`Slot::each()` renders one `AddressShape()` per record, and `Slot::if()` skips
-the `city` element for records without it — a missing key is false and never
-throws. The same shape renders to a string with `$page($data)` or
-`$page->print($data)`; `save()` prepends the document header of the root tag,
-and you can pass your own header as the third argument of `Shape::save()`
-(`Renderer::save()` takes it as well but defaults to none).
+`Slot::if()` skips the `city` element for records without it — a missing key is
+false and never throws. To write the document to a file, pass the rendered
+string to `file_put_contents()`; `Renderer::save()` on the underlying template
+prepends the document header of the root tag and takes a custom header as its
+third argument.
 
 ### Data-driven Elements
 

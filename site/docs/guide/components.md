@@ -1,231 +1,160 @@
 # Components
 
-Components are the building blocks of a PurePHP UI. A component is a PHP
-function that returns a `Shape`; it is compiled once per process (a
-long-running worker; under standard PHP-FPM enable `Compile::cachePath()` so
-requests load the compiled renderer) and rendered as many times as needed with
-different data.
+A component is a PHP function with typed parameters that returns `Raw` markup.
+The template behind it is a shape file that `pure compile` precompiles, and the
+`render()` helper binds the two in a single expression.
 
-## Function Components
-
-A component takes static configuration as function arguments and describes
-dynamic values with slots. Memoize the shape in a `static` variable so the
-compile step happens once per process:
+## Your First Component
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
-
-use function Pure\HTML\{div, h2, p};
-
-function CardShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class('card')
-    );
-}
-
-// Render the component with data
-CardShape()->print([
-    'title' => 'Title',
-    'content' => 'Content',
-]);
-```
-
-Never call `Compile::shape()` inside a request handler; the guard
-(`Compile::guard(true)`) warns when a call site builds shapes repeatedly.
-
-## Component Props
-
-### 1. Static Props
-
-Static props become function arguments. Memoize per argument value so each
-variant gets its own shape:
-
-```php
-<?php
-
-function CardShape(string $classList = 'card'): Shape
-{
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
-}
-
-CardShape('card shadow')->print([
-    'title' => 'Shadowed',
-    'content' => 'Static props are function arguments',
-]);
-```
-
-### 2. Dynamic Props
-
-Dynamic props are slots, bound at render time:
-
-```php
-<?php
-
-$shape = Compile::shape(
-    button(Slot::text('label'))->type('button')->class(Slot::attr('class'))
-);
-
-$shape(['label' => 'Save', 'class' => 'btn btn-primary']);
-```
-
-### 3. Event Props
-
-Event handlers are static attributes on the tag (`->onclick(...)`,
-`->onchange(...)`); the browser-side handler is identified by its name, so it
-is part of the shape:
-
-```php
-<?php
-
-$shape = Compile::shape(
-    button(Slot::text('label'))->onclick('handleClick()')
-);
-
-$shape(['label' => 'Click me']);
-```
-
-## Child Components
-
-`Slot::child()` embeds another shape and creates a nested data scope for it:
-
-```php
-<?php
-
-function IconShape(string $class = 'icon'): Shape
-{
-    static $shapes = [];
-
-    return $shapes[$class] ??= Compile::shape(
-        span(Slot::attr('glyph'))->class($class)
-    );
-}
-
-function ButtonShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        button(
-            Slot::child('icon', IconShape()),
-            Slot::text('label')
-        )->class('btn')
-    );
-}
-
-ButtonShape()->print([
-    'icon' => ['glyph' => '+'],
-    'label' => 'Add',
-]);
-```
-
-When a child component needs a different data shape than its parent, derive the
-child scope in the data layer: a child slot reads `$data[$name]`, so the binding
-carries the nested array the child expects.
-
-```php
-<?php
-
-Slot::child('user', BadgeShape()); // reads $data['user']
-
-$shape(['user' => ['label' => 'ADA']]);
-```
-
-## Lists
-
-`Slot::each()` renders a child shape for every item:
-
-```php
-<?php
-
-$row = Compile::shape(li(Slot::text('label')));
-$list = Compile::shape(ul(Slot::each('rows', $row))->class('list'));
-
-$list(['rows' => [['label' => 'a'], ['label' => 'b']]]);
-```
-
-Each item becomes the data scope of the child shape; missing keys follow the
-usual rules (`default()`, `required(false)`, or `MissingSlotException`).
-
-## Conditional Rendering
-
-`Slot::if()` renders a branch based on the truthiness of a data key. A missing
-key is simply false — it never throws — and the branches share the current
-scope:
-
-```php
-<?php
-
-$shape = Compile::shape(
+// components/Card.shape.php — the template: static markup plus slots
+return Compile::shape(
     div(
-        Slot::if('admin', Compile::shape(span('Administrator')), Compile::shape(span('Guest')))
-    )
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class('card')
 );
-
-$shape(['admin' => true]);  // <div><span>Administrator</span></div>
-$shape([]);                 // <div><span>Guest</span></div>
 ```
-
-## Mixed Lists
-
-`Slot::eachKind()` dispatches each item on a discriminator key (default
-`kind`):
 
 ```php
 <?php
 
-$shape = Compile::shape(div(Slot::eachKind('blocks', [
-    'text' => Compile::shape(p(Slot::text('value'))),
-    'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
-])));
+// components/Card.php — the component: typed props in, Raw markup out
+use Pure\Core\Raw;
 
-$shape(['blocks' => [
-    ['kind' => 'text', 'value' => 'hello'],
-    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
-]]);
-```
+use function Pure\Component\render;
 
-An item without the discriminator or with an unknown kind raises an
-`InvalidArgumentException` naming the full path (`blocks[].kind`).
-
-## Component Composition
-
-Components compose by nesting shapes — either directly in a parent shape or
-through `Slot::child()`:
-
-```php
-<?php
-
-function PageShape(): Shape
+function Card(string $title, string $content): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        main(
-            Slot::child('header', HeaderShape()),
-            Slot::each('cards', CardShape())
-        )->class('page')
+    return render(
+        __DIR__ . '/Card.shape.php',
+        title: $title,
+        content: $content
     );
+}
+
+echo Card('Title', 'Content');
+```
+
+`render()` binds the shape file to a `data → Raw` function and caches that
+binder per path, so the template is loaded once per process: it uses the
+sibling `Card.pure.php` artifact when it is fresh and compiles
+`Card.shape.php` otherwise. Slot values are passed by name, or as an unpacked
+array with string keys (`render($file, ...$bindings)`). Run
+`vendor/bin/pure compile components` to build the artifacts.
+
+## Props
+
+Props are function parameters: type them, give them defaults, and pass them
+into the template's slots. Values that never change can be baked into the
+template; anything that changes per render belongs in the bindings.
+
+```php
+<?php
+
+function Badge(string $label, string $class = 'badge'): Raw
+{
+    return render(__DIR__ . '/Badge.shape.php', label: $label, class: $class);
 }
 ```
 
-Because a shape is data-free, a component shape can be reused in many pages at
-no extra cost: it is compiled once and inlined into each parent compiler.
+```php
+<?php
+
+// components/Badge.shape.php
+return Compile::shape(
+    span(Slot::text('label'))->class(Slot::attr('class'))
+);
+```
+
+## Composing Components
+
+A parent component calls its children and injects their output through
+`Slot::raw`:
+
+```php
+<?php
+
+// components/Button.shape.php
+return Compile::shape(
+    button(Slot::raw('icon'), Slot::text('label'))->class('btn')
+);
+
+// components/Button.php
+function Button(Raw $icon, string $label): Raw
+{
+    return render(__DIR__ . '/Button.shape.php', icon: $icon, label: $label);
+}
+
+Button(Icon('#plus'), 'Add');
+```
+
+Lists work the same way: loop in the component function, join the markup, pass
+the string into a raw slot. Use `Slot::each()` inside the template when the
+items are plain data rows that need no per-item component logic.
+
+## The Binder API
+
+`render()` is a convenience over two lower-level helpers:
+
+- `component($source)` returns the `data → Raw` binder of a template.
+- `page($source)` does the same and prepends the document header of the root
+  tag (the `<!DOCTYPE html>` of an `html()` root).
+
+Use them when the template is an inline tree (`component(div(Slot::text('title')))`)
+or when you want to hold the binder in a variable yourself:
+
+```php
+<?php
+
+function Tag(string $label): Raw
+{
+    static $render;
+    $render ??= component(div(Slot::text('label'))->class('tag'));
+
+    return $render(['label' => $label]);
+}
+```
+
+`render($file, ...)` and `renderPage($file, ...)` are the one-expression forms
+for shape files; both cache the binder per path, so you never need a `static`
+variable for a file-backed component.
+
+## Pages
+
+`renderPage()` is `render()` plus the document header:
+
+```php
+<?php
+
+function featuresPage(array $data): Raw
+{
+    return renderPage(__DIR__ . '/features.shape.php', [
+        'title' => $data['title'],
+        'content' => (string) FeaturesBody($data['content']),
+    ]);
+}
+```
+
+A page template is a shape file like any other, so pages get artifacts too; the
+controller just prints the result. The plain flavor (`pure compile --plain`)
+prints the same bindings from a dependency-free view file.
+
+## Caching
+
+- `render()` / `renderPage()` — the binder is cached per template path, so the
+  artifact or shape is loaded once per process.
+- `Compile::cachePath($dir)` — requests load generated renderers instead of
+  regenerating them.
+- `pure compile` artifacts — the binder skips the shape tree and the
+  fingerprint when the artifact is fresh; `pure compile --check` keeps CI
+  honest.
+- Long-running workers keep the memoized renderer in memory, so artifacts are
+  optional there.
+
+See [Compiled Components](/guide/compiled) for the full caching story.
 
 ## Immediate Rendering (Snippets)
 
@@ -235,16 +164,21 @@ directly:
 ```php
 <?php
 
-use function Pure\HTML\{div, h2, p};
-
 div(h2('Title'), p('Content'))->class('card')->print();
 ```
 
-Use this for snippets and debugging only; production pages should compile
-shapes so escaping and structure costs are paid once.
+Use this for snippets and debugging only; production components should compile
+a template so escaping and structure costs are paid once.
+
+## Slot Reference
+
+Components are functions; slots are the vocabulary *inside* a template:
+`Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::each()`, `Slot::if()`,
+`Slot::eachKind()` and `Slot::child()`. See [Props and Slots](/guide/props) for
+the complete binding reference.
 
 ## Next Steps
 
-- [Compiled Components](/guide/compiled) - Caching, guard and limitations
+- [Compiled Components](/guide/compiled) - Artifacts, caching and plain views
 - [Props and Slots](/guide/props) - The complete data-binding reference
 - [Events](/guide/events) - Event attributes and browser-side handlers

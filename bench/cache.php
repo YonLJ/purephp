@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 /**
  * Compares cold (generate + write) and warm (load from disk) compile times for
- * one page shape. Run each phase in its own process:
+ * the features page shape. Run each phase in its own process:
  *
  *   php bench/cache.php --clear   # clear cache, then compile and write
  *   php bench/cache.php           # load the cached renderer
+ *
+ * The shape measured is examples/bootstrap/views/features.shape.php, the page
+ * skeleton the example precompiles with `pure compile`; the body of the page is
+ * composed by the component functions and is not part of this shape.
  */
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../examples/bootstrap/views/features-sections.php';
 
 use Pure\Compile\Compile;
 
@@ -22,7 +25,7 @@ if (in_array('--clear', $argv, true)) {
     printf("cleared %d cache file(s)\n", Compile::clearCache());
 }
 
-$shape = FeaturesBodyShape();
+$shape = require __DIR__ . '/../examples/bootstrap/views/features.shape.php';
 $file = $dir . '/' . $shape->id() . '.php';
 $warm = is_file($file);
 

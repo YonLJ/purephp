@@ -79,45 +79,33 @@ $item = Compile::shape(
 
 ## 组件
 
-组件是返回 `Shape` 的函数。静态 props 是函数参数，动态 props 是槽位，并且形状会记忆化到 `static` 中，因此每个进程只编译一次（PHP-FPM 场景见[缓存](#缓存)）：
+组件是带类型化参数、返回 `Raw` 的函数，背后是一个 `*.shape.php` 模板；`render()`
+负责绑定并按路径缓存（参见[组件](/zh/guide/components)与
+[缓存](#缓存)中的 PHP-FPM 场景）：
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// Card.shape.php
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 
-use function Pure\HTML\{div, h2, p};
+// Card.php
+use Pure\Core\Raw;
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
-
-function PageShape(): Shape
-{
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            Slot::child('card', CardShape('card shadow'))
-        )->class('container')
-    );
-}
-
-PageShape()->print([
-    'card' => ['title' => 'Hello', 'content' => 'Compiled card'],
-]);
 ```
 
-嵌套组件使用 `Slot::child()`，列表使用 `Slot::each()`，混合列表使用 `Slot::eachKind()`，可选/条件标记使用 `Slot::if()`。
+模板内部：嵌套形状用 `Slot::child()`，列表用 `Slot::each()`，混合列表用
+`Slot::eachKind()`，可选/条件标记用 `Slot::if()`，已渲染的子组件经 `Slot::raw()` 注入。
 
 ### 列表
 
@@ -217,37 +205,53 @@ $pureBody = static function (array $v): string {
 };
 ```
 
-`Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`），
-因此请求处理器只需要打印视图。`examples/bootstrap` 就是基于它的一小组 MVC 示例：
+`Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`）。
+`examples/bootstrap` 的组件与页面都是建立在其上的普通函数：
 
 ```php
-// app/controllers/FeaturesController.php：组装数据并填充编译后的视图
-function featuresController(): string
+// components/Icon.php：类型化 props，背后是预编译模板
+function Icon(string $href, string $class = 'bi'): Raw
 {
-    return view('features.pure', [
-        'title' => 'Features · Bootstrap v5.2',
-        'content' => [/* … */],
-    ]);
+    return render(__DIR__ . '/Icon.shape.php', href: $href, class: $class);
 }
 
-// app/bootstrap.php：features.pure 对应 views/features.pure.php
-function view(string $name, array $data = []): string
+// views/features.php：页面骨架加已渲染的正文
+function featuresPage(array $data): Raw
 {
-    static $views = [];
-
-    $renderer = $views[$name] ??= require __DIR__ . '/../views/' . $name . '.php';
-
-    return $renderer->header . $renderer->render($data);
+    return renderPage(__DIR__ . '/features.shape.php', [
+        'title' => $data['title'],
+        'content' => (string) FeaturesBody($data['content']),
+    ]);
 }
 ```
 
-它的 `PlainFeaturesController` 把同一份 `featuresData()` 交给 `plain()` 渲染；单一入口
-`public/index.php` 为每个页面同时提供两种形态：`/pure/features`、`/pure/pricing` 走严格产物，
+`Pure\Component\render()` 与 `renderPage()` 会在 shape 文件旁边存在产物、且产物不早于
+shape 文件时直接加载产物，否则编译 shape 文件（磁盘缓存仍然生效）。`renderPage()` 会附加
+文档声明，`render()` 只返回片段；底层绑定器是 `component()` / `page()`，内联树可以直接持有
+它们。
+
+它的 `PlainFeaturesController` 把同一份 bindings 交给 `plain()` 渲染；单一入口
+`public/index.php` 为每个页面同时提供两种形态：`/pure/features`、`/pure/pricing` 走页面函数，
 `/plain/features`、`/plain/pricing` 走普通视图，开发时可以对照。
 - 请使用与生产环境相同的 PHP 次版本号构建产物：指纹与产物头部都嵌入了 PHP 版本（与缓存一致）。
 - 产物是构建输出：修改形状后需要重新构建。加载时不会校验形状树，因此请用 `--check`
   发现过期产物。
 - 加载形状文件时产生的输出会被丢弃；`pure compile` 只输出构建信息。
+
+### 组件产物与缓存策略
+
+每个组件模板都是一个 `*.shape.php`，因此 `pure compile` 会像其他形状一样为它构建产物。
+绑定器会比较产物与 shape 文件的 mtime：产物较新就直接加载（不建树、不算指纹），过期或缺失
+则回退到编译 shape 文件。CI 中用 `pure compile --check` 可以发现过期产物（退出码 1）。
+
+开启哪些取决于部署形态：
+
+- **PHP-FPM**——开启 `Compile::cachePath()` 并构建产物。否则每个请求都要为每个组件重建形状树
+  与指纹（示例中每个组件约 14 µs），组件多时累积明显；产物把这段降为一个 `require`。
+- **长驻 worker**（RoadRunner、Swoole、FrankenPHP）——开启 `Compile::cachePath()` 并保留
+  绑定器的路径缓存（`render()` 内置，内联树用 `static $render`）；renderer 常驻内存，产物可选。
+- **`opcache.preload`**——preload 只把代码常驻内存，不会让 static 变量跨请求保留（PHP preload
+  RFC 已明确说明），因此不能替代上面两种做法。
 
 ### 无依赖视图
 
@@ -275,6 +279,9 @@ $html = (string)ob_get_clean();
 - 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
 - `null` 属性输出为空值，而不是整个属性消失；
 - 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`。
+
+使用函数组件时，控制器会先渲染组件、再把它们的标记作为 raw bindings 传给页面形状，因此视图
+文件仍然无依赖，而请求处理器会用到库。
 
 视图会按形状结构为每个顶层槽生成 `@var` 注解，静态分析器无需排除规则或额外配置即可读取这些展开的局部变量：
 
@@ -318,15 +325,15 @@ php examples/bootstrap/bench.php
 - 编译时会读取当前的形状树，`id()` 也反映调用时刻的树。已编译的渲染器会持续渲染它编译时的那份树，因此在修改已包装为形状的树之后需要调用 `Compile::flush()`；每个进程只构建一次形状即可完全避免此问题。
 - 形状不得包含请求数据——它们是进程级产物。
 
-## 经典组件 → 形状映射
+## 经典组件 → PurePHP 映射
 
-| 经典组件 | 编译组件 |
+| 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function CardShape(): Shape` |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.shape.php` 模板 |
 | `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | 静态 props 直接 `->class($classList)`，动态的用 `->class(Slot::attr('classList'))` |
-| `array_map(fn ($row) => Row($row), $rows)` | `Slot::each('rows', RowShape())` |
+| `->class($classList)` | 静态值直接 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
+| `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | `Slot::child('props', ChildShape())` |
+| `<Child($props)>` | 调用 `Child(...)` 并把它的 `Raw` 经 `Slot::raw()` 注入 |
 
 即时（`render()`）标签树仍然可用于代码片段与调试；参见[基本用法](/zh/guide/basic-usage)。

@@ -2,14 +2,14 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/XmlData.php';
+require_once __DIR__ . '/../../views/xml.php';
 
 /**
- * The xml page controller for the artifact: it fills views/xml.pure.php with
- * data through view().
+ * The xml page controller.
  *
  * @return string The rendered document.
  */
 function indexController(): string
 {
-    return view('xml.pure', xmlData());
+    return (string)xmlPage(xmlData());
 }

@@ -1,13 +1,15 @@
 <?php declare(strict_types=1);
 
-use Pure\Core\HTML;
+use Pure\Core\Raw;
 
 use function Pure\HTML\div;
 
 /**
- * The divider between two page sections.
+ * The divider between two page sections: static markup, rendered once.
  */
-function DividerShape(): HTML
+function Divider(): Raw
 {
-    return div()->class('b-example-divider');
+    static $divider;
+
+    return $divider ??= Raw::of(div()->class('b-example-divider')->render());
 }

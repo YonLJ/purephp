@@ -26,52 +26,56 @@ Then include HTMX in your HTML:
 
 ### 2. Create Dynamic Components
 
-The counter text is a bound slot; the endpoint renders the same `CountShape()`
-fragment with the new count:
+The counter text is a bound slot; the endpoint renders the same `CounterValue()`
+component with the new count. The templates are shape files:
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// Count.shape.php
+return Compile::shape(
+    p('Current count: ', Slot::text('count'))->id('counter')
+);
 
-use function Pure\HTML\{div, button, p};
+// Counter.shape.php
+return Compile::shape(
+    div(
+        Slot::raw('counter'),
+        button('Increment')
+            ->hxPost('/increment')
+            ->hxTarget('#counter')
+            ->hxSwap('innerHTML')
+    )->class('counter')
+);
+```
 
-function CountShape(): Shape
+```php
+<?php
+
+use Pure\Core\Raw;
+
+use function Pure\HTML\{button, div, p};
+use function Pure\Component\render;
+
+function CounterValue(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        p('Current count: ', Slot::text('count'))->id('counter')
-    );
+    return render(__DIR__ . '/Count.shape.php', count: $count);
 }
 
-function CounterShape(): Shape
+function Counter(int $count): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            Slot::child('counter', CountShape()),
-            button('Increment')
-                ->hxPost('/increment')
-                ->hxTarget('#counter')
-                ->hxSwap('innerHTML')
-        )->class('counter')
-    );
+    return render(__DIR__ . '/Counter.shape.php', counter: (string) CounterValue($count));
 }
 
 // Render the page
-$bindings = ['counter' => ['count' => 0]];
-
-CounterShape()->print($bindings);
+echo Counter(0);
 
 // Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['REQUEST_URI'] === '/increment') {
     $count = (int)($_COOKIE['count'] ?? 0) + 1;
     setcookie('count', $count);
 
-    CountShape()->print(['count' => $count]);
+    echo CounterValue($count);
     exit;
 }
 ```
@@ -107,63 +111,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], '/to
 
 ### 4. Live Search
 
-The result list is a shape; every result title is bound with `Slot::text()`, and
-the endpoint renders the list shape with the search results:
+The result list is a component; every result title is bound with `Slot::text()`,
+and the endpoint renders the list component with the search results:
 
 ```php
 <?php
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+// SearchResult.shape.php
+return Compile::shape(
+    div(Slot::text('title'))->class('search-result')
+);
 
-use function Pure\HTML\{input, div};
+// ResultList.shape.php
+return Compile::shape(div(Slot::raw('results')));
 
-function SearchResultShape(): Shape
+// SearchBox.shape.php
+return Compile::shape(
+    div(
+        input()
+            ->type('text')
+            ->placeholder('Search...')
+            ->hxGet('/search')
+            ->hxTrigger('keyup changed delay:500ms')
+            ->hxTarget('#results'),
+        div(Slot::raw('list'))->id('results')
+    )->class('search-box')
+);
+```
+
+```php
+<?php
+
+use Pure\Core\Raw;
+
+use function Pure\HTML\{div, input};
+use function Pure\Component\render;
+
+function SearchResult(string $title): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(Slot::text('title'))->class('search-result')
-    );
+    return render(__DIR__ . '/SearchResult.shape.php', title: $title);
 }
 
-function ResultListShape(): Shape
+function ResultList(array $results): Raw
 {
-    static $shape;
+    $items = [];
 
-    return $shape ??= Compile::shape(
-        div(Slot::each('results', SearchResultShape()))
-    );
+    foreach ($results as $result) {
+        $items[] = (string) SearchResult($result['title']);
+    }
+
+    return render(__DIR__ . '/ResultList.shape.php', results: implode('', $items));
 }
 
-function SearchBoxShape(): Shape
+function SearchBox(Raw $list): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            input()
-                ->type('text')
-                ->placeholder('Search...')
-                ->hxGet('/search')
-                ->hxTrigger('keyup changed delay:500ms')
-                ->hxTarget('#results'),
-            div(Slot::child('list', ResultListShape()))->id('results')
-        )->class('search-box')
-    );
+    return render(__DIR__ . '/SearchBox.shape.php', list: $list);
 }
 
 // Render the page with an empty result list
-$bindings = ['list' => ['results' => []]];
-
-SearchBoxShape()->print($bindings);
+echo SearchBox(ResultList([]));
 
 // Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search') {
     $query = $_GET['q'] ?? '';
     $results = searchItems($query); // Search items
 
-    ResultListShape()->print(['results' => $results]);
+    echo ResultList($results);
     exit;
 }
 ```

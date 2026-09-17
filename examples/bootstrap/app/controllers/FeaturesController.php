@@ -2,15 +2,17 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/FeaturesData.php';
+require_once __DIR__ . '/../../views/features.php';
 
 /**
- * The features page controller for the artifact: it fills
- * views/features.pure.php with data through view(). Slots are validated, so a
- * required slot the data does not provide throws MissingSlotException.
+ * The features page controller: the page function binds the data through the
+ * component functions and the precompiled document skeleton. Slots are
+ * validated, so a required slot the data does not provide throws
+ * MissingSlotException.
  *
  * @return string The rendered document.
  */
 function featuresController(): string
 {
-    return view('features.pure', featuresData());
+    return (string)featuresPage(featuresData());
 }

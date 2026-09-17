@@ -6,8 +6,8 @@
  *
  *     /            redirects to /plain
  *     /index.php   redirects to /plain
- *     /pure        the compiled artifact (views/xml.pure.php, strict slots)
- *     /plain       the plain view (views/xml.plain.php, no library at render time)
+ *     /pure        the page function and the xml artifact
+ *     /plain       the plain view (views/xml.plain.php, no library in the view file)
  *
  * The response is XML, so the content type is application/xml and a request that
  * matches nothing gets a 404 that lists the routes as XML. The CLI entry that
@@ -24,8 +24,8 @@ use Pure\Core\XML;
 
 // The pages and aliases of this router, for the 404 map below.
 $pages = [
-    '/pure' => 'the compiled artifact, strict slots',
-    '/plain' => 'the plain view, no library at render time',
+    '/pure' => 'the page function and the artifact',
+    '/plain' => 'the plain view, no library in the view file',
 ];
 $redirects = [
     '/' => '/plain',

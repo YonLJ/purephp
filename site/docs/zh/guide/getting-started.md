@@ -54,42 +54,55 @@ composer require yonld/purephp
 
 ### 2. 创建入口文件
 
-创建 `index.php`：
+先创建页面模板 `page.shape.php`——静态标记加槽位：
+
+```php
+<?php
+
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\{div, h1, p};
+
+return Compile::shape(
+    div(
+        h1(Slot::text('heading')),
+        p(Slot::text('lead')),
+        p(Slot::text('body'))
+    )->class('container')
+);
+```
+
+再创建绑定数据的页面函数 `index.php`：
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\{div, h1, p};
+use function Pure\Component\{page, renderPage};
 
-/**
- * 页面形状：把数据换成 Slot 占位符的无数据树。
- * 它在每个进程只构建一次（长驻 worker；标准 PHP-FPM 下请启用
- * Compile::cachePath()，让请求加载已编译的渲染器而不是重建）。
- */
-function PageShape(): Shape
+function pageView(array $data): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            h1(Slot::text('heading')),
-            p(Slot::text('lead')),
-            p(Slot::text('body'))
-        )->class('container')
-    );
+    return renderPage(__DIR__ . '/page.shape.php', [
+        'heading' => $data['heading'],
+        'lead' => $data['lead'],
+        'body' => $data['body'],
+    ]);
 }
 
-PageShape()->print([
+echo pageView([
     'heading' => 'My First PurePHP Application',
     'lead' => 'Welcome to PurePHP!',
     'body' => 'This is a simple yet powerful PHP template engine.',
 ]);
 ```
+
+`renderPage()` 每进程只加载一次模板，并附加文档声明。标准 PHP-FPM 下请启用
+`Compile::cachePath()`，让请求加载已编译的渲染器而不是重建；也可以用
+`vendor/bin/pure compile .` 预编译模板，让绑定器直接加载产物。
 
 ### 3. 运行应用
 
@@ -111,41 +124,45 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 ```
 
 当同一调用点在单个进程内过多地调用 `Compile::shape()` 时，它会按调用点发出一次
-`E_USER_WARNING`，并指向 `static $shape ??=` 模式。
+`E_USER_WARNING`；例如每次调用都重建的内联 `component(...)`。文件形式的组件走
+`render()`，绑定器按模板路径缓存，不会反复编译。
 
 ## 基础示例
 
 ### 使用组件
 
-组件是返回 `Shape` 的函数；静态 props 是函数参数，动态 props 是槽位：
+组件是带类型化参数、返回 `Raw` 的函数，背后有自己的模板：
 
 ```php
 <?php
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\{Compile, Shape};
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
 use function Pure\HTML\{div, h2, p};
+use function Pure\Component\render;
 
-function CardShape(string $classList = 'card'): Shape
+function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    static $shapes = [];
-
-    return $shapes[$classList] ??= Compile::shape(
-        div(
-            h2(Slot::text('title')),
-            p(Slot::text('content'))
-        )->class($classList)
-    );
+    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
 }
 
 // 使用数据渲染组件
-CardShape()->print([
-    'title' => 'Card Title',
-    'content' => 'This is the card content',
-]);
+echo Card('Card Title', 'This is the card content');
+```
+
+```php
+<?php
+
+// Card.shape.php
+
+return Compile::shape(
+    div(
+        h2(Slot::text('title')),
+        p(Slot::text('content'))
+    )->class(Slot::attr('class'))
+);
 ```
 
 ### 设置属性

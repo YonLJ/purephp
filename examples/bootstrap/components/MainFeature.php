@@ -1,23 +1,21 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\a;
-use function Pure\HTML\div;
-use function Pure\HTML\h3;
-use function Pure\HTML\p;
+use function Pure\Component\render;
 
-function MainFeatureShape(): Shape
+/**
+ * The "features with title" main column.
+ *
+ * @param array{title: string, content: string, link: string, linkText: string} $main
+ */
+function MainFeature(array $main): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            h3(Slot::text('title'))->class('fw-bold'),
-            p(Slot::text('content'))->class('text-muted'),
-            a(Slot::text('linkText'))->class('btn btn-primary btn-lg')->href(Slot::attr('link'))
-        )->class('col d-flex flex-column align-items-start gap-2')
+    return render(
+        __DIR__ . '/MainFeature.shape.php',
+        title: $main['title'],
+        content: $main['content'],
+        link: $main['link'],
+        linkText: $main['linkText'],
     );
 }

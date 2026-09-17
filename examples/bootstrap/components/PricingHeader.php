@@ -1,21 +1,17 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Slot;
+use Pure\Core\Raw;
 
-use function Pure\HTML\div;
-use function Pure\HTML\h1;
-use function Pure\HTML\p;
+use function Pure\Component\render;
 
-function PricingHeaderShape(): Shape
+/**
+ * The pricing page heading.
+ */
+function PricingHeader(string $title, string $desc): Raw
 {
-    static $shape;
-
-    return $shape ??= Compile::shape(
-        div(
-            h1(Slot::text('title'))->class('display-4'),
-            p(Slot::text('desc'))->class('lead')
-        )->class('pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center')
+    return render(
+        __DIR__ . '/PricingHeader.shape.php',
+        title: $title,
+        desc: $desc,
     );
 }
