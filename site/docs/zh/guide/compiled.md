@@ -218,19 +218,19 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 ```
 
 `Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`），
-因此请求处理器只需要打印视图。`examples/bootstrap-features` 就是基于它的一小组 MVC 示例：
+因此请求处理器只需要打印视图。`examples/bootstrap` 就是基于它的一小组 MVC 示例：
 
 ```php
-// app/controllers/IndexController.php：组装数据并填充编译后的视图
-function indexController(): string
+// app/controllers/FeaturesController.php：组装数据并填充编译后的视图
+function featuresController(): string
 {
-    return view('index.pure', [
+    return view('features.pure', [
         'title' => 'Features · Bootstrap v5.2',
         'content' => [/* … */],
     ]);
 }
 
-// app/bootstrap.php：index.pure 对应 views/index.pure.php
+// app/bootstrap.php：features.pure 对应 views/features.pure.php
 function view(string $name, array $data = []): string
 {
     static $views = [];
@@ -241,9 +241,9 @@ function view(string $name, array $data = []): string
 }
 ```
 
-它的 `PlainIndexController` 把同一份 `indexData()` 交给 `plain()` 渲染；单一入口
-`public/index.php` 同时提供两条路由：`/` 重定向到 `/plain`、`/pure` 走严格产物、
-`/plain` 走普通视图，开发时可以对照。
+它的 `PlainFeaturesController` 把同一份 `featuresData()` 交给 `plain()` 渲染；单一入口
+`public/index.php` 为每个页面同时提供两种形态：`/pure/features`、`/pure/pricing` 走严格产物，
+`/plain/features`、`/plain/pricing` 走普通视图，开发时可以对照。
 - 请使用与生产环境相同的 PHP 次版本号构建产物：指纹与产物头部都嵌入了 PHP 版本（与缓存一致）。
 - 产物是构建输出：修改形状后需要重新构建。加载时不会校验形状树，因此请用 `--check`
   发现过期产物。
@@ -322,7 +322,7 @@ bootstrap features 示例使用编译路径后渲染约快 10 倍。
 
 ```bash
 php bench/compare.php
-php examples/bootstrap-features/bench.php
+php examples/bootstrap/bench.php
 ```
 
 ## 限制

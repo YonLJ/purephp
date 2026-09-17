@@ -4,6 +4,11 @@ parameters:
         - src
         - tests
         - bin/pure
+    # The examples call global functions defined by files they require at
+    # runtime; scanning them keeps analyzers from reporting those as undefined.
+    scanDirectories:
+        - examples
+        - bench
     excludePaths:
         - vendor
     ignoreErrors:

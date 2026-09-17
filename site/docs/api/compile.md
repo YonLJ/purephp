@@ -220,7 +220,7 @@ Benchmarks are manual, not part of CI:
 
 ```bash
 php bench/compare.php
-php examples/bootstrap-features/bench.php
+php examples/bootstrap/bench.php
 ```
 
 ## Limitations

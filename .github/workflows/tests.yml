@@ -82,3 +82,31 @@ jobs:
 
     - name: Run PHPStan
       run: composer phpstan
+
+    - name: Smoke test the examples
+      run: |
+        php bin/pure compile --plain examples
+        php bin/pure compile --check --plain examples
+        for route in /cover /pure/features /plain/features /pure/pricing /plain/pricing; do
+          if REQUEST_URI="$route" php examples/bootstrap/public/index.php | grep -q '<h1>404</h1>'; then
+            echo "route $route fell back to the 404 page"
+            exit 1
+          fi
+        done
+        for route in /index.php /pure /plain; do
+          if REQUEST_URI="$route" php examples/event-counter/public/index.php | grep -q '<h1>404</h1>'; then
+            echo "route $route fell back to the 404 page"
+            exit 1
+          fi
+        done
+        php examples/event-counter/public/index.php | grep -q '<!DOCTYPE html>' || exit 1
+        for route in /index.php /pure /plain; do
+          if REQUEST_URI="$route" php examples/xml/public/index.php | grep -q '<routes '; then
+            echo "route $route fell back to the 404 page"
+            exit 1
+          fi
+        done
+        php examples/xml/public/index.php | grep -q '<?xml' || exit 1
+        REQUEST_URI=/pure php examples/xml/public/index.php | grep -q '<customers' || exit 1
+        php examples/xml/write.php > /dev/null
+        grep -q '<customers' examples/xml/example.xml

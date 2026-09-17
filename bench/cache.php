@@ -11,7 +11,7 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../examples/bootstrap-features/shapes.php';
+require __DIR__ . '/../examples/bootstrap/views/features-sections.php';
 
 use Pure\Compile\Compile;
 
@@ -22,7 +22,7 @@ if (in_array('--clear', $argv, true)) {
     printf("cleared %d cache file(s)\n", Compile::clearCache());
 }
 
-$shape = FeaturePageShape();
+$shape = FeaturesBodyShape();
 $file = $dir . '/' . $shape->id() . '.php';
 $warm = is_file($file);
 
