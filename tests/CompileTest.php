@@ -499,4 +499,22 @@ class CompileTest extends TestCase
         $this->assertArrayNotHasKey('seed', $remaining);
         $this->assertLessThanOrEqual($limit, $bytes->getValue());
     }
+
+    public function testSourceMemoCanBeDisabledByEnvironment(): void
+    {
+        putenv('PURE_COMPILE_MEMO_BYTES=0');
+
+        try {
+            $shape = Compile::shape(div(span(Slot::text('env-memo'))));
+
+            $this->assertSame('<div><span>x</span></div>', $shape(['env-memo' => 'x']));
+
+            $sources = new ReflectionProperty(Compile::class, 'sources');
+            /** @var array<string, string> $remaining */
+            $remaining = $sources->getValue();
+            $this->assertArrayNotHasKey($shape->id(), $remaining);
+        } finally {
+            putenv('PURE_COMPILE_MEMO_BYTES');
+        }
+    }
 }

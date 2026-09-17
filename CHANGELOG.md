@@ -56,6 +56,7 @@ First public version. No tag has been cut yet.
   of regenerated; map closures stay live, so a rebuilt shape binds its own
   closures. The memo is bounded by a byte budget (oldest sources are dropped
   first), so a structure that varies per request cannot grow it without limit;
+  `PURE_COMPILE_MEMO_BYTES` changes the budget and `0` disables the memo, and
   `Compile::flush()` clears it.
 - The concepts guide states the one-line rule (data drives the output → slots
   and shapes; snippets and debugging → immediate rendering) and the verb table,

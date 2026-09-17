@@ -153,7 +153,8 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
   regenerating it; map closures stay live, so a rebuilt shape binds its own
   closures. The memo is bounded by a byte budget (the oldest sources are dropped
   first and a source larger than the budget is not kept), so a structure that
-  varies per request cannot grow it without limit.
+  varies per request cannot grow it without limit. Set the environment variable
+  `PURE_COMPILE_MEMO_BYTES` to change the budget (`0` disables the memo).
 - `Compile::flush()` invalidates in-memory renderers (every shape recompiles on
   next use); it does not delete cache files.
 
