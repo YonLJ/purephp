@@ -19,6 +19,12 @@ $p = p('Paragraph');
 $span = span('Text')->class('highlight');
 ```
 
+Functions follow tag names one to one, with one exception: a tag named after a
+PHP keyword cannot name a function, so `<var>` comes from `Pure\HTML\htmlVar()`.
+This mirrors SVG's `Pure\SVG\svgUse()` for `<use>` and `Pure\SVG\svgSwitch()`
+for `<switch>`; the magic static surface (`HTML::var()`,
+`HTML::customTag('var')`) covers the element too.
+
 ### 2. Magic Static Methods (Custom tags)
 
 ```php

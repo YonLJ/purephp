@@ -438,6 +438,10 @@ function ul(): HTML
 {
     return new HTML('ul', func_get_args());
 }
+function htmlVar(): HTML
+{
+    return new HTML('var', func_get_args());
+}
 function video(): HTML
 {
     return new HTML('video', func_get_args());

@@ -18,6 +18,11 @@ $p = p('段落');
 $span = span('文本')->class('highlight');
 ```
 
+函数与标签名一一对应，只有一处例外：与 PHP 关键字同名的标签无法作为函数名，因此
+`<var>` 由 `Pure\HTML\htmlVar()` 创建。这与 SVG 的 `Pure\SVG\svgUse()`（`<use>`）
+和 `Pure\SVG\svgSwitch()`（`<switch>`）保持一致；魔术静态方法
+（`HTML::var()`、`HTML::customTag('var')`）同样可以创建该元素。
+
 ### 2. 魔术静态方法（自定义标签）
 
 ```php
