@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Pure\Core\Escaper;
 use Pure\Core\MissingSlotException;
 
 /**
@@ -36,7 +37,18 @@ final class TemplateRuntime
      */
     public static function text(array $scope, string $key, ?string $path = null, mixed $default = null): string
     {
-        return SlotRuntime::text(self::read($scope, $key, $path, func_num_args() < 4, $default), $path ?? $key);
+        $value = $scope[$key]
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+
+        // Scalars (the common case) escape inline with the shared constants,
+        // exactly like the flat renderer's generated expression; everything
+        // else keeps the SlotRuntime call for the null/Stringable/invalid
+        // semantics and the path-bearing exception.
+        if (is_scalar($value)) {
+            return htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING, false);
+        }
+
+        return SlotRuntime::text($value, $path ?? $key);
     }
 
     /**
@@ -50,7 +62,10 @@ final class TemplateRuntime
      */
     public static function raw(array $scope, string $key, ?string $path = null, mixed $default = null): string
     {
-        return SlotRuntime::raw(self::read($scope, $key, $path, func_num_args() < 4, $default), $path ?? $key);
+        $value = $scope[$key]
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+
+        return is_scalar($value) ? (string)$value : SlotRuntime::raw($value, $path ?? $key);
     }
 
     /**
@@ -65,9 +80,31 @@ final class TemplateRuntime
      */
     public static function attr(array $scope, string $key, ?string $name = null, ?string $path = null, mixed $default = null): string
     {
-        $value = self::read($scope, $key, $path, func_num_args() < 5, $default);
+        $value = $scope[$key]
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 5);
 
-        return SlotRuntime::attrOpen($name ?? $key, $value, $path ?? $key);
+        $name ??= $key;
+
+        // The scalar branch builds the chunk inline; the order of the checks
+        // and the escaping flags mirror SlotRuntime::attrOpen() so the bytes
+        // stay identical to the flat renderer.
+        if (is_string($value)) {
+            return ' ' . $name . '="' . htmlspecialchars($value, Escaper::FLAGS, Escaper::ENCODING) . '"';
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? Escaper::attribute($name, $name) : '';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return ' ' . $name . '="' . htmlspecialchars((string)$value, Escaper::FLAGS, Escaper::ENCODING) . '"';
+        }
+
+        return SlotRuntime::attrOpen($name, $value, $path ?? $key);
     }
 
     /**
@@ -81,7 +118,10 @@ final class TemplateRuntime
      */
     public static function child(array $scope, string $key, ?string $path = null, mixed $default = null): array
     {
-        return SlotRuntime::scope(self::read($scope, $key, $path, func_num_args() < 4, $default), $path ?? $key);
+        $value = $scope[$key]
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+
+        return is_array($value) ? $value : SlotRuntime::scope($value, $path ?? $key);
     }
 
     /**
@@ -95,7 +135,10 @@ final class TemplateRuntime
      */
     public static function items(array $scope, string $key, ?string $path = null, mixed $default = null): iterable
     {
-        return SlotRuntime::items(self::read($scope, $key, $path, func_num_args() < 4, $default), $path ?? $key);
+        $value = $scope[$key]
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+
+        return is_iterable($value) ? $value : SlotRuntime::items($value, $path ?? $key);
     }
 
     /**
@@ -125,22 +168,31 @@ final class TemplateRuntime
     }
 
     /**
-     * Read one slot value: required slots throw, optional ones fall back to the
-     * compiled default (also when the value is null, exactly like `??`).
+     * Resolve a slot the fast path could not: an optional slot falls back to
+     * the compiled default (also when the value is null, exactly like `??`), a
+     * required slot keeps null when the key exists, and a missing required slot
+     * throws.
+     *
+     * Only the cold path calls this, so `func_num_args()` at the call site
+     * never runs for present, non-null values.
      *
      * @param array<array-key, mixed> $scope The data scope to read from.
      * @param string $key The slot key.
      * @param ?string $path The slot path for error messages, when it differs from the key.
-     * @param bool $required Whether the slot is required.
      * @param mixed $default The compiled default of an optional slot.
+     * @param bool $optional Whether the slot has a compiled default.
      * @return mixed The slot value.
      */
-    private static function read(array $scope, string $key, ?string $path, bool $required, mixed $default): mixed
+    private static function fallback(array $scope, string $key, ?string $path, mixed $default, bool $optional): mixed
     {
-        if (!$required) {
+        if ($optional) {
             return $scope[$key] ?? $default;
         }
 
-        return array_key_exists($key, $scope) ? $scope[$key] : throw MissingSlotException::forPath($path ?? $key);
+        if (array_key_exists($key, $scope)) {
+            return null;
+        }
+
+        throw MissingSlotException::forPath($path ?? $key);
     }
 }

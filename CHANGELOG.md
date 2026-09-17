@@ -80,6 +80,23 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- `pure compile` skips the files whose content is already current: the shape is
+  still loaded and compiled (so a change in anything it pulls in is picked up),
+  but the write, the load-back verification and the rename are skipped and the
+  file is reported as `unchanged:` instead of `compiled:`.
+- Artifact slots read through merged fast paths in `TemplateRuntime`: a present,
+  non-null value skips the requiredness check and the default, scalar text and
+  attributes escape inline with the shared `Escaper` flags, and attributes build
+  their ` name="value"` chunk without the `SlotRuntime` / `Escaper` call chain.
+  `func_num_args()` and the compiled default are only consulted when the value
+  is missing or null, and the accessor signatures are unchanged, so existing
+  templates keep rendering; a component template renders about 2.2x faster
+  (3.9 us -> 1.7 us in the microbenchmark) and stays byte-identical.
+- `ShapeIndex` encodes a null slot default (every required slot) without
+  `serialize()`, cutting about a tenth of the fingerprint walk;
+  `Compile::CACHE_VERSION` is bumped to 7 for the new fingerprints, so cached
+  renderers and artifacts written earlier are rebuilt.
+
 - The examples are function components: each component is a function with typed
   parameters returning `Raw`, backed by a fixed `*.shape.php` template, and
   pages are functions too (`featuresPage()`, `pricingPage()`, `counterPage()`,

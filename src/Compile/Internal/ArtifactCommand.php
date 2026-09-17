@@ -143,7 +143,14 @@ final class ArtifactCommand
                         continue;
                     }
 
-                    $written = ArtifactCompiler::writeAll($file, $plain);
+                    $written = ArtifactCompiler::writeChanged($file, $plain);
+
+                    if (!$written['artifactWritten'] && !$written['plainWritten']) {
+                        fwrite($stdout, "unchanged: {$file}\n");
+
+                        continue;
+                    }
+
                     $targets = $written['artifact'] . ($written['plain'] === null ? '' : ', ' . $written['plain']);
                     fwrite($stdout, "compiled: {$file} -> {$targets}\n");
                 } catch (Throwable $error) {
