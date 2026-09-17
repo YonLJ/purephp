@@ -23,6 +23,25 @@ final class Compile
     private static ?string $cachePath = null;
 
     /**
+     * Byte budget for the in-memory source memo. Entries are pure
+     * (fingerprint -> generated source), so evicting one only costs code
+     * generation time; a structure that varies per request cannot grow the
+     * memo without limit.
+     */
+    private const MEMO_BYTES = 4194304;
+
+    /**
+     * Generated sources memoized per fingerprint, so a tree rebuilt in the
+     * same process reuses the code instead of regenerating it. Bounded: the
+     * oldest entries are dropped once MEMO_BYTES is exceeded.
+     *
+     * @var array<string, string>
+     */
+    private static array $sources = [];
+
+    private static int $memoBytes = 0;
+
+    /**
      * Wrap a data-free shape tree for compiled rendering.
      *
      * Build shapes once per process (for example with a static variable inside
@@ -69,6 +88,8 @@ final class Compile
     public static function flush(): void
     {
         self::$generation++;
+        self::$sources = [];
+        self::$memoBytes = 0;
     }
 
     /**
@@ -104,21 +125,59 @@ final class Compile
         // code derived from the same tree state: a memoized index could
         // describe an older tree after a mutation and poison the cache file.
         $index = ShapeIndex::of($tree);
+        $id = $index->id();
+        $maps = array_values($index->maps());
         $dir = self::$cachePath;
 
-        if ($dir === null) {
-            return CodeGenerator::compile($tree, $index);
+        if ($dir !== null) {
+            $file = $dir . '/' . $id . '.php';
+            $cached = RendererCache::load($file, $id, $index->maps());
+            if ($cached !== null) {
+                self::memoize($id, $cached->source);
+
+                return $cached;
+            }
         }
 
-        $file = $dir . '/' . $index->id() . '.php';
-        $cached = RendererCache::load($file, $index->id(), $index->maps());
-        if ($cached !== null) {
-            return $cached;
+        $source = self::$sources[$id] ?? null;
+        if ($source !== null) {
+            $compiled = CodeGenerator::fromSource($source, $id, $maps);
+        } else {
+            $compiled = CodeGenerator::compile($tree, $index);
+            self::memoize($id, $compiled->source);
         }
 
-        $compiled = CodeGenerator::compile($tree, $index);
-        RendererCache::write($file, $compiled->source, $index->id(), count($index->maps()));
+        if ($dir !== null) {
+            RendererCache::write($dir . '/' . $id . '.php', $compiled->source, $id, count($maps));
+        }
 
         return $compiled;
+    }
+
+    /**
+     * Remember a generated source, evicting the oldest entries once the byte
+     * budget is exceeded. A source larger than the whole budget is not kept.
+     *
+     * @param string $id The shape fingerprint.
+     * @param string $source The generated PHP source.
+     */
+    private static function memoize(string $id, string $source): void
+    {
+        if (isset(self::$sources[$id])) {
+            return;
+        }
+
+        self::$sources[$id] = $source;
+        self::$memoBytes += strlen($source);
+
+        while (self::$memoBytes > self::MEMO_BYTES) {
+            $oldest = array_key_first(self::$sources);
+            if ($oldest === null) {
+                break;
+            }
+
+            self::$memoBytes -= strlen(self::$sources[$oldest]);
+            unset(self::$sources[$oldest]);
+        }
     }
 }
