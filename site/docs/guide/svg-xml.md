@@ -255,19 +255,19 @@ is safe and stays visible:
 ```php
 <?php
 
+use Pure\Core\Raw;
 use Pure\Core\XML;
-use function Pure\Utils\rawXml;
 
 // ✅ XML tags in strings are escaped, not parsed
 XML::root('<item>This stays visible</item>')->toPrint();
 // Output: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
-// ✅ Use rawXml to emit XML content
-XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
+// ✅ Use Raw::of to emit XML content
+XML::root(Raw::of('<item>This is preserved</item>'))->toPrint();
 // Output: <root><item>This is preserved</item></root>
 ```
 
-**When to use rawXml/rawHtml:**
+**When to use Raw::of():**
 - Including CDATA sections
 - Embedding external XML/SVG content
 - Working with pre-formatted markup
@@ -275,14 +275,14 @@ XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
 
 Both render paths behave the same way; bound data is escaped by
 `Slot::text()` / `Slot::attr()`, and `Slot::raw()` is the verbatim equivalent of
-`rawXml()` when data must keep its markup.
+`Raw::of()` when data must keep its markup.
 
 ## Best Practices
 
 1. **Use functions for predefined HTML/SVG tags** - They provide the best balance of performance and readability
 2. **Use magic methods for custom tags** - When you need dynamic tag creation
 3. **Use constructors for performance-critical code** - When building libraries or processing large documents
-4. **Use rawXml/rawHtml for trusted content** - When you need to preserve markup structure
+4. **Use Raw::of() for trusted content** - When you need to preserve markup structure
 5. **Combine approaches as needed** - You can mix and match based on your specific use case
 
 ## Next Steps

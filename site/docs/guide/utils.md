@@ -2,7 +2,7 @@
 
 PurePHP provides several utility functions to simplify development. These functions are automatically used when setting element attributes.
 
-*`clx()`, `sty()` and `rawHtml()` are unchanged by compiled rendering: use them
+*`clx()` and `sty()` are unchanged by compiled rendering: use them
 while building static attributes in a shape, and bind dynamic values with
 `Slot::text()` / `Slot::attr()` / `Slot::raw()` — see
 [Compiled Components](/guide/compiled). Most examples below use the tag API,
@@ -153,42 +153,10 @@ $styles = sty([
 div('Content')->style($styles)->toPrint();
 ```
 
-## rawHtml Function
+## Raw Markup
 
-The `rawHtml` function is used to insert raw HTML content without escaping.
-
-### Basic Usage
-
-```php
-<?php
-
-use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
-
-div(
-    rawHtml('<strong>This is bold text</strong>'),
-    rawHtml('<em>This is italic text</em>')
-)->toPrint();
-```
-
-### Security Considerations
-
-When using `rawHtml`, ensure the content is safe to avoid XSS attacks:
-
-```php
-<?php
-
-use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
-
-// Safe usage
-$safeHtml = htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
-div(rawHtml($safeHtml))->toPrint();
-
-// Or use known safe HTML
-$iconHtml = '<svg><path d="..."/></svg>';
-div(rawHtml($iconHtml))->toPrint();
-```
+Trusted markup is wrapped in `Pure\Core\Raw::of()`; the tag API emits it
+verbatim. See the [Raw API](/api/raw) for details.
 
 ## Practical Examples
 

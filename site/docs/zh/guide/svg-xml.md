@@ -246,32 +246,32 @@ $element3 = div('content')->customAttr('value');
 ```php
 <?php
 
+use Pure\Core\Raw;
 use Pure\Core\XML;
-use function Pure\Utils\rawXml;
 
 // ✅ 字符串中的 XML 标签会被转义，不会被解析
 XML::root('<item>This stays visible</item>')->toPrint();
 // 输出: <root>&lt;item&gt;This stays visible&lt;/item&gt;</root>
 
-// ✅ 使用 rawXml 输出 XML 内容
-XML::root(rawXml('<item>This is preserved</item>'))->toPrint();
+// ✅ 使用 Raw::of 输出 XML 内容
+XML::root(Raw::of('<item>This is preserved</item>'))->toPrint();
 // 输出: <root><item>This is preserved</item></root>
 ```
 
-**何时使用 rawXml/rawHtml：**
+**何时使用 Raw::of()：**
 - 包含 CDATA 部分
 - 嵌入外部 XML/SVG 内容
 - 处理预格式化的标记
 - 包含复杂的嵌套结构
 
-两条渲染路径行为一致；绑定的数据由 `Slot::text()` / `Slot::attr()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `rawXml()` 的等价原样输出。
+两条渲染路径行为一致；绑定的数据由 `Slot::text()` / `Slot::attr()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `Raw::of()` 的等价原样输出。
 
 ## 最佳实践
 
 1. **对预定义的 HTML/SVG 标签使用函数**——它们提供性能和可读性的最佳平衡
 2. **对自定义标签使用魔术方法**——当你需要动态创建标签时
 3. **对性能关键代码使用构造函数**——当构建库或处理大型文档时
-4. **对可信内容使用 rawXml/rawHtml**——当你需要保留标记结构时
+4. **对可信内容使用 Raw::of()**——当你需要保留标记结构时
 5. **根据需要组合方法**——你可以根据具体用例混合搭配
 
 ## 下一步

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Core\HTML;
+use Pure\Core\Raw;
 
 use function Pure\HTML\a;
 use function Pure\HTML\body;
@@ -27,7 +28,6 @@ use function Pure\HTML\section;
 use function Pure\HTML\textarea;
 use function Pure\HTML\title;
 use function Pure\HTML\ul;
-use function Pure\Utils\rawHtml;
 
 class HTMLTest extends TestCase
 {
@@ -63,7 +63,7 @@ class HTMLTest extends TestCase
                                     li(
                                         a('Services')->href('#')
                                     ),
-                                    rawHtml('<li><a href="#">Contact</a></li>')
+                                    Raw::of('<li><a href="#">Contact</a></li>')
                                 )
                             )->class('nav')
                         )->class('header'),
@@ -132,7 +132,7 @@ class HTMLTest extends TestCase
     public function testStringChildrenAreEscapedNotFiltered(): void
     {
         // String children are text: markup-looking content is escaped so no
-        // data is lost. Use rawHtml() to emit trusted markup.
+        // data is lost. Use Raw::of() to emit trusted markup.
         $tag = HTML::div('<p>This stays visible</p>', '<strong>This too</strong>', 'a<b');
 
         $output = (string)$tag;
@@ -143,12 +143,12 @@ class HTMLTest extends TestCase
         );
     }
 
-    public function testRawHtmlPreservesContent(): void
+    public function testRawPreservesContent(): void
     {
-        // Test that rawHtml preserves HTML content
+        // Test that Raw::of() preserves HTML content
         $tag = HTML::div(
-            rawHtml('<p>This should be preserved</p>'),
-            rawHtml('<strong>This too</strong>')
+            Raw::of('<p>This should be preserved</p>'),
+            Raw::of('<strong>This too</strong>')
         );
 
         $output = (string)$tag;
@@ -265,7 +265,7 @@ class HTMLTest extends TestCase
                                 self::node('li', [], [self::node('a', ['href' => '#'], ['Home'])]),
                                 self::node('li', [], [self::node('a', ['href' => '#'], ['About'])]),
                                 self::node('li', [], [self::node('a', ['href' => '#'], ['Services'])]),
-                                rawHtml('<li><a href="#">Contact</a></li>')->toJSON(),
+                                Raw::of('<li><a href="#">Contact</a></li>')->value,
                             ]),
                         ]),
                     ]),

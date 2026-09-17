@@ -128,24 +128,24 @@ $performant = new HTML('div', ['Performance content']);
 ```php
 <?php
 
+use Pure\Core\Raw;
 use function Pure\HTML\div;
-use function Pure\Utils\rawHtml;
 
 // ✅ 字符串内容被转义，不会被解析
 div('<p>This is shown as text</p>')->toPrint();
 // 输出: <div>&lt;p&gt;This is shown as text&lt;/p&gt;</div>
 
-// ✅ 使用 rawHtml 输出可信标记
-div(rawHtml('<p>This is preserved</p>'))->toPrint();
+// ✅ 使用 Raw::of 输出可信标记
+div(Raw::of('<p>This is preserved</p>'))->toPrint();
 // 输出: <div><p>This is preserved</p></div>
 ```
 
 **为什么这很重要：**
 - **安全性**：转义消除了用户输入中的 XSS
 - **不丢数据**：只是看起来像标记的文本会被完整保留
-- **明确性**：输出标记必须显式使用 rawHtml()/rawXml()
+- **明确性**：输出标记必须显式使用 Raw::of()
 
-**何时使用 rawHtml/rawXml：**
+**何时使用 Raw::of()：**
 - 包含预格式化的 HTML/XML 内容
 - 嵌入模板或外部内容
 - 处理可信的 HTML/XML 字符串
