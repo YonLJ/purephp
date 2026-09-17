@@ -14,7 +14,7 @@ final class Renderer
     /**
      * @internal Renderers are created by the compiler, not by user code.
      *
-     * @param Closure(array<string, mixed>): string $closure
+     * @param Closure(array<int|string, mixed>): string $closure
      * @param string $source Generated PHP source, for debugging; empty for
      *     artifacts, whose file is the source.
      * @param string $id Structure fingerprint shared by the shape and its cached renderer.
@@ -33,7 +33,7 @@ final class Renderer
     /**
      * Render the compiled shape with the given data.
      *
-     * @param array<string, mixed> $data The rendering data.
+     * @param array<int|string, mixed> $data The rendering data.
      * @return string The rendered output.
      */
     public function render(array $data): string
@@ -45,7 +45,7 @@ final class Renderer
      * Render the shape with the given data and write the output to a file.
      *
      * @param string $path The file path to save to.
-     * @param array<string, mixed> $data The rendering data.
+     * @param array<int|string, mixed> $data The rendering data.
      * @param string|null $header Optional document header to prepend; null uses
      *     the header captured at compile time.
      * @return int|false The number of bytes written, or false on failure.
