@@ -2,7 +2,7 @@
 
 /**
  * The view data of the pricing page, keyed by the slots of
- * views/pricing.shape.php.
+ * views/pricing.cmp.php.
  * Both controllers fill their view with it, so the page is the same whether it
  * renders the artifact or the plain view.
  *

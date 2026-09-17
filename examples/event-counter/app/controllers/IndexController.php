@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/CounterData.php';
-require_once __DIR__ . '/../../views/counter.php';
+require_once __DIR__ . '/../../views/counter.cmp.php';
 
 /**
  * The counter page controller.

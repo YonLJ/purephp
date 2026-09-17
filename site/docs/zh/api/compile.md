@@ -42,37 +42,52 @@ echo $shape([
 
 ## 函数组件
 
-`Pure\Component\render()` 与 `Pure\Component\renderPage()` 在一个表达式里把模板变成
-`Raw` 标记，组件函数与页面函数都建立在它们之上：
+组件单元把惰性模板工厂注册到一个名字下，紧挨着的组件函数渲染这个名字。
+`Pure\Component\render()` 与 `renderPage()` 在一个表达式里把注册的模板变成 `Raw` 标记：
 
 ```php
 <?php
 
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
-use function Pure\Component\render;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
+    div(h2(Slot::text('title')), p(Slot::text('content')))->class('card')
+));
 
 function Card(string $title, string $content): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content);
+    return render('Card', title: $title, content: $content);
 }
 ```
 
 | 函数 | 行为 |
 | --- | --- |
-| `render(string $source, mixed ...$data): Raw` | 渲染组件模板；绑定器按路径缓存 |
+| `register(string $name, string $file, Closure $factory, bool $override = false): void` | 注册组件单元；工厂必须惰性且返回 `Shape` |
+| `registerPage(string $name, string $file, Closure $factory, bool $override = false): void` | 同上，并附加根标签的文档声明 |
+| `render(string $source, mixed ...$data): Raw` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
 | `renderPage(string $source, array $data): Raw` | 同上，并附加根标签的文档声明 |
 | `component(Tag\|string $source): Closure` | 返回片段的 `fn (array $data): Raw` 绑定器 |
 | `page(Tag\|string $source): Closure` | 同上，并附加根标签的文档声明 |
 
-`render()` 的槽位值按名字传入（`render($file, title: $title)`），也可以传解包的字符串键
+`render()` 的槽位值按名字传入（`render('Card', title: $title)`），也可以传解包的字符串键
 数组；位置参数会被 `RuntimeException` 拒绝。`component()` 与 `page()` 是更底层的助手，
 用于内联树，或需要自己把绑定器存进 `static` 变量的场合。
 
-传入 `Tag` 时就地编译；传入字符串时视为 `*.shape.php` 路径。对文件而言，相邻的
-`*.pure.php` 产物存在且不早于 shape 文件时直接加载，生产环境因此跳过形状树构建与指纹计算；
-否则编译 shape 文件（磁盘缓存仍然生效）。文件缺失、模板未返回 `Shape`、产物未返回
-`Renderer` 都会抛出带文件名的 `RuntimeException`。用 `pure compile` 构建产物，
-用 `pure compile --check` 在 CI 中保证产物新鲜。
+传入 `Tag` 时就地编译；传入字符串时视为注册名、`*.cmp.php` 单元路径或 `*.shape.php` 模板
+路径。同名注册到另一个文件、或同一文件注册另一个名字都会抛异常，除非传 `override: true`；
+一个单元文件只注册一个组件。名字与它单元文件的路径解析到同一个绑定器。
+
+对文件而言，相邻的 `*.pure.php` 产物存在且不早于单元/shape 文件时直接加载，生产环境因此
+跳过工厂调用与形状树构建；否则调用工厂（每个编译 generation 一次）或编译 shape 文件
+（磁盘缓存仍然生效）。文件缺失、模板未返回 `Shape`、产物未返回 `Renderer` 都会抛出带文件名
+的 `RuntimeException`。用 `pure compile` 为所有 `*.shape.php` 与 `*.cmp.php` 构建产物，
+用 `pure compile --list` 打印发现的单元，用 `pure compile --check` 在 CI 中保证产物新鲜。
 
 ## 形状与数据
 
@@ -84,7 +99,7 @@ function Card(string $title, string $content): Raw
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.shape.php` 模板 |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
 | `h2($title)` | `h2(Slot::text('title'))` |
 | `->class($classList)` | 静态值用 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，把拼接好的标记经 `Slot::raw()` 注入 |

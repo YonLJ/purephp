@@ -10,6 +10,7 @@ use Pure\Compile\Internal\CodeGenerator;
 use Pure\Compile\Internal\ShapeIndex;
 use Pure\Compile\Renderer;
 use Pure\Compile\Shape;
+use Pure\Component\Registry;
 
 class ArtifactTest extends TestCase
 {
@@ -24,10 +25,12 @@ class ArtifactTest extends TestCase
 
         Compile::cachePath(null);
         Compile::flush();
+        Registry::reset();
     }
 
     protected function tearDown(): void
     {
+        Registry::reset();
         $this->remove($this->dir);
 
         Compile::flush();
@@ -512,7 +515,7 @@ class ArtifactTest extends TestCase
         $this->assertSame(1, $missing['code']);
         $this->assertStringContainsString('missing:', $missing['stdout']);
 
-        $compiled = $this->runCommand($command, ['pure', 'compile', $file]);
+        $compiled = $this->runCommand($command, ['pure', 'compile', '--plain', $file]);
         $this->assertSame(0, $compiled['code']);
         $this->assertStringContainsString('compiled:', $compiled['stdout']);
 
@@ -606,6 +609,97 @@ class ArtifactTest extends TestCase
         $this->assertInstanceOf(Renderer::class, $fromUnit);
         $this->assertSame($fromShapeFile->id, $fromUnit->id);
         $this->assertSame($fromShapeFile->render(['title' => 'a']), $fromUnit->render(['title' => 'a']));
+    }
+
+    public function testCompilesUnitFilesThroughTheCommand(): void
+    {
+        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+        $command = $this->registryCommand();
+
+        $compiled = $this->runCommand($command, ['pure', 'compile', '--plain', $file]);
+        $this->assertSame(0, $compiled['code']);
+        $this->assertStringContainsString('compiled:', $compiled['stdout']);
+        $this->assertFileExists($this->dir . '/badge.pure.php');
+        $this->assertFileExists($this->dir . '/badge.plain.php');
+
+        $fresh = $this->runCommand($command, ['pure', 'compile', '--check', '--plain', $file]);
+        $this->assertSame(0, $fresh['code']);
+        $this->assertStringContainsString('up to date:', $fresh['stdout']);
+
+        $list = $this->runCommand($command, ['pure', 'compile', '--list', $file]);
+        $this->assertSame(0, $list['code']);
+        $this->assertStringContainsString("Badge -> {$file} (component)", $list['stdout']);
+
+        file_put_contents($this->dir . '/badge.pure.php', "<?php\n// stale\n");
+
+        $stale = $this->runCommand($command, ['pure', 'compile', '--check', $file]);
+        $this->assertSame(1, $stale['code']);
+        $this->assertStringContainsString('stale:', $stale['stdout']);
+    }
+
+    public function testUnitFilesNeedTheRegistry(): void
+    {
+        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+
+        $result = $this->runCommand(new ArtifactCommand(), ['pure', 'compile', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString('need the component registry', $result['stderr']);
+    }
+
+    public function testUnitFileMustRegisterExactlyOneUnit(): void
+    {
+        $command = $this->registryCommand();
+
+        $empty = $this->unitFile('empty.cmp.php', null, 'component');
+        $none = $this->runCommand($command, ['pure', 'compile', $empty]);
+        $this->assertSame(1, $none['code']);
+        $this->assertStringContainsString('no component unit is registered', $none['stderr']);
+
+        $two = $this->dir . '/two.cmp.php';
+        file_put_contents($two, <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\span;
+
+            register('One', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::text('label'))));
+            register('Two', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::text('label'))));
+            PHP);
+
+        $many = $this->runCommand($command, ['pure', 'compile', $two]);
+        $this->assertSame(1, $many['code']);
+        $this->assertStringContainsString("already registered as 'One'", $many['stderr']);
+    }
+
+    public function testCommandRejectsResolversThatReturnSeveralUnits(): void
+    {
+        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+        $shape = Compile::shape(\Pure\HTML\span(\Pure\Core\Slot::text('label')));
+        $command = new ArtifactCommand(static fn (string $path): array => [
+            'One' => ['factory' => static fn (): Shape => $shape, 'document' => false],
+            'Two' => ['factory' => static fn (): Shape => $shape, 'document' => false],
+        ]);
+
+        $result = $this->runCommand($command, ['pure', 'compile', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString('2 component units are registered here', $result['stderr']);
+    }
+
+    public function testListReportsShapeFiles(): void
+    {
+        $file = $this->shapeFile('plain.shape.php', "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('x'));\n");
+
+        $list = $this->runCommand($this->registryCommand(), ['pure', 'compile', '--list', $file]);
+
+        $this->assertSame(0, $list['code']);
+        $this->assertStringContainsString("{$file} (shape)", $list['stdout']);
     }
 
     public function testCompilesDirectoriesRecursively(): void
@@ -750,6 +844,39 @@ class ArtifactTest extends TestCase
     private static function load(string $file): mixed
     {
         return (static fn (string $path): mixed => require $path)($file);
+    }
+
+    private function registryCommand(): ArtifactCommand
+    {
+        return new ArtifactCommand(static fn (string $file): array => Registry::unitsFor($file));
+    }
+
+    /**
+     * Write a `*.cmp.php` file that registers one unit.
+     */
+    private function unitFile(string $name, ?string $component, string $kind): string
+    {
+        $file = $this->dir . '/' . $name;
+        $registerFunction = $kind === 'page' ? 'registerPage' : 'register';
+        $register = $component === null
+            ? ''
+            : $registerFunction . "('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::text('label'))));";
+
+        file_put_contents($file, <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{$registerFunction};
+            use function Pure\HTML\span;
+
+            {$register}
+            PHP);
+
+        return $file;
     }
 
     private function remove(string $dir): void

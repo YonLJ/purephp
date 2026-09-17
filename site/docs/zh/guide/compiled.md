@@ -79,28 +79,31 @@ $item = Compile::shape(
 
 ## 组件
 
-组件是带类型化参数、返回 `Raw` 的函数，背后是一个 `*.shape.php` 模板；`render()`
-负责绑定并按路径缓存（参见[组件](/zh/guide/components)与
-[缓存](#缓存)中的 PHP-FPM 场景）：
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性工厂
+（参见[组件](/zh/guide/components)与[缓存](#缓存)中的 PHP-FPM 场景）：
 
 ```php
 <?php
 
-// Card.shape.php
-return Compile::shape(
+// Card.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
-
-// Card.php
-use Pure\Core\Raw;
-use function Pure\Component\render;
+));
 
 function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
+    return render('Card', title: $title, content: $content, class: $class);
 }
 ```
 
@@ -134,6 +137,10 @@ $shape(['blocks' => [
 ```
 
 每个项都必须是带有判别键的数组（默认是 `kind`；可以把不同的键作为 `Slot::eachKind()` 的第三个参数传入）。
+
+开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 12µs，见
+`bench/registry.php`），因此「产物 + opcache」就是生产路径。单文件 bundle 曾按该数据做过原型
+并被否决：冷启动比全部可读模板加起来更慢，热路径打平，因此库不再提供 bundle。
 
 ## 缓存
 
@@ -179,11 +186,12 @@ echo $page->render(['title' => 'Users']);
 $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 ```
 
-- `pure compile <路径>...` 接受文件与目录（递归查找），并跳过内容已最新的文件：shape
-  仍会被加载与编译（因此它引用的任何文件发生变化都能被感知），但内容一致的文件会以
-  `unchanged:` 报告而不是重写。`pure compile --check` 不写入任何文件，当产物过期或缺失时
-  以退出码 1 结束，适合放在 CI 步骤中。`--plain` 会额外写出下文的「无依赖视图」，
-  `--check --plain` 同时校验两种形态。仓库中的示例都带有 `*.shape.php` 文件，
+- `pure compile <路径>...` 接受文件与目录（递归查找），同时发现 `*.shape.php` 模板与
+  `*.cmp.php` 单元，并跳过内容已最新的文件：shape 仍会被加载与编译（因此它引用的任何文件
+  发生变化都能被感知），但内容一致的文件会以 `unchanged:` 报告而不是重写。`--list` 不编译，
+  直接按 `name -> file (component|page)` 打印发现的单元。`pure compile --check` 不写入任何
+  文件，当产物过期或缺失时以退出码 1 结束，适合放在 CI 步骤中。`--plain` 会额外写出下文的
+  「无依赖视图」，`--check --plain` 同时校验两种形态。仓库中的示例都是 `*.cmp.php` 单元，
   `vendor/bin/pure compile examples` 可一次编译全部。
 - 产物的渲染结果与运行时编译器完全一致（测试按逐字节比对断言），并且读起来就像模板：
   标记仍是标记，动态值写成 `<?= ... ?>`，控制流使用替代语法，闭包只定义一次并导入类的短名。
@@ -209,19 +217,23 @@ $pureBody = static function (array $v): string {
 ```
 
 `Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`）。
-`examples/bootstrap` 的组件与页面都是建立在其上的普通函数：
+`examples/bootstrap` 的组件与页面都是建立在其上的单元：
 
 ```php
-// components/Icon.php：类型化 props，背后是预编译模板
+// components/Icon.cmp.php：类型化 props，背后是预编译模板
+register('Icon', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+
 function Icon(string $href, string $class = 'bi'): Raw
 {
-    return render(__DIR__ . '/Icon.shape.php', href: $href, class: $class);
+    return render('Icon', href: $href, class: $class);
 }
 
-// views/features.php：页面骨架加已渲染的正文
+// views/features.cmp.php：页面骨架加已渲染的正文
+registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+
 function featuresPage(array $data): Raw
 {
-    return renderPage(__DIR__ . '/features.shape.php', [
+    return renderPage('Features', [
         'title' => $data['title'],
         'content' => (string) FeaturesBody($data['content']),
     ]);
@@ -243,9 +255,10 @@ shape 文件时直接加载产物，否则编译 shape 文件（磁盘缓存仍�
 
 ### 组件产物与缓存策略
 
-每个组件模板都是一个 `*.shape.php`，因此 `pure compile` 会像其他形状一样为它构建产物。
-绑定器会比较产物与 shape 文件的 mtime：产物较新就直接加载（不建树、不算指纹），过期或缺失
-则回退到编译 shape 文件。CI 中用 `pure compile --check` 可以发现过期产物（退出码 1）。
+每个组件都是一个 `*.cmp.php` 单元（也支持 `*.shape.php` 模板），因此 `pure compile` 会像
+其他形状一样为它构建产物。绑定器会比较产物与单元文件的 mtime：产物较新就直接加载（不调用
+工厂、不建树、不算指纹），过期或缺失则调用注册的工厂或编译 shape 文件。CI 中用
+`pure compile --check` 可以发现过期产物（退出码 1）。
 
 开启哪些取决于部署形态：
 
@@ -332,7 +345,7 @@ php examples/bootstrap/bench.php
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.shape.php` 模板 |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
 | `h2($title)` | `h2(Slot::text('title'))` |
 | `->class($classList)` | 静态值直接 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，经 `Slot::raw()` 注入 |

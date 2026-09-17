@@ -1,49 +1,50 @@
 # Components
 
-A component is a PHP function with typed parameters that returns `Raw` markup.
-The template behind it is a shape file that `pure compile` precompiles, and the
-`render()` helper binds the two in a single expression.
+A component is one file: a PHP function with typed parameters that returns
+`Raw` markup, next to the template it renders. The file registers a lazy
+factory, so `pure compile` can precompile the template while a request only
+loads the artifact.
 
 ## Your First Component
 
 ```php
 <?php
 
-// components/Card.shape.php — the template: static markup plus slots
-return Compile::shape(
+// components/Card.cmp.php — the component unit: function + template
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class('card')
-);
-```
-
-```php
-<?php
-
-// components/Card.php — the component: typed props in, Raw markup out
-use Pure\Core\Raw;
-
-use function Pure\Component\render;
+));
 
 function Card(string $title, string $content): Raw
 {
-    return render(
-        __DIR__ . '/Card.shape.php',
-        title: $title,
-        content: $content
-    );
+    return render('Card', title: $title, content: $content);
 }
 
 echo Card('Title', 'Content');
 ```
 
-`render()` binds the shape file to a `data → Raw` function and caches that
-binder per path, so the template is loaded once per process: it uses the
-sibling `Card.pure.php` artifact when it is fresh and compiles
-`Card.shape.php` otherwise. Slot values are passed by name, or as an unpacked
-array with string keys (`render($file, ...$bindings)`). Run
-`vendor/bin/pure compile components` to build the artifacts.
+- `register()` stores the factory and the file; it builds nothing. A request
+  that has a fresh artifact never calls the factory.
+- `render('Card', ...)` renders the registered template, passing slot values by
+  name (or as an unpacked string-keyed array: `render('Card', ...$bindings)`).
+- Run `vendor/bin/pure compile components` to build `Card.pure.php` and (with
+  `--plain`) `Card.plain.php` next to the unit. `pure compile --list` prints
+  every unit it finds.
+
+The registered name and the path of the unit file are interchangeable:
+`render(__DIR__ . '/Card.cmp.php', ...)` resolves to the same binder, so a
+component can be rendered by name or by file.
 
 ## Props
 
@@ -54,19 +55,15 @@ template; anything that changes per render belongs in the bindings.
 ```php
 <?php
 
+// components/Badge.cmp.php
+register('Badge', __FILE__, static fn (): Shape => Compile::shape(
+    span(Slot::text('label'))->class(Slot::attr('class'))
+));
+
 function Badge(string $label, string $class = 'badge'): Raw
 {
-    return render(__DIR__ . '/Badge.shape.php', label: $label, class: $class);
+    return render('Badge', label: $label, class: $class);
 }
-```
-
-```php
-<?php
-
-// components/Badge.shape.php
-return Compile::shape(
-    span(Slot::text('label'))->class(Slot::attr('class'))
-);
 ```
 
 ## Composing Components
@@ -77,15 +74,14 @@ A parent component calls its children and injects their output through
 ```php
 <?php
 
-// components/Button.shape.php
-return Compile::shape(
+// components/Button.cmp.php
+register('Button', __FILE__, static fn (): Shape => Compile::shape(
     button(Slot::raw('icon'), Slot::text('label'))->class('btn')
-);
+));
 
-// components/Button.php
 function Button(Raw $icon, string $label): Raw
 {
-    return render(__DIR__ . '/Button.shape.php', icon: $icon, label: $label);
+    return render('Button', icon: $icon, label: $label);
 }
 
 Button(Icon('#plus'), 'Add');
@@ -95,16 +91,46 @@ Lists work the same way: loop in the component function, join the markup, pass
 the string into a raw slot. Use `Slot::each()` inside the template when the
 items are plain data rows that need no per-item component logic.
 
+## Pages
+
+A page is a unit too: register it with `registerPage()` and the binder prepends
+the document header of the root tag (`<!DOCTYPE html>` for an `html()` root):
+
+```php
+<?php
+
+// views/features.cmp.php
+registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(
+    html(
+        head(title(Slot::text('title'))),
+        body(Slot::raw('content'))
+    )
+));
+
+function featuresPage(array $data): Raw
+{
+    return renderPage('Features', [
+        'title' => $data['title'],
+        'content' => (string) FeaturesBody($data['content']),
+    ]);
+}
+```
+
+`pure compile --plain` writes the same page as a dependency-free view file, so a
+deployment without purephp can serve it; the controller prints the same
+bindings either way.
+
 ## The Binder API
 
-`render()` is a convenience over two lower-level helpers:
+`render()` is a convenience over lower-level helpers:
 
-- `component($source)` returns the `data → Raw` binder of a template.
-- `page($source)` does the same and prepends the document header of the root
-  tag (the `<!DOCTYPE html>` of an `html()` root).
+- `component($source)` returns the `data → Raw` binder of a unit or template.
+- `page($source)` does the same and prepends the document header.
+- `register()` / `registerPage()` register a unit under a name.
 
-Use them when the template is an inline tree (`component(div(Slot::text('title')))`)
-or when you want to hold the binder in a variable yourself:
+Use `component()` when the template is an inline tree
+(`component(div(Slot::text('title')))`) or when you want to hold the binder in a
+variable yourself:
 
 ```php
 <?php
@@ -118,43 +144,23 @@ function Tag(string $label): Raw
 }
 ```
 
-`render($file, ...)` and `renderPage($file, ...)` are the one-expression forms
-for shape files; both cache the binder per path, so you never need a `static`
-variable for a file-backed component.
-
-## Pages
-
-`renderPage()` is `render()` plus the document header:
-
-```php
-<?php
-
-function featuresPage(array $data): Raw
-{
-    return renderPage(__DIR__ . '/features.shape.php', [
-        'title' => $data['title'],
-        'content' => (string) FeaturesBody($data['content']),
-    ]);
-}
-```
-
-A page template is a shape file like any other, so pages get artifacts too; the
-controller just prints the result. The plain flavor (`pure compile --plain`)
-prints the same bindings from a dependency-free view file.
+`render()` / `renderPage()` cache the binder per name or path, so you never need
+a `static` variable for a registered unit.
 
 ## Caching
 
-- `render()` / `renderPage()` — the binder is cached per template path, so the
-  artifact or shape is loaded once per process.
+- A unit is served by its `*.pure.php` artifact when it is at least as new as
+  the unit file; the factory and the shape tree are then never touched.
+- `render()` / `renderPage()` cache the binder per name or path for the compile
+  generation.
 - `Compile::cachePath($dir)` — requests load generated renderers instead of
   regenerating them.
-- `pure compile` artifacts — the binder skips the shape tree and the
-  fingerprint when the artifact is fresh; `pure compile --check` keeps CI
-  honest.
-- Long-running workers keep the memoized renderer in memory, so artifacts are
-  optional there.
+- `pure compile --check` keeps artifacts fresh in CI; a long-running worker
+  keeps the loaded renderer in memory, so artifacts are optional there.
 
-See [Compiled Components](/guide/compiled) for the full caching story.
+With opcache, requiring the artifacts of a whole page costs about half a
+microsecond per component (see `bench/README.md`), so artifacts plus opcache are
+the production path.
 
 ## Immediate Rendering (Snippets)
 

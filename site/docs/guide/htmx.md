@@ -27,18 +27,45 @@ Then include HTMX in your HTML:
 ### 2. Create Dynamic Components
 
 The counter text is a bound slot; the endpoint renders the same `CounterValue()`
-component with the new count. The templates are shape files:
+component with the new count. Each component is its own unit:
 
 ```php
 <?php
 
-// Count.shape.php
-return Compile::shape(
-    p('Current count: ', Slot::text('count'))->id('counter')
-);
+// components/CounterValue.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
 
-// Counter.shape.php
-return Compile::shape(
+use function Pure\Component\{register, render};
+use function Pure\HTML\p;
+
+register('CounterValue', __FILE__, static fn (): Shape => Compile::shape(
+    p('Current count: ', Slot::text('count'))->id('counter')
+));
+
+function CounterValue(int $count): Raw
+{
+    return render('CounterValue', count: $count);
+}
+```
+
+```php
+<?php
+
+// components/Counter.cmp.php
+require_once __DIR__ . '/CounterValue.cmp.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{button, div};
+
+register('Counter', __FILE__, static fn (): Shape => Compile::shape(
     div(
         Slot::raw('counter'),
         button('Increment')
@@ -46,26 +73,18 @@ return Compile::shape(
             ->hxTarget('#counter')
             ->hxSwap('innerHTML')
     )->class('counter')
-);
+));
+
+function Counter(int $count): Raw
+{
+    return render('Counter', counter: (string) CounterValue($count));
+}
 ```
 
 ```php
 <?php
 
-use Pure\Core\Raw;
-
-use function Pure\HTML\{button, div, p};
-use function Pure\Component\render;
-
-function CounterValue(int $count): Raw
-{
-    return render(__DIR__ . '/Count.shape.php', count: $count);
-}
-
-function Counter(int $count): Raw
-{
-    return render(__DIR__ . '/Counter.shape.php', counter: (string) CounterValue($count));
-}
+// index.php
 
 // Render the page
 echo Counter(0);
@@ -117,40 +136,40 @@ and the endpoint renders the list component with the search results:
 ```php
 <?php
 
-// SearchResult.shape.php
-return Compile::shape(
+// components/SearchResult.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\div;
+
+register('SearchResult', __FILE__, static fn (): Shape => Compile::shape(
     div(Slot::text('title'))->class('search-result')
-);
+));
 
-// ResultList.shape.php
-return Compile::shape(div(Slot::raw('results')));
-
-// SearchBox.shape.php
-return Compile::shape(
-    div(
-        input()
-            ->type('text')
-            ->placeholder('Search...')
-            ->hxGet('/search')
-            ->hxTrigger('keyup changed delay:500ms')
-            ->hxTarget('#results'),
-        div(Slot::raw('list'))->id('results')
-    )->class('search-box')
-);
+function SearchResult(string $title): Raw
+{
+    return render('SearchResult', title: $title);
+}
 ```
 
 ```php
 <?php
 
+// components/ResultList.cmp.php
+require_once __DIR__ . '/SearchResult.cmp.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
 use Pure\Core\Raw;
+use Pure\Core\Slot;
 
-use function Pure\HTML\{div, input};
-use function Pure\Component\render;
+use function Pure\Component\{register, render};
+use function Pure\HTML\div;
 
-function SearchResult(string $title): Raw
-{
-    return render(__DIR__ . '/SearchResult.shape.php', title: $title);
-}
+register('ResultList', __FILE__, static fn (): Shape => Compile::shape(div(Slot::raw('results'))));
 
 function ResultList(array $results): Raw
 {
@@ -160,13 +179,46 @@ function ResultList(array $results): Raw
         $items[] = (string) SearchResult($result['title']);
     }
 
-    return render(__DIR__ . '/ResultList.shape.php', results: implode('', $items));
+    return render('ResultList', results: implode('', $items));
 }
+```
+
+```php
+<?php
+
+// components/SearchBox.cmp.php
+require_once __DIR__ . '/ResultList.cmp.php';
+
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, input};
+
+register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
+    div(
+        input()
+            ->type('text')
+            ->placeholder('Search...')
+            ->hxGet('/search')
+            ->hxTrigger('keyup changed delay:500ms')
+            ->hxTarget('#results'),
+        div(Slot::raw('list'))->id('results')
+    )->class('search-box')
+));
 
 function SearchBox(Raw $list): Raw
 {
-    return render(__DIR__ . '/SearchBox.shape.php', list: $list);
+    return render('SearchBox', list: $list);
 }
+```
+
+```php
+<?php
+
+// index.php
 
 // Render the page with an empty result list
 echo SearchBox(ResultList([]));

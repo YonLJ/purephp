@@ -91,28 +91,32 @@ $item = Compile::shape(
 
 ## Components
 
-A component is a function with typed parameters returning `Raw`, backed by a
-`*.shape.php` template that `render()` binds and caches per path (see
+A component is a `*.cmp.php` unit: a function with typed parameters returning
+`Raw`, plus the lazy factory registered next to it (see
 [Components](/guide/components) and [Caching](#caching) for the PHP-FPM case):
 
 ```php
 <?php
 
-// Card.shape.php
-return Compile::shape(
+// Card.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
-
-// Card.php
-use Pure\Core\Raw;
-use function Pure\Component\render;
+));
 
 function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
+    return render('Card', title: $title, content: $content, class: $class);
 }
 ```
 
@@ -206,15 +210,16 @@ echo $page->render(['title' => 'Users']);
 $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
 ```
 
-- `pure compile <path>...` accepts files and directories (searched recursively)
-  and skips the files whose content is already current: the shape is still
-  loaded and compiled (so a change in anything it pulls in is picked up), but an
-  up-to-date file is reported as `unchanged:` instead of rewritten.
-  `pure compile --check` writes nothing and exits with code 1 when an artifact
-  is stale or missing, which fits a CI step. `--plain` also writes the
-  dependency-free view described below, and `--check --plain` covers both
-  flavors. The repository examples ship `*.shape.php` files, so
-  `vendor/bin/pure compile examples` compiles them all.
+- `pure compile <path>...` accepts files and directories (searched recursively),
+  discovers both `*.shape.php` templates and `*.cmp.php` units, and skips the
+  files whose content is already current: the shape is still loaded and compiled
+  (so a change in anything it pulls in is picked up), but an up-to-date file is
+  reported as `unchanged:` instead of rewritten. `--list` prints every unit as
+  `name -> file (component|page)` without compiling. `pure compile --check`
+  writes nothing and exits with code 1 when an artifact is stale or missing,
+  which fits a CI step. `--plain` also writes the dependency-free view described
+  below, and `--check --plain` covers both flavors. The repository examples ship
+  `*.cmp.php` units, so `vendor/bin/pure compile examples` compiles them all.
 - Artifacts render the same output as the runtime compiler (asserted byte for
   byte by the tests) and read as a template: markup stays markup, values become
   `<?= ... ?>`, control flow uses the alternative syntax, and the closure is
@@ -244,31 +249,37 @@ $pureBody = static function (array $v): string {
 
 `Renderer::$header` holds the document header captured at build time (the
 `<!DOCTYPE html>` of an `html()` root). Components and pages in
-`examples/bootstrap` are ordinary functions built on that:
+`examples/bootstrap` are units built on that:
 
 ```php
-// components/Icon.php: typed props, backed by its precompiled template
+// components/Icon.cmp.php: typed props, backed by its precompiled template
+register('Icon', __FILE__, static fn (): Shape => Compile::shape(
+    svg(svgUse()->href(Slot::attr('href')))->class(Slot::attr('class'))
+));
+
 function Icon(string $href, string $class = 'bi'): Raw
 {
-    return render(__DIR__ . '/Icon.shape.php', href: $href, class: $class);
+    return render('Icon', href: $href, class: $class);
 }
 
-// views/features.php: the page skeleton plus the rendered body
+// views/features.cmp.php: the page skeleton plus the rendered body
+registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+
 function featuresPage(array $data): Raw
 {
-    return renderPage(__DIR__ . '/features.shape.php', [
+    return renderPage('Features', [
         'title' => $data['title'],
         'content' => (string) FeaturesBody($data['content']),
     ]);
 }
 ```
 
-`Pure\Component\render()` and `renderPage()` load the artifact of a shape file
-when one exists next to it and is at least as new as the shape file; otherwise
-they compile the shape file (the disk cache still applies). `renderPage()`
-prepends the document header, `render()` returns the fragment. The binder
-underneath is `component()` / `page()`, which you can hold yourself for inline
-trees.
+`Pure\Component\render()` and `renderPage()` load the artifact of a unit or
+shape file when one exists next to it and is at least as new as the file;
+otherwise they call the registered factory (once per compile generation) or
+compile the shape file (the disk cache still applies). `renderPage()` prepends
+the document header, `render()` returns the fragment. The binder underneath is
+`component()` / `page()`, which you can hold yourself for inline trees.
 
 Its `PlainFeaturesController` passes the same bindings through `plain()`, and
 one router (`public/index.php`) serves every page in both flavors —
@@ -284,11 +295,12 @@ compare the flavors while developing.
 
 ### Component Artifacts and Caching
 
-Every component template is a `*.shape.php` file, so `pure compile` builds it
-like any other shape. The binder checks the artifact mtime against the shape
-file: a fresh artifact is loaded as-is (no shape tree, no fingerprint), a stale
-or missing one falls back to compiling the shape file. In CI, `pure compile
---check` reports stale artifacts with exit code 1.
+Every component is a `*.cmp.php` unit (a `*.shape.php` template also works), so
+`pure compile` builds it like any other shape. The binder checks the artifact
+mtime against the unit file: a fresh artifact is loaded as-is (no factory call,
+no shape tree, no fingerprint), a stale or missing one calls the registered
+factory or compiles the shape file. In CI, `pure compile --check` reports stale
+artifacts with exit code 1.
 
 What to enable depends on the deployment:
 
@@ -303,6 +315,13 @@ What to enable depends on the deployment:
 - **`opcache.preload`** — preloading keeps code in memory but does not carry
   static variables across requests (PHP's preload RFC states this explicitly),
   so it is not a substitute for either of the above.
+
+With opcache, requiring the artifacts of every component on a page costs about
+half a microsecond each (22 artifacts load in ~12 µs; see
+`bench/registry.php`), so artifacts plus opcache are the production path. A
+single-file bundle was prototyped and rejected on that data: it compiled slower
+cold than the readable templates together and tied warm, so the library ships
+no bundle.
 
 ### Dependency-Free Views
 
@@ -402,7 +421,7 @@ php examples/bootstrap/bench.php
 
 | Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.shape.php` template |
+| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.cmp.php` unit (function + template) |
 | `h2($title)` | `h2(Slot::text('title'))` |
 | `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject through `Slot::raw()` |

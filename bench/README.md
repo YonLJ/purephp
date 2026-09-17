@@ -21,6 +21,10 @@ php bench/artifact.php [iterations]
 # page function, the precompiled features.pure.php artifact and the plain view
 php examples/bootstrap/bench.php [iterations]
 
+# component loading: per-unit artifact requires, cold and with a warm opcache
+php bench/registry.php
+php -d opcache.enable_cli=1 bench/registry.php
+
 # with opcache
 php -d opcache.enable_cli=1 bench/compare.php
 
@@ -73,11 +77,11 @@ whose mtime just changed on every include).
 
 ### `bench/cache.php` — compile only, the features page skeleton
 
-Measures `examples/bootstrap/views/features.shape.php`, the page skeleton the
-example precompiles with `pure compile`. The body of the page is composed by
-the component functions and is not part of this shape, so the numbers recorded
-for the previous body shape (~640–780 µs cold, ~340–480 µs warm) no longer
-apply.
+Measures the page template of `examples/bootstrap/views/features.cmp.php`, the
+unit the example precompiles with `pure compile`. The body of the page is
+composed by the component functions and is not part of this shape, so the
+numbers recorded for the previous body shape (~640–780 µs cold, ~340–480 µs
+warm) no longer apply.
 
 | Phase | Time |
 | --- | --- |
@@ -88,6 +92,22 @@ The remaining warm cost is the structure fingerprint walk plus loading the
 generated file; the shape build itself dominates per-process startup either
 way. (Recorded 2026-09-18 on PHP 8.1.34 CLI; re-run the two commands above to
 record your machine.)
+
+### `bench/registry.php` — component loading, 22 unit artifacts
+
+| opcache | cold | warm (second require in the process) |
+| --- | --- | --- |
+| off | 457 µs | 301 µs (13.7 µs each) |
+| on | 915 µs | **11.6 µs (0.5 µs each)** |
+
+Recorded 2026-09-18 on PHP 8.1.34 CLI (see the machine note above).
+
+A single-file bundle was prototyped to replace the per-unit requires and
+rejected on this data: with opcache a per-unit require is about half a
+microsecond, while one flat bundle (55 KB of `$out .=` code plus function
+stubs) compiled slower cold than the 22 readable templates together (899 µs
+vs 470 µs) and tied warm. Artifacts plus opcache are the production path, so
+the library ships no bundle.
 
 ## Notes
 

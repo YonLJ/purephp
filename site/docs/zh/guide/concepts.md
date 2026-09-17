@@ -108,27 +108,31 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 
 ## 组件
 
-组件是带类型化参数、返回 `Raw` 的函数；它的模板是一个 `*.shape.php` 文件，通过
-`render()` 绑定：
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性模板
+工厂：
 
 ```php
 <?php
 
-// components/Card.shape.php
-return Compile::shape(
+// components/Card.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
-
-// components/Card.php
-use Pure\Core\Raw;
-use function Pure\Component\render;
+));
 
 function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
+    return render('Card', title: $title, content: $content, class: $class);
 }
 ```
 
@@ -150,7 +154,7 @@ use function Pure\Component\render;
 
 function Counter(int $count): Raw
 {
-    return render(__DIR__ . '/Counter.shape.php', count: $count);
+    return render('Counter', count: $count);
 }
 
 echo Counter(0);

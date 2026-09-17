@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/XmlData.php';
-require_once __DIR__ . '/../../views/xml.php';
+require_once __DIR__ . '/../../views/xml.cmp.php';
 
 /**
  * The xml page controller.

@@ -136,27 +136,31 @@ slot `title` resolves against the current item. Missing required keys throw
 
 ## Components
 
-A component is a function with typed parameters returning `Raw`; its template
-is a `*.shape.php` file the component binds with `render()`:
+A component is one `*.cmp.php` unit: a function with typed parameters returning
+`Raw`, plus the lazy factory registered next to it:
 
 ```php
 <?php
 
-// components/Card.shape.php
-return Compile::shape(
+// components/Card.cmp.php
+use Pure\Compile\Compile;
+use Pure\Compile\Shape;
+use Pure\Core\Raw;
+use Pure\Core\Slot;
+
+use function Pure\Component\{register, render};
+use function Pure\HTML\{div, h2, p};
+
+register('Card', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h2(Slot::text('title')),
         p(Slot::text('content'))
     )->class(Slot::attr('class'))
-);
-
-// components/Card.php
-use Pure\Core\Raw;
-use function Pure\Component\render;
+));
 
 function Card(string $title, string $content, string $class = 'card'): Raw
 {
-    return render(__DIR__ . '/Card.shape.php', title: $title, content: $content, class: $class);
+    return render('Card', title: $title, content: $content, class: $class);
 }
 ```
 
@@ -180,7 +184,7 @@ use function Pure\Component\render;
 
 function Counter(int $count): Raw
 {
-    return render(__DIR__ . '/Counter.shape.php', count: $count);
+    return render('Counter', count: $count);
 }
 
 echo Counter(0);

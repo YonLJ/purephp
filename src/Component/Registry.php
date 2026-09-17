@@ -56,6 +56,7 @@ final class Registry
     /** @var array<string, array{shape: Shape, generation: int}> */
     private static array $shapes = [];
 
+
     private function __construct()
     {
     }
