@@ -13,6 +13,7 @@ use Pure\Component\Registry;
 use Pure\Core\DevMode;
 use Pure\Core\Markup;
 use Pure\Core\MissingSlotException;
+use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\HTML\{div, h2, li, p, section, ul};
@@ -85,6 +86,35 @@ class CallTest extends TestCase
         $this->expectExceptionMessage("component 'FluentPlain' does not read children");
 
         component('FluentPlain', 'child')->text('x')->render();
+    }
+
+    public function testArrayChildrenAreFlattened(): void
+    {
+        $this->assertSame(
+            '<div class="card"><h2>Pro</h2><p>Nested</p><h2 class="card-title">Free</h2><p>Sign up</p><ul class="list"></ul></div>',
+            FluentCard([h2('Pro'), [p('Nested')]])->type('Free')->features([])->text('Sign up')->render()
+        );
+    }
+
+    public function testTextChildrenAreEscapedAndRawIsVerbatim(): void
+    {
+        $this->assertSame(
+            '<div class="card">&lt;b&gt;x&lt;/b&gt;<h2 class="card-title">Free</h2><p>Sign up</p><ul class="list"></ul></div>',
+            FluentCard('<b>x</b>')->type('Free')->features([])->text('Sign up')->render()
+        );
+
+        $this->assertSame(
+            '<div class="card"><b>y</b><h2 class="card-title">Free</h2><p>Sign up</p><ul class="list"></ul></div>',
+            FluentCard(Raw::of('<b>y</b>'))->type('Free')->features([])->text('Sign up')->render()
+        );
+    }
+
+    public function testSlotChildIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('a Slot cannot be a child of a call');
+
+        FluentCard(Slot::value('x'))->type('Free')->features([])->text('Sign up')->render();
     }
 
     public function testChildrenCannotBeAProp(): void

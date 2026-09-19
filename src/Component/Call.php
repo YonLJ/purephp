@@ -6,9 +6,11 @@ namespace Pure\Component;
 
 use Closure;
 use InvalidArgumentException;
+use Pure\Core\Escaper;
 use Pure\Core\Markup;
 use Pure\Core\Slot;
 use Pure\Core\Suggestion;
+use Pure\Core\Tag;
 
 use function Pure\Utils\clx;
 use function Pure\Utils\sty;
@@ -54,7 +56,7 @@ final class Call implements Markup
      */
     public function __construct(private readonly string $name, array $children = [])
     {
-        $this->children = $children;
+        $this->children = self::flatten($children);
     }
 
     /**
@@ -152,10 +154,68 @@ final class Call implements Markup
         if ($slots !== null || $this->children !== []) {
             // A template with a children slot always receives the list, so a
             // childless call renders empty content exactly like an empty tag.
-            $data['children'] = $this->children;
+            $data['children'] = array_map(
+                fn (mixed $child): string => $this->childMarkup($child),
+                $this->children
+            );
         }
 
         return $data;
+    }
+
+    /**
+     * Children follow the tag rules: a Tag or Markup child is verbatim markup,
+     * everything else is text and is escaped. A Slot cannot be a child of a
+     * call — it belongs to the caller's scope, not to the component.
+     */
+    private function childMarkup(mixed $child): string
+    {
+        if ($child instanceof Tag) {
+            return $child->render();
+        }
+
+        if ($child instanceof Markup) {
+            return (string)$child;
+        }
+
+        if ($child instanceof Slot) {
+            throw new InvalidArgumentException(
+                "component '{$this->name}': a Slot cannot be a child of a call; "
+                . 'bind it to a raw slot instead.'
+            );
+        }
+
+        return Escaper::text((string)$child);
+    }
+
+    /**
+     * Flatten nested child arrays like Tag::appendChildren(), so
+     * `Card($children)` and `Card(...$children)` are equivalent.
+     *
+     * @param array<array-key, mixed> $children
+     * @return list<mixed>
+     */
+    private static function flatten(array $children): array
+    {
+        $flat = [];
+
+        foreach ($children as $child) {
+            if ($child === null) {
+                continue;
+            }
+
+            if (is_array($child)) {
+                foreach (self::flatten($child) as $nested) {
+                    $flat[] = $nested;
+                }
+
+                continue;
+            }
+
+            $flat[] = $child;
+        }
+
+        return $flat;
     }
 
     private function set(string $prop, mixed $value): self
