@@ -530,6 +530,421 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('prepare() does not return one array literal', $result['stdout']);
     }
 
+    public function testDeclaredSlotsCarryTheBindingsOfAComputedPrepare(): void
+    {
+        $file = $this->unitFile('fluent-declared.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckDeclared', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')), div(Slot::raw('contents')))
+                ),
+                prepare: static function (
+                    #[Prop(slot: 'title')] string $text,
+                    #[Prop(slot: 'contents')] string $body,
+                ): array {
+                    $data = ['title' => strtoupper($text), 'contents' => $body];
+
+                    return $data;
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('its bindings are read from the #[Prop] declarations', $result['stdout']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testUndeclaredRequiredSlotIsAnErrorWhenPrepareIsComputed(): void
+    {
+        $file = $this->unitFile('fluent-undeclared.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckUndeclared', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')), div(Slot::raw('contents')))
+                ),
+                prepare: static function (
+                    #[Prop(slot: 'title')] string $text,
+                    string $body,
+                ): array {
+                    $data = ['title' => strtoupper($text), 'contents' => $body];
+
+                    return $data;
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "required slot 'contents' is not declared by any #[Prop] and prepare() does not return a readable array literal",
+            $result['stdout']
+        );
+    }
+
+    public function testDeclaredSlotMustBeReturnedByAPrepareLiteral(): void
+    {
+        $file = $this->unitFile('fluent-declared-literal.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckDeclaredLiteral', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')))
+                ),
+                prepare: static function (#[Prop(slot: 'title')] string $text): array {
+                    return ['titel' => $text];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "prop \$text declares slot 'title', which prepare() does not return",
+            $result['stdout']
+        );
+    }
+
+    public function testDeclaredSlotMustBeReadByTheTemplate(): void
+    {
+        $file = $this->unitFile('fluent-declared-typo.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckDeclaredTypo', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')))
+                ),
+                prepare: static function (#[Prop(slot: 'titel')] string $text): array {
+                    return ['titel' => $text];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "prop \$text declares slot 'titel', which the template does not read (did you mean 'title'?)",
+            $result['stdout']
+        );
+    }
+
+    public function testTwoPropsDeclaringOneSlotAreAnError(): void
+    {
+        $file = $this->unitFile('fluent-declared-duplicate.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckDeclaredDuplicate', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (
+                    #[Prop(slot: 'title')] string $text,
+                    #[Prop(slot: 'title')] string $heading,
+                ): array {
+                    return ['title' => $text . $heading];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "props \$text and \$heading declare the same slot 'title'",
+            $result['stdout']
+        );
+    }
+
+    public function testDeclaredRequiredMustMatchTheSignature(): void
+    {
+        $file = $this->unitFile('fluent-declared-required.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckDeclaredRequired', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), Slot::value('class')->default(''))
+                ),
+                prepare: static function (
+                    #[Prop(required: false)] string $title,
+                    #[Prop(required: true)] ?string $class = null,
+                ): array {
+                    return ['title' => $title, 'class' => $class];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            'prop $title is declared optional but its parameter has no default value; callers must pass it',
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            'prop $class is declared required but its parameter has a default value; callers may omit it',
+            $result['stdout']
+        );
+    }
+
+    public function testDeclaredItemIsCheckedAgainstTheItemShape(): void
+    {
+        $file = $this->unitFile('fluent-declared-item.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{li, ul};
+
+            register('CheckDeclaredItem', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    ul(Slot::each('features', li(Slot::value('value'))))
+                ),
+                prepare: static function (#[Prop(item: 'value')] array $features): array {
+                    return [
+                        'features' => array_map(static fn (string $feature): array => ['value' => $feature], $features),
+                    ];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testDeclaredItemMismatchesAreReported(): void
+    {
+        $this->unitFile('item-wrong.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{li, ul};
+
+            register('CheckItemWrong', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    ul(Slot::each('features', li(Slot::value('value'))))
+                ),
+                prepare: static function (#[Prop(item: 'vaule')] array $features): array {
+                    return ['features' => $features];
+                }
+            );
+            PHP);
+
+        $this->unitFile('item-multi.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{li, ul};
+
+            register('CheckItemMulti', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    ul(Slot::each('features', li(Slot::value('value'), Slot::value('url'))))
+                ),
+                prepare: static function (#[Prop(item: 'value')] array $features): array {
+                    return ['features' => $features];
+                }
+            );
+            PHP);
+
+        $this->unitFile('item-text.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckItemText', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (#[Prop(item: 'value')] string $title): array {
+                    return ['title' => $title];
+                }
+            );
+            PHP);
+
+        $this->unitFile('item-static.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{li, ul};
+
+            register('CheckItemStatic', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    ul(Slot::each('features', li('static')))
+                ),
+                prepare: static function (#[Prop(item: 'value')] array $features): array {
+                    return ['features' => $features];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "prop \$features declares one item slot 'vaule' but the item shape of slot 'features' reads 'value' (did you mean 'value'?)",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "prop \$features declares one item slot 'value' but the item shape of slot 'features' reads 'value', 'url'",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "prop \$title declares item: 'value' but slot 'title' is not a list slot",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "prop \$features declares item: 'value' but the item shape of slot 'features' reads no slots",
+            $result['stdout']
+        );
+    }
+
+    public function testDeprecatedPropIsReportedAtCallSites(): void
+    {
+        $this->unitFile('deprecated-target.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckDeprecated', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))->style(Slot::value('style'))
+                ),
+                prepare: static function (
+                    #[Prop(slot: 'title')] string $title,
+                    #[Prop(deprecated: 'use class()')] string $style = '',
+                ): array {
+                    return ['title' => $title, 'style' => $style];
+                }
+            );
+            PHP);
+
+        $this->unitFile('deprecated-calls.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+
+            use function Pure\Component\register;
+
+            register('CheckDeprecatedPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                \Pure\HTML\div()
+            ));
+
+            function checkDeprecatedBody(): string
+            {
+                return (string) CheckDeprecated('Home')->style('color: red');
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString(
+            "component 'CheckDeprecated': the call binds 'style', which is deprecated: use class()",
+            $result['stdout']
+        );
+        $this->assertStringContainsString('0 error(s), 1 warning(s).', $result['stdout']);
+    }
+
     public function testFluentCallSitePropsAreCheckedAgainstTheTarget(): void
     {
         $this->unitFile('target.cmp.php', <<<'PHP'

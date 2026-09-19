@@ -7,6 +7,7 @@ namespace Pure\Compile\Internal;
 use Closure;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Component\Prop;
 use Pure\Component\Registry;
 use Pure\Core\Suggestion;
 use ReflectionFunction;
@@ -42,9 +43,11 @@ final class CheckCommand
         Checks every *.cmp.php unit: the slots its template reads against the
         named bindings of its component function's render() call (a binding the
         template does not read, a required slot the call does not bind), or
-        against the prepare() parameters and returned keys of a fluent unit;
-        the function's parameter types against the slot kinds (a list slot
-        needs an iterable, a child scope an array, a text slot a stringable).
+        against the prepare() parameters and returned keys of a fluent unit,
+        where a #[Prop] declaration on a parameter (slot, item, required,
+        deprecated) is verified against the signature and the template; the
+        function's parameter types against the slot kinds (a list slot needs an
+        iterable, a child scope an array, a text slot a stringable).
         Also checks the fluent calls in every file: a `->prop(...)` the target
         does not accept is an error. Reports a slot that one template uses as
         both a scalar and a scope, and checks *.shape.php templates for the
@@ -217,8 +220,15 @@ final class CheckCommand
                 continue;
             }
 
+            $deprecated = self::deprecatedProps($site['name']);
+
             foreach (array_keys($site['props']) as $prop) {
                 if (in_array($prop, $expected, true) || in_array($prop, self::CALL_METHODS, true)) {
+                    if (isset($deprecated[$prop])) {
+                        fwrite($stdout, "warning: {$file}: component '{$site['name']}': the call binds '{$prop}', which is deprecated: {$deprecated[$prop]}\n");
+                        $warnings++;
+                    }
+
                     continue;
                 }
 
@@ -256,6 +266,35 @@ final class CheckCommand
         }
 
         return Registry::slots($name);
+    }
+
+    /**
+     * The props a fluent call may bind but should not, per the `#[Prop]`
+     * declarations of the target: prop name to migration hint.
+     *
+     * @return array<string, string>
+     */
+    private static function deprecatedProps(string $name): array
+    {
+        $prepare = Registry::prepare($name);
+
+        if ($prepare === null) {
+            return [];
+        }
+
+        $deprecated = [];
+
+        foreach ((new ReflectionFunction($prepare))->getParameters() as $parameter) {
+            foreach ($parameter->getAttributes(Prop::class) as $attribute) {
+                $prop = $attribute->newInstance();
+
+                if ($prop->deprecated !== null) {
+                    $deprecated[$parameter->getName()] = $prop->deprecated;
+                }
+            }
+        }
+
+        return $deprecated;
     }
 
     /**

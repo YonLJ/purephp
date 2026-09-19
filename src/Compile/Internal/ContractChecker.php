@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Pure\Component\Prop;
 use Pure\Core\SlotKind;
 use Pure\Core\Suggestion;
 use Pure\Core\Tag;
@@ -57,7 +58,7 @@ final class ContractChecker
         }
 
         if ($prepare !== null) {
-            return array_merge($findings, self::checkPrepare($file, $name, $contract, $prepare));
+            return array_merge($findings, self::checkPrepare($file, $name, $contract, $prepare, $tree));
         }
 
         if ($function !== null && self::returnsCall($function)) {
@@ -149,16 +150,47 @@ final class ContractChecker
      * reserved `children` slot from the call, not from prepare(), so a missing
      * `children` is not reported.
      *
+     * A `#[Prop]` declaration makes the contract explicit: `slot` names the
+     * binding (the parameter name by default), `required` states the caller
+     * obligation, `item` the single slot each item of a list prop fills, and
+     * `deprecated` a migration hint. Declarations are compared with the
+     * signature and the template, and when prepare() does not return one
+     * readable array literal they are what the required slots are checked
+     * against.
+     *
      * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
      * @return list<Finding>
      */
-    private static function checkPrepare(string $file, string $name, array $contract, ReflectionFunction $prepare): array
+    private static function checkPrepare(string $file, string $name, array $contract, ReflectionFunction $prepare, Tag $tree): array
     {
         $findings = [];
         $parameters = [];
+        $declared = [];
+        $slots = [];
 
         foreach ($prepare->getParameters() as $parameter) {
-            $parameters[$parameter->getName()] = $parameter;
+            $parameterName = $parameter->getName();
+            $parameters[$parameterName] = $parameter;
+            $declaration = self::declaration($parameter);
+
+            if ($declaration === null) {
+                continue;
+            }
+
+            $declared[$parameterName] = $declaration;
+            $slots[$parameterName] = $declaration->slot ?? $parameterName;
+        }
+
+        $bySlot = [];
+        $owner = [];
+
+        foreach ($slots as $parameterName => $slot) {
+            if (isset($owner[$slot])) {
+                $findings[] = Finding::error("props \${$owner[$slot]} and \${$parameterName} declare the same slot '{$slot}'");
+            }
+
+            $owner[$slot] = $parameterName;
+            $bySlot[$slot] = $parameters[$parameterName];
         }
 
         foreach ($contract as $slot => $info) {
@@ -166,7 +198,7 @@ final class ContractChecker
                 continue;
             }
 
-            $parameter = $parameters[$slot] ?? null;
+            $parameter = $bySlot[$slot] ?? $parameters[$slot] ?? null;
 
             if ($parameter === null) {
                 continue;
@@ -177,10 +209,28 @@ final class ContractChecker
             }
         }
 
+        foreach ($declared as $parameterName => $declaration) {
+            foreach (self::declarationFindings($parameterName, $declaration, $parameters[$parameterName], $contract, $slots[$parameterName], $tree) as $finding) {
+                $findings[] = $finding;
+            }
+        }
+
         $keys = Bindings::literalKeys($prepare);
 
         if ($keys === null) {
-            $findings[] = Finding::info('prepare() does not return one array literal; its bindings are not compared');
+            if ($slots === []) {
+                $findings[] = Finding::info('prepare() does not return one array literal; its bindings are not compared');
+            } else {
+                $findings[] = Finding::info('prepare() does not return one array literal; its bindings are read from the #[Prop] declarations');
+
+                foreach ($contract as $slot => $info) {
+                    if (!$info['required'] || $slot === 'children' || in_array($slot, $slots, true)) {
+                        continue;
+                    }
+
+                    $findings[] = Finding::error("required slot '{$slot}' is not declared by any #[Prop] and prepare() does not return a readable array literal");
+                }
+            }
         } else {
             foreach (array_keys($keys) as $key) {
                 if (isset($contract[$key])) {
@@ -198,6 +248,14 @@ final class ContractChecker
                     $findings[] = Finding::error("required slot '{$slot}' is not returned by prepare()");
                 }
             }
+
+            foreach ($slots as $parameterName => $slot) {
+                if (isset($keys[$slot])) {
+                    continue;
+                }
+
+                $findings[] = Finding::error("prop \${$parameterName} declares slot '{$slot}', which prepare() does not return");
+            }
         }
 
         $bindings = Bindings::of($prepare, $name, $file);
@@ -213,6 +271,107 @@ final class ContractChecker
         }
 
         return $findings;
+    }
+
+    /**
+     * The `#[Prop]` declaration of a parameter, if it has one.
+     */
+    private static function declaration(ReflectionParameter $parameter): ?Prop
+    {
+        foreach ($parameter->getAttributes(Prop::class) as $attribute) {
+            return $attribute->newInstance();
+        }
+
+        return null;
+    }
+
+    /**
+     * Check one declaration against the signature and the template.
+     *
+     * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
+     * @param string $slot The declared slot name of the parameter.
+     * @return list<Finding>
+     */
+    private static function declarationFindings(string $parameterName, Prop $prop, ReflectionParameter $parameter, array $contract, string $slot, Tag $tree): array
+    {
+        $findings = [];
+
+        if (!isset($contract[$slot])) {
+            $nearest = Suggestion::nearest($slot, array_keys($contract));
+            $hint = $nearest === null ? '' : " (did you mean '{$nearest}'?)";
+
+            $findings[] = Finding::error("prop \${$parameterName} declares slot '{$slot}', which the template does not read{$hint}");
+        }
+
+        if ($prop->required !== null) {
+            $optional = $parameter->isDefaultValueAvailable() || $parameter->isVariadic();
+
+            if ($prop->required && $optional) {
+                $findings[] = Finding::warning("prop \${$parameterName} is declared required but its parameter has a default value; callers may omit it");
+            } elseif (!$prop->required && !$optional) {
+                $findings[] = Finding::error("prop \${$parameterName} is declared optional but its parameter has no default value; callers must pass it");
+            }
+        }
+
+        if ($prop->item !== null) {
+            foreach (self::itemFindings($parameterName, $prop->item, $slot, $contract, $tree) as $finding) {
+                $findings[] = $finding;
+            }
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Check an `item:` declaration against the item shape of a list slot: the
+     * shape must read exactly the declared slot, as a scalar.
+     *
+     * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
+     * @return list<Finding>
+     */
+    private static function itemFindings(string $parameterName, string $item, string $slot, array $contract, Tag $tree): array
+    {
+        if (!isset($contract[$slot]['kinds'][SlotKind::Each->name])) {
+            return [
+                Finding::error("prop \${$parameterName} declares item: '{$item}' but slot '{$slot}' is not a list slot"),
+            ];
+        }
+
+        $items = RootSlots::itemSlots($tree, $slot);
+        $names = array_keys($items);
+
+        if ($names === []) {
+            return [
+                Finding::error("prop \${$parameterName} declares item: '{$item}' but the item shape of slot '{$slot}' reads no slots"),
+            ];
+        }
+
+        if (!in_array($item, $names, true) || count($names) > 1) {
+            $nearest = Suggestion::nearest($item, $names);
+            $hint = !in_array($item, $names, true) && $nearest !== null ? " (did you mean '{$nearest}'?)" : '';
+
+            return [
+                Finding::error("prop \${$parameterName} declares one item slot '{$item}' but the item shape of slot '{$slot}' reads " . self::names($names) . $hint),
+            ];
+        }
+
+        $kind = self::kindOf($items[$item]['kinds']);
+
+        if ($kind !== null && $kind !== SlotKind::Value && $kind !== SlotKind::Raw) {
+            return [
+                Finding::error("prop \${$parameterName} declares item: '{$item}' but the item shape reads it as a " . self::label($kind)),
+            ];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param list<string> $names
+     */
+    private static function names(array $names): string
+    {
+        return "'" . implode("', '", $names) . "'";
     }
 
     /**

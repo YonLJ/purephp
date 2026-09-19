@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Pure\Core\ShapeContract;
 use Pure\Core\Slot;
 use Pure\Core\SlotKind;
 use Pure\Core\Tag;
@@ -96,6 +97,71 @@ final class RootSlots
                 }
             }
         }
+    }
+
+    /**
+     * The merged manifest of the item shapes of a list slot: the keys each
+     * item scope reads, across every `Slot::each($slot, ...)` in the tree.
+     *
+     * An empty result means no list slot of that name holds a shape that reads
+     * keys of its own, so `pure check` can tell a text slot from a list slot
+     * whose items are static markup.
+     *
+     * @param Tag $tree The shape tree.
+     * @param string $slot The list slot name.
+     * @return array<string, array{required: bool, kinds: array<string, true>}>
+     */
+    public static function itemSlots(Tag $tree, string $slot): array
+    {
+        $items = [];
+
+        foreach (self::itemShapes($tree, $slot) as $shape) {
+            foreach (self::manifest($shape->tree()) as $name => $info) {
+                $entry = $items[$name] ?? ['required' => false, 'kinds' => []];
+                $entry['required'] = $entry['required'] || $info['required'];
+
+                foreach (array_keys($info['kinds']) as $kind) {
+                    $entry['kinds'][$kind] = true;
+                }
+
+                $items[$name] = $entry;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * The item shapes of a list slot, in tree order.
+     *
+     * @param Tag $tree The shape tree.
+     * @param string $slot The list slot name.
+     * @return list<ShapeContract>
+     */
+    private static function itemShapes(Tag $tree, string $slot): array
+    {
+        $shapes = [];
+        $export = $tree->export();
+
+        if ($export['selfClose']) {
+            return $shapes;
+        }
+
+        foreach ($export['children'] as $child) {
+            if ($child instanceof Tag) {
+                foreach (self::itemShapes($child, $slot) as $shape) {
+                    $shapes[] = $shape;
+                }
+
+                continue;
+            }
+
+            if ($child instanceof Slot && $child->kind === SlotKind::Each && $child->name === $slot && $child->shape !== null) {
+                $shapes[] = $child->shape;
+            }
+        }
+
+        return $shapes;
     }
 
     /**

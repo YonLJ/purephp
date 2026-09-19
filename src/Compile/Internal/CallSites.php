@@ -55,7 +55,7 @@ final class CallSites
 
             if (
                 is_array($previous)
-                && in_array($previous[0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NEW, T_FUNCTION], true)
+                && in_array($previous[0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_NEW, T_FUNCTION, T_ATTRIBUTE], true)
             ) {
                 continue;
             }
