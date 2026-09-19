@@ -99,12 +99,13 @@ register('Features', __FILE__, static fn () =>
     )
 );
 
-function featuresPage(array $data): string
+function featuresPage(): string
 {
     // 引擎按原样输出树，文档声明在这里手动拼接。
+    // 页面决定有哪些区块，每个区块自己取数据。
     return '<!DOCTYPE html>' . render('Features',
-        title: $data['title'],
-        content: FeaturesBody($data['content']),
+        title: FeaturesService::pageTitle(),
+        content: FeaturesBody(),
     );
 }
 ```

@@ -24,8 +24,9 @@ use Pure\Core\Tag;
  *
  * Values are escaped with `htmlspecialchars()` using the same flags as the
  * compiled renderer, so a plain view renders byte-identical output for
- * ordinary data. The strict slot semantics (MissingSlotException, attributes
- * omitted for null, iterable validation) belong to the runtime renderer and
+ * ordinary data. A raw slot joins an iterable with `implode()`, like the
+ * runtime does. The strict slot semantics (MissingSlotException, attributes
+ * omitted for null, per-element validation) belong to the runtime renderer and
  * are not part of a plain view: a missing slot is an undefined variable, a
  * null attribute prints an empty value.
  *
@@ -76,7 +77,13 @@ final class PlainGenerator extends TemplateGenerator
         $access = $this->slotData($dataVar, $slot);
 
         if ($kind === 'raw') {
-            return $access;
+            // A raw value may be an iterable of stringables; the runtime joins
+            // it, and a plain view has no runtime, so it joins with native PHP.
+            // `$pureRaw` cannot collide with an extracted local: local() never
+            // maps a `pure*` slot name.
+            return 'is_iterable($pureRaw = ' . $access . ')'
+                . " ? implode('', is_array(\$pureRaw) ? \$pureRaw : iterator_to_array(\$pureRaw, false))"
+                . ' : $pureRaw';
         }
 
         return 'htmlspecialchars((string)' . $access . ", ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false)";

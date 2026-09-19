@@ -19,13 +19,13 @@ register('ColLinks', __FILE__, static fn () =>
 /**
  * One footer link column.
  *
- * @param array{title: string, links: list<array{text: string, href: string}>} $column
+ * @param list<array{text: string, href: string}> $links
  */
-function ColLinks(array $column): string
+function ColLinks(string $title, array $links): string
 {
     return render(
         'ColLinks',
-        title: $column['title'],
-        links: $column['links'],
+        title: $title,
+        links: $links,
     );
 }

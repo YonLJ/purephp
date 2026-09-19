@@ -17,16 +17,14 @@ register('MainFeature', __FILE__, static fn () =>
 
 /**
  * The "features with title" main column.
- *
- * @param array{title: string, content: string, link: string, linkText: string} $main
  */
-function MainFeature(array $main): string
+function MainFeature(string $title, string $content, string $link, string $linkText): string
 {
     return render(
         'MainFeature',
-        title: $main['title'],
-        content: $main['content'],
-        link: $main['link'],
-        linkText: $main['linkText'],
+        title: $title,
+        content: $content,
+        link: $link,
+        linkText: $linkText,
     );
 }

@@ -26,17 +26,15 @@ register('IconColumn', __FILE__, static fn () =>
 
 /**
  * One "columns with icons" item.
- *
- * @param array{icon: string, title: string, content: string, link: string, linkText: string} $item
  */
-function IconColumn(array $item): string
+function IconColumn(string $icon, string $title, string $content, string $link, string $linkText): string
 {
     return render(
         'IconColumn',
-        icon: Icon('#' . $item['icon']),
-        title: $item['title'],
-        content: $item['content'],
-        link: $item['link'],
-        linkText: $item['linkText'],
+        icon: Icon('#' . $icon),
+        title: $title,
+        content: $content,
+        link: $link,
+        linkText: $linkText,
     );
 }

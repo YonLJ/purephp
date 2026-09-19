@@ -2,8 +2,7 @@
 
 /**
  * Benchmarks the classic renderer and the function components of this page:
- * the page function, the precompiled skeleton artifact with precomputed
- * bindings, and the plain view.
+ * the page function and the precompiled skeleton artifact.
  *
  * The classic baseline lives in bench/fixtures (examples are compiled-only).
  *
@@ -29,7 +28,6 @@ function bench(string $label, int $iters, callable $fn): float
 }
 
 $iters = (int)($argv[1] ?? 2000);
-$data = featuresData();
 
 // One-time costs: the page skeleton compiles once per process, the artifact is
 // loaded once, and the component functions compile on their first render.
@@ -45,7 +43,7 @@ $renderer = require __DIR__ . '/views/features.pure.php';
 $requireTime = (hrtime(true) - $requireStart) / 1000;
 
 $firstStart = hrtime(true);
-$first = featuresPage($data);
+$first = featuresPage();
 $firstTime = (hrtime(true) - $firstStart) / 1000;
 
 printf("page shape + compile: %.1f us (once) | artifact require: %.1f us (once)\n", $shapeTime, $requireTime);
@@ -55,11 +53,11 @@ printf("page function first render (compiles components): %.1f us\n\n", $firstTi
 // its cached op_array instead of revalidating a file whose mtime just changed.
 touch(__DIR__ . '/views/features.plain.php', time() - 5);
 
-$bindings = featuresBindings($data);
-$classic = fn (): string => classicFeaturesPage(featuresContent())->render();
+$classic = fn (): string => classicFeaturesPage(FeaturesDao::content())->render();
+$bindings = featuresBindings();
 
 $classicTime = bench('classic build + render', $iters, $classic);
-$pageTime = bench('page function (components + artifact)', $iters, fn (): string => featuresPage($data));
+$pageTime = bench('page function (components + artifact)', $iters, fn (): string => featuresPage());
 $artifactTime = bench('skeleton artifact + bindings', $iters, fn (): string => $renderer->render($bindings));
 $plainTime = bench('plain view + bindings', $iters, fn (): string => plain('features', $bindings));
 

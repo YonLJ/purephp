@@ -4,6 +4,8 @@ use Pure\Core\Slot;
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h1, p};
 
+require_once __DIR__ . '/../app/services/PricingService.php';
+
 /**
  * The pricing page heading template.
  */
@@ -15,13 +17,16 @@ register('PricingHeader', __FILE__, static fn () =>
 );
 
 /**
- * The pricing page heading.
+ * The pricing page heading: it fetches the title and the description from the
+ * service.
  */
-function PricingHeader(string $title, string $desc): string
+function PricingHeader(): string
 {
+    $data = PricingService::pricing();
+
     return render(
         'PricingHeader',
-        title: $title,
-        desc: $desc,
+        title: $data['title'],
+        desc: $data['desc'],
     );
 }

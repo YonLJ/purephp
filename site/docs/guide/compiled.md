@@ -222,15 +222,19 @@ function Icon(string $href, string $class = 'bi'): string
 // views/features.cmp.php: the page skeleton plus the rendered body
 register('Features', __FILE__, static fn () => html(/* ... */));
 
-function featuresPage(array $data): string
+function featuresPage(): string
 {
     // Prepend the document header; the tree itself renders without one.
     return '<!DOCTYPE html>' . render('Features',
-        title: $data['title'],
-        content: FeaturesBody($data['content']),
+        title: FeaturesService::pageTitle(),
+        content: FeaturesBody(),
     );
 }
 ```
+
+Each block fetches its own records from the service layer (`FeaturesService` in
+the bootstrap example), so the page function carries no page data and adding a
+prop to a component never touches the page.
 
 A child component's markup is a plain string that goes straight into a raw slot
 — no `(string)` cast — and a list of them is concatenated in order.

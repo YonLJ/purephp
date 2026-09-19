@@ -110,12 +110,13 @@ register('Features', __FILE__, static fn () =>
     )
 );
 
-function featuresPage(array $data): string
+function featuresPage(): string
 {
     // The engine emits the tree as written; prepend the document header here.
+    // The page decides which blocks exist, each block fetches its own records.
     return '<!DOCTYPE html>' . render('Features',
-        title: $data['title'],
-        content: FeaturesBody($data['content']),
+        title: FeaturesService::pageTitle(),
+        content: FeaturesBody(),
     );
 }
 ```

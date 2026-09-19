@@ -21,15 +21,13 @@ register('FeatureTitle', __FILE__, static fn () =>
 
 /**
  * One "features with title" item.
- *
- * @param array{icon: string, title: string, content: string} $item
  */
-function FeatureTitle(array $item): string
+function FeatureTitle(string $icon, string $title, string $content): string
 {
     return render(
         'FeatureTitle',
-        icon: Icon('#' . $item['icon']),
-        title: $item['title'],
-        content: $item['content'],
+        icon: Icon('#' . $icon),
+        title: $title,
+        content: $content,
     );
 }

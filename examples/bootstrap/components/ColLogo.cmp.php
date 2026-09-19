@@ -16,16 +16,14 @@ register('ColLogo', __FILE__, static fn () =>
 
 /**
  * The footer logo column.
- *
- * @param array{src: string, width: string, height: string, text: string} $logo
  */
-function ColLogo(array $logo): string
+function ColLogo(string $src, string $text, string $width, string $height): string
 {
     return render(
         'ColLogo',
-        src: $logo['src'],
-        width: $logo['width'],
-        height: $logo['height'],
-        text: $logo['text'],
+        src: $src,
+        width: $width,
+        height: $height,
+        text: $text,
     );
 }

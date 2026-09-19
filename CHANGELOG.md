@@ -101,11 +101,11 @@ First public version. No tag has been cut yet.
   escapes to text; attribute position follows `Tag::setAttr()` with bool/null
   omission). Generated code is byte-identical for equivalent usages; the
   fingerprint encodes the slot kind name, so it keys differently and
-  `Compile::CACHE_VERSION` is bumped 9 → 11 (the slot-kind rekeying plus the
-  `Slot::eachKind()` removal below). Local `*.pure.php` / `*.plain.php`
-  artifacts become stale and must be regenerated with `pure compile --plain`
-  (plain views are not rebuilt or checked without `--plain`); they are
-  gitignored and not committed.
+  `Compile::CACHE_VERSION` is bumped 9 → 12 (the slot-kind rekeying, the
+  `Slot::eachKind()` removal below and the plain raw-iterable join). Local
+  `*.pure.php` / `*.plain.php` artifacts become stale and must be regenerated
+  with `pure compile --plain` (plain views are not rebuilt or checked without
+  `--plain`); they are gitignored and not committed.
 - `register()` factories and `*.shape.php` templates may now return a bare tag
   tree; `Registry` and `ArtifactCompiler` wrap it in `Compile::shape()`
   automatically. `Compile::shape()` stays as the explicit API.
@@ -317,6 +317,11 @@ First public version. No tag has been cut yet.
   `Pure\Core\Raw::of($value)`.
 
 ### Fixed
+
+- A plain view joins an iterable raw slot with `implode()` instead of echoing
+  the array, so a `Slot::raw()` list of stringables renders in both flavors
+  (a `Traversable` is materialized first). The plain `@var` annotation of a raw
+  slot now includes the iterable form.
 
 - The structure fingerprint left out the attribute name of a slot-valued
   attribute, because the slot path it encodes carries the slot name only:

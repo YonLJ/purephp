@@ -28,17 +28,11 @@ register('Card', __FILE__, static fn () =>
  */
 function Card(string $type, string $price, array $features, string $text, string $class): string
 {
-    $items = [];
-
-    foreach ($features as $feature) {
-        $items[] = ['value' => $feature];
-    }
-
     return render(
         'Card',
         type: $type,
         price: $price,
-        features: $items,
+        features: array_map(static fn (string $feature): array => ['value' => $feature], $features),
         text: $text,
         class: $class,
     );

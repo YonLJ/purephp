@@ -24,17 +24,15 @@ register('HangingIcon', __FILE__, static fn () =>
 
 /**
  * One "hanging icons" item.
- *
- * @param array{icon: string, title: string, content: string, link: string, linkText: string} $item
  */
-function HangingIcon(array $item): string
+function HangingIcon(string $icon, string $title, string $content, string $link, string $linkText): string
 {
     return render(
         'HangingIcon',
-        icon: Icon('#' . $item['icon']),
-        title: $item['title'],
-        content: $item['content'],
-        link: $item['link'],
-        linkText: $item['linkText'],
+        icon: Icon('#' . $icon),
+        title: $title,
+        content: $content,
+        link: $link,
+        linkText: $linkText,
     );
 }

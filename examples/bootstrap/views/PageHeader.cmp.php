@@ -4,7 +4,8 @@ use Pure\Core\Slot;
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h5, nav};
 
-require_once __DIR__ . '/NavLink.cmp.php';
+require_once __DIR__ . '/../components/NavLink.cmp.php';
+require_once __DIR__ . '/../app/services/PricingService.php';
 
 /**
  * The page header template: the company name, the nav links and the sign-up
@@ -19,23 +20,17 @@ register('PageHeader', __FILE__, static fn () =>
 );
 
 /**
- * The page header: the company name, the nav links and the sign-up link.
- *
- * @param list<array{text: string, href: string, class: string}> $navs
- * @param array{text: string, href: string, class: string} $signUp
+ * The page header: it fetches the company name, the nav links and the sign-up
+ * link from the service and renders its own children.
  */
-function PageHeader(string $companyName, array $navs, array $signUp): string
+function PageHeader(): string
 {
-    $links = [];
-
-    foreach ($navs as $nav) {
-        $links[] = NavLink($nav['text'], $nav['href'], $nav['class']);
-    }
+    $data = PricingService::header();
 
     return render(
         'PageHeader',
-        company: $companyName,
-        navs: $links,
-        signUp: NavLink($signUp['text'], $signUp['href'], $signUp['class']),
+        company: $data['company'],
+        navs: array_map(static fn (array $nav): string => NavLink(...$nav), $data['navs']),
+        signUp: NavLink(...$data['signUp']),
     );
 }

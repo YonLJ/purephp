@@ -34,17 +34,15 @@ register('CustomCard', __FILE__, static fn () =>
 /**
  * One "custom cards" item: the cover image is the card background, the icon is
  * the avatar.
- *
- * @param array{title: string, icon: string, location: string, date: string, bgImg: string} $card
  */
-function CustomCard(array $card): string
+function CustomCard(string $title, string $icon, string $location, string $date, string $bgImg): string
 {
     return render(
         'CustomCard',
-        title: $card['title'],
-        icon: $card['icon'],
-        location: $card['location'],
-        date: $card['date'],
-        style: "background-image: url('{$card['bgImg']}');",
+        title: $title,
+        icon: $icon,
+        location: $location,
+        date: $date,
+        style: "background-image: url('{$bgImg}');",
     );
 }

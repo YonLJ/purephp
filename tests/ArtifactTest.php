@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Generator;
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCommand;
@@ -336,7 +337,16 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('foreach ($items as $item1):', $source);
         $this->assertStringContainsString('if ((bool)($flag ?? false)):', $source);
         $this->assertStringContainsString('class="<?= htmlspecialchars', $source);
+        $this->assertStringContainsString('is_iterable($pureRaw = $body)', $source);
+        $this->assertStringContainsString(
+            "? implode('', is_array(\$pureRaw) ? \$pureRaw : iterator_to_array(\$pureRaw, false))",
+            $source
+        );
         $this->assertStringContainsString('@var scalar|null|\\Stringable $title', $source);
+        $this->assertStringContainsString(
+            '@var iterable<array-key, scalar|null|\\Stringable>|scalar|null|\\Stringable $body',
+            $source
+        );
         $this->assertStringContainsString('@var mixed $flag', $source);
         $this->assertStringContainsString(
             '@var iterable<array-key, array{class: scalar|null|\\Stringable, label: scalar|null|\\Stringable}> $items',
@@ -367,6 +377,15 @@ class ArtifactTest extends TestCase
                 'items' => [],
                 'tip' => 'x',
             ],
+            [
+                'title' => 'Raw list',
+                'body' => ['<b>a</b>', Raw::of('<i>b</i>'), null, 3],
+                'subtitle' => 'S',
+                'flag' => true,
+                'cardClass' => 'c3',
+                'items' => [['label' => 'one', 'class' => 'i1']],
+                'tip' => 't',
+            ],
         ];
 
         $header = $shape->tree()->documentHeader();
@@ -374,6 +393,39 @@ class ArtifactTest extends TestCase
         foreach ($sets as $set) {
             $this->assertSame($header . $flat->render($set), self::renderPlain($plain, $set));
         }
+    }
+
+    public function testPlainViewsJoinATraversableRawSlot(): void
+    {
+        $file = $this->shapeFile('raw-generator.shape.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Raw;
+            use Pure\Core\Slot;
+
+            use function Pure\HTML\div;
+
+            return Compile::shape(div(Slot::raw('items')));
+            PHP);
+
+        $plain = ArtifactCompiler::writeAll($file, true)['plain'];
+        $this->assertIsString($plain);
+
+        $shape = self::load($file);
+        $this->assertInstanceOf(Shape::class, $shape);
+
+        $items = static function (): Generator {
+            yield '<b>a</b>';
+            yield Raw::of('<i>b</i>');
+        };
+
+        $this->assertSame(
+            $shape->tree()->documentHeader() . '<div><b>a</b><i>b</i></div>',
+            self::renderPlain($plain, ['items' => $items()])
+        );
     }
 
     public function testPlainViewsDeclareRootSlotsWithTypesDerivedFromTheShape(): void

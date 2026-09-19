@@ -145,14 +145,17 @@ for the artifact contract, the freshness rules and the plain-view caveats.
 
 ## Examples
 
-`examples/bootstrap` is a small MVC setup with three pages behind one router.
-`views/features.cmp.php` and `views/pricing.cmp.php` are component units that
-compile
+`examples/bootstrap` is a small MVC setup with three pages behind one router:
+controllers stay thin, `app/dao/` reads the records, `app/services/` turns them
+into the props of one component, and each component fetches its own slice there
+— the page function carries no page data. `views/features.cmp.php` and
+`views/pricing.cmp.php` are component units that compile
 into a strict artifact (`*.pure.php`, loaded by `render()`) and a
 dependency-free view (`*.plain.php`, required by the example's `plain()`
-helper); the two controllers of a page share its view data through
-`featuresData()` / `pricingData()`. The cover page is static markup through the
-string renderer (`views/cover.php`), so it has neither variant. Routes:
+helper); the two controllers of a page share the bindings its component
+functions produce (`featuresBindings()` / `pricingBindings()`). The cover page
+is static markup through the string renderer (`views/cover.php`), so it has
+neither variant. Routes:
 
 ```
 /cover             the static cover page

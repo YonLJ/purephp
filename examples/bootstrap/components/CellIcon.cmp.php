@@ -22,15 +22,18 @@ register('CellIcon', __FILE__, static fn () =>
 
 /**
  * One "icon grid" item.
- *
- * @param array{icon: string, title: string, content: string} $item
  */
-function CellIcon(array $item): string
+function CellIcon(string $icon, string $title, string $content): string
 {
     return render(
         'CellIcon',
-        icon: Icon('#' . $item['icon'], 'bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'),
-        title: $item['title'],
-        content: $item['content'],
+        icon: Icon(
+            href: '#' . $icon,
+            class: 'bi text-muted flex-shrink-0 me-3',
+            width: '1.75em',
+            height: '1.75em'
+        ),
+        title: $title,
+        content: $content,
     );
 }

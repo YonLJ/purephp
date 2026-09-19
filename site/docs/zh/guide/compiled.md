@@ -237,15 +237,18 @@ function Icon(string $href, string $class = 'bi'): string
 // views/features.cmp.php：页面骨架加已渲染的正文
 register('Features', __FILE__, static fn () => html(/* ... */));
 
-function featuresPage(array $data): string
+function featuresPage(): string
 {
     // 手动补上文档声明；树本身不带文档声明。
     return '<!DOCTYPE html>' . render('Features',
-        title: $data['title'],
-        content: FeaturesBody($data['content']),
+        title: FeaturesService::pageTitle(),
+        content: FeaturesBody(),
     );
 }
 ```
+
+每个区块都从 service 层（bootstrap 示例中的 `FeaturesService`）取自己的记录，因此页面函数
+不携带页面数据，给组件加一个 prop 也永远不需要改页面。
 
 子组件渲染出的字符串直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的列表按顺序拼接。
 

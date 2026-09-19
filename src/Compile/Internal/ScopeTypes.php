@@ -15,21 +15,28 @@ use Pure\Core\Tag;
  *
  * A plain view reads root slots as locals (the loader extracts the data array)
  * and every nested slot as an offset of the array its root slot holds, so the
- * compiler can tell static analyzers what the view expects: text, raw and
- * attribute slots accept what PHP stringifies (`scalar|null|\Stringable`),
- * condition slots are `mixed` (they are read as `(bool)`), and child and each
- * slots become array shapes and iterables of them.
+ * compiler can tell static analyzers what the view expects: text and attribute
+ * slots accept what PHP stringifies (`scalar|null|\Stringable`), raw slots also
+ * accept an iterable of those (a plain view joins it), condition slots are
+ * `mixed` (they are read as `(bool)`), and child and each slots become array
+ * shapes and iterables of them.
  *
  * @internal
  */
 final class ScopeTypes
 {
     /**
-     * The value type of a text, raw or attribute slot: what SlotRuntime and
-     * the inlined htmlspecialchars() calls of a plain view accept. The null
-     * keeps `$x ?? default` reads valid for optional slots.
+     * The value type of a text or attribute slot: what SlotRuntime and the
+     * inlined htmlspecialchars() calls of a plain view accept. The null keeps
+     * `$x ?? default` reads valid for optional slots.
      */
     private const VALUE = 'scalar|null|\\Stringable';
+
+    /**
+     * The value type of a raw slot: a stringable, or an iterable of stringables
+     * that the renderer joins.
+     */
+    private const RAW = 'iterable<array-key, scalar|null|\\Stringable>|scalar|null|\\Stringable';
 
     /**
      * The value type of a condition slot: `(bool)` accepts anything, and the
@@ -164,7 +171,8 @@ final class ScopeTypes
     private function slotType(Slot $slot): string
     {
         return match ($slot->kind) {
-            SlotKind::Value, SlotKind::Raw => self::VALUE,
+            SlotKind::Value => self::VALUE,
+            SlotKind::Raw => self::RAW,
             SlotKind::Child => $this->shapeType($slot->shape),
             SlotKind::Each => 'iterable<array-key, ' . $this->shapeType($slot->shape) . '>',
             default => throw new LogicException("slot kind '{$slot->kind->name}' has no scope type."),

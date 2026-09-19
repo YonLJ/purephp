@@ -4,8 +4,9 @@ use Pure\Core\Slot;
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2};
 
-require_once __DIR__ . '/MainFeature.cmp.php';
-require_once __DIR__ . '/FeatureTitle.cmp.php';
+require_once __DIR__ . '/../components/MainFeature.cmp.php';
+require_once __DIR__ . '/../components/FeatureTitle.cmp.php';
+require_once __DIR__ . '/../app/services/FeaturesService.php';
 
 /**
  * The "features with title" section template: the main column and the feature
@@ -25,23 +26,17 @@ register('FeatureSection', __FILE__, static fn () =>
 );
 
 /**
- * The "features with title" section.
- *
- * @param array{title: string, content: string, link: string, linkText: string} $main
- * @param list<array{icon: string, title: string, content: string}> $features
+ * The "features with title" section: it fetches the heading, the main column
+ * and the feature records from the service and renders its own children.
  */
-function FeatureSection(string $title, array $main, array $features): string
+function FeatureSection(): string
 {
-    $items = [];
-
-    foreach ($features as $feature) {
-        $items[] = FeatureTitle($feature);
-    }
+    $data = FeaturesService::featureSection();
 
     return render(
         'FeatureSection',
-        title: $title,
-        main: MainFeature($main),
-        features: $items,
+        title: $data['title'],
+        main: MainFeature(...$data['main']),
+        features: array_map(static fn (array $feature): string => FeatureTitle(...$feature), $data['features']),
     );
 }

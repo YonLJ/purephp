@@ -55,7 +55,7 @@ $iterations = (int)($argv[1] ?? 3000);
 require $root . '/examples/bootstrap/app/bootstrap.php';
 require $root . '/examples/bootstrap/app/controllers/FeaturesController.php';
 require_once $root . '/examples/bootstrap/views/features.cmp.php';
-$data = featuresBindings(featuresData());
+$bindings = featuresBindings();
 
 $start = hrtime(true);
 $renderer = require $artifactFile;
@@ -69,7 +69,7 @@ $warm = (hrtime(true) - $start) / 1000;
 
 $start = hrtime(true);
 for ($i = 0; $i < $iterations; $i++) {
-    $rendered = $renderer->render($data);
+    $rendered = $renderer->render($bindings);
 }
 $artifactRender = (hrtime(true) - $start) / 1000 / $iterations;
 
@@ -85,7 +85,7 @@ $compile = (hrtime(true) - $start) / 1000;
 
 $start = hrtime(true);
 for ($i = 0; $i < $iterations; $i++) {
-    $expected = $shape($data);
+    $expected = $shape($bindings);
 }
 $shapeRender = (hrtime(true) - $start) / 1000 / $iterations;
 

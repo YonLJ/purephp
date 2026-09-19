@@ -7,16 +7,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{register, render};
 use function Pure\HTML\{body, h1, head, html, link, main, meta, title};
 
-require_once __DIR__ . '/features-svgs.php';
+require_once __DIR__ . '/../components/IconSheet.cmp.php';
 require_once __DIR__ . '/../components/IconColumn.cmp.php';
 require_once __DIR__ . '/../components/HangingIcon.cmp.php';
 require_once __DIR__ . '/../components/CustomCard.cmp.php';
 require_once __DIR__ . '/../components/CellIcon.cmp.php';
 require_once __DIR__ . '/../components/MainFeature.cmp.php';
 require_once __DIR__ . '/../components/FeatureTitle.cmp.php';
-require_once __DIR__ . '/../components/Section.cmp.php';
+require_once __DIR__ . '/Section.cmp.php';
 require_once __DIR__ . '/../components/Divider.cmp.php';
-require_once __DIR__ . '/../components/FeatureSection.cmp.php';
+require_once __DIR__ . '/FeatureSection.cmp.php';
+require_once __DIR__ . '/../app/services/FeaturesService.php';
 
 register('Features', __FILE__, static function () {
     /**
@@ -53,9 +54,13 @@ register('Features', __FILE__, static function () {
                 main(
                     h1('Features examples')->class('visually-hidden'),
                     Slot::raw('columns'),
+                    Raw::of(Divider()),
                     Slot::raw('hanging'),
+                    Raw::of(Divider()),
                     Slot::raw('cards'),
+                    Raw::of(Divider()),
                     Slot::raw('grid'),
+                    Raw::of(Divider()),
                     Slot::raw('features')
                 )
             )
@@ -64,53 +69,32 @@ register('Features', __FILE__, static function () {
 });
 
 /**
- * The data of the features page: the title and rendered markup for each
- * section. The plain view controller uses the same bindings, so both flavors
- * render one page.
+ * The rendered blocks of the features page: every section component fetches
+ * its own records from FeaturesService, so the page only decides which blocks
+ * the skeleton has. The page function and the plain view controller share
+ * these bindings, so both flavors render one page.
  *
- * @param array<string, mixed> $data The page data from the controller.
  * @return array{title: string, columns: string, hanging: string, cards: string, grid: string, features: string}
  */
-function featuresBindings(array $data): array
+function featuresBindings(): array
 {
-    $content = $data['content'];
-
     return [
-        'title' => $data['title'],
-        'columns' => Section($content['columns']['title'], renderItems($content['columns']['contents'], IconColumn(...)), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        'hanging' => Divider() . Section($content['hanging']['title'], renderItems($content['hanging']['contents'], HangingIcon(...)), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        'cards' => Divider() . Section($content['cards']['title'], renderItems($content['cards']['contents'], CustomCard(...)), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'),
-        'grid' => Divider() . Section($content['grid']['title'], renderItems($content['grid']['contents'], CellIcon(...)), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'),
-        'features' => Divider() . FeatureSection($content['features']['title'], $content['features']['main'], $content['features']['features']),
+        'title' => FeaturesService::pageTitle(),
+        'columns' => Section('columns', 'row g-4 py-5 row-cols-1 row-cols-lg-3', IconColumn(...)),
+        'hanging' => Section('hanging', 'row g-4 py-5 row-cols-1 row-cols-lg-3', HangingIcon(...)),
+        'cards' => Section('cards', 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5', CustomCard(...)),
+        'grid' => Section('grid', 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5', CellIcon(...)),
+        'features' => FeatureSection(),
     ];
 }
 
 /**
  * The features page: the document skeleton is the registered template
- * (precompiled with `pure compile`), the body is composed from the component
- * functions. The document header is not part of the tree, so it is prepended
- * manually.
- *
- * @param array<string, mixed> $data The page data from the controller.
+ * (precompiled with `pure compile`), the blocks are composed from the
+ * component functions. The document header is not part of the tree, so it is
+ * prepended manually.
  */
-function featuresPage(array $data): string
+function featuresPage(): string
 {
-    return '<!DOCTYPE html>' . render('Features', ...featuresBindings($data));
-}
-
-/**
- * Render one list of section items with its component function.
- *
- * @param list<array<string, string>> $items
- * @param callable(array<string, string>): string $component
- */
-function renderItems(array $items, callable $component): string
-{
-    $html = '';
-
-    foreach ($items as $item) {
-        $html .= $component($item);
-    }
-
-    return $html;
+    return '<!DOCTYPE html>' . render('Features', ...featuresBindings());
 }
