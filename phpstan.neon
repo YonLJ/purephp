@@ -14,7 +14,9 @@ parameters:
     ignoreErrors:
         # Allow magic static methods in HTML/SVG/XML classes
         - '#Call to an undefined static method Pure\\Core\\(HTML|SVG|XML)::[a-zA-Z0-9_]+\(\)#'
-        # Allow dynamic calls in Tag/HTML/SVG/XML classes for attributes
+        # Allow dynamic calls in Tag/HTML/SVG/XML classes for attributes and in
+        # Call for component props
         - '#Call to an undefined method Pure\\Core\\(Tag|HTML|SVG|XML)::[a-zA-Z0-9_]+\(\)#'
+        - '#Call to an undefined method Pure\\Component\\Call::[a-zA-Z0-9_]+\(\)#'
         # Allow mixed to string casting in template engine
         - '#Cannot cast mixed to string#'

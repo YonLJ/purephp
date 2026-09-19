@@ -39,7 +39,7 @@ use Throwable;
  */
 final class Registry
 {
-    /** @var array<string, array{file: string, factory: Closure(): mixed}> */
+    /** @var array<string, array{file: string, factory: Closure(): mixed, prepare: ?Closure}> */
     private static array $units = [];
 
     /** @var array<string, string> realpath(file) => name */
@@ -48,7 +48,7 @@ final class Registry
     /** @var array<string, string> the name or path as given => cache key */
     private static array $keys = [];
 
-    /** @var array<string, array{binder: Closure(array<int|string, mixed>): string, generation: int}> */
+    /** @var array<string, array{binder: Closure(array<int|string, mixed>): string, renderer: Renderer, generation: int}> */
     private static array $binders = [];
 
     /** @var array<string, array{shape: Shape, generation: int}> */
@@ -70,9 +70,10 @@ final class Registry
      * @param string $file The unit file, normally `__FILE__`.
      * @param Closure(): mixed $factory Builds the template; called lazily, may return a tag tree or a Shape.
      * @param bool $override Replace an existing registration.
+     * @param ?Closure $prepare Optional props-to-bindings hook for fluent calls.
      * @return void
      */
-    public static function register(string $name, string $file, Closure $factory, bool $override = false): void
+    public static function register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void
     {
         if ($name === '') {
             throw new InvalidArgumentException('component name must not be empty.');
@@ -112,9 +113,43 @@ final class Registry
             self::forget($owner);
         }
 
-        self::$units[$name] = ['file' => $path, 'factory' => $factory];
+        self::$units[$name] = ['file' => $path, 'factory' => $factory, 'prepare' => $prepare];
         self::$files[$path] = $name;
         self::$keys = [];
+    }
+
+    /**
+     * The prepare() hook of a registered unit: the props-to-bindings closure a
+     * fluent call uses to type and transform its props.
+     *
+     * @param string $name A component name.
+     * @return ?Closure The registered hook, or null when the unit has none.
+     */
+    public static function prepare(string $name): ?Closure
+    {
+        return self::$units[$name]['prepare'] ?? null;
+    }
+
+    /**
+     * The root slot manifest of a unit or template, when the renderer carries
+     * one: the slot names the template reads, for tooling and for the children
+     * check of a fluent call.
+     *
+     * @param string $nameOrPath A component name or a unit/shape file path.
+     * @return list<string>|null The slot names, or null when unknown.
+     */
+    public static function slots(string $nameOrPath): ?array
+    {
+        $key = self::key($nameOrPath);
+        $generation = Compile::generation();
+        $cached = self::$binders[$key] ?? null;
+
+        if ($cached === null || $cached['generation'] !== $generation) {
+            self::binder($nameOrPath);
+            $cached = self::$binders[$key];
+        }
+
+        return $cached['renderer']->slots;
     }
 
     /**
@@ -197,7 +232,7 @@ final class Registry
                 }
             };
 
-        self::$binders[$key] = ['binder' => $binder, 'generation' => $generation];
+        self::$binders[$key] = ['binder' => $binder, 'renderer' => $renderer, 'generation' => $generation];
 
         return $binder;
     }
