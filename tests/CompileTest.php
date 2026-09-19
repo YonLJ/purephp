@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
+use Pure\Compile\CompileException;
 use Pure\Compile\Internal\SlotRuntime;
 use Pure\Core\HTML;
+use Pure\Core\Markup;
 use Pure\Core\MissingSlotException;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
@@ -655,5 +657,38 @@ class CompileTest extends TestCase
         $shape->print(['v' => 'a']);
 
         $this->assertSame('<div>a</div>', ob_get_clean());
+    }
+    public function testMarkupChildInAShapeIsACompileError(): void
+    {
+        $shape = Compile::shape(div(new ShapeMarkupProbe()));
+
+        $this->expectException(CompileException::class);
+        $this->expectExceptionMessage(
+            "a component call ('ShapeMarkupProbe') cannot be part of a data-free shape; "
+            . "render it into a raw slot instead, e.g. Slot::raw('children')."
+        );
+
+        $shape->compile();
+    }
+
+    public function testRawSlotAcceptsMarkup(): void
+    {
+        $shape = Compile::shape(div(Slot::raw('body')));
+
+        $this->assertSame(
+            '<div><b>m</b><i>r</i></div>',
+            $shape(['body' => [new ShapeMarkupProbe(), Raw::of('<i>r</i>')]])
+        );
+    }
+}
+
+/**
+ * A Markup implementation for the shape checks.
+ */
+final class ShapeMarkupProbe implements Markup
+{
+    public function __toString(): string
+    {
+        return '<b>m</b>';
     }
 }

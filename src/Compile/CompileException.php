@@ -25,4 +25,12 @@ final class CompileException extends LogicException
     {
         return new self("only value slots are allowed in attribute position, got '{$kind->name}' for '{$slotPath}'.");
     }
+
+    public static function markupInShape(string $class): self
+    {
+        return new self(
+            "a component call ('{$class}') cannot be part of a data-free shape; "
+            . 'render it into a raw slot instead, e.g. Slot::raw(\'children\').'
+        );
+    }
 }

@@ -75,7 +75,7 @@ abstract class Tag implements ShapeContract
         foreach ($this->children as $child) {
             if ($child instanceof Tag) {
                 $content .= $child->render();
-            } elseif ($child instanceof Raw) {
+            } elseif ($child instanceof Markup) {
                 $content .= (string)$child;
             } elseif ($child instanceof Slot) {
                 throw new LogicException(self::slotError());
@@ -471,6 +471,11 @@ abstract class Tag implements ShapeContract
         }
     }
 
+    /**
+     * A Markup child (Raw, a component call) is kept as an object so it is
+     * emitted verbatim and rendered lazily with the tree; every other value is
+     * frozen to text now and escaped at render time.
+     */
     private function appendChild(mixed $child): void
     {
         if (is_null($child)) {
@@ -484,7 +489,7 @@ abstract class Tag implements ShapeContract
             return;
         }
 
-        if (is_string($child) || $child instanceof Raw || $child instanceof Tag || $child instanceof Slot) {
+        if (is_string($child) || $child instanceof Markup || $child instanceof Tag || $child instanceof Slot) {
             $this->children[] = $child;
 
             return;
@@ -513,6 +518,7 @@ abstract class Tag implements ShapeContract
                 fn ($child) => match (true) {
                     $child instanceof Slot => ['slot' => $child->name],
                     $child instanceof Raw => $child->value,
+                    $child instanceof Markup => ['markup' => get_class($child)],
                     $child instanceof Tag => $child->toJSON(),
                     default => $child,
                 },

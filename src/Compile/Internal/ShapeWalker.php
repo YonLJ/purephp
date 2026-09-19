@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pure\Compile\Internal;
 
 use Pure\Compile\CompileException;
+use Pure\Core\Markup;
 use Pure\Core\Raw;
 use Pure\Core\ShapeContract;
 use Pure\Core\Slot;
@@ -65,6 +66,13 @@ final class ShapeWalker
                 $this->visitor->raw($child);
 
                 continue;
+            }
+
+            if ($child instanceof Markup) {
+                // A component call has runtime data of its own; baking its
+                // output into a data-free shape would freeze it at compile
+                // time. Render it into a raw slot instead.
+                throw CompileException::markupInShape($child::class);
             }
 
             if ($child instanceof Slot) {

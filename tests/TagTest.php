@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Core\DevMode;
 use Pure\Core\HTML;
+use Pure\Core\Markup;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\SVG;
@@ -398,5 +399,56 @@ class TagTest extends TestCase
         $this->assertFalse((new HTML('div'))->getSelfClose());
         $this->assertFalse((new HTML('DIV'))->getSelfClose());
         $this->assertSame('<img />', (string)(new HTML('img')));
+    }
+
+    public function testMarkupChildrenAreEmittedVerbatimAndLazily(): void
+    {
+        MarkupProbe::$renders = 0;
+
+        $tree = div('a', new MarkupProbe(), Raw::of('<i>r</i>'));
+
+        $this->assertSame(0, MarkupProbe::$renders, 'A Markup child must not render while the tree is built.');
+        $this->assertSame('<div>a<b>m</b><i>r</i></div>', $tree->render());
+        $this->assertSame(1, MarkupProbe::$renders);
+        $this->assertSame('<div>a<b>m</b><i>r</i></div>', $tree->render());
+        $this->assertSame(2, MarkupProbe::$renders, 'A Markup child renders with every render of the tree.');
+    }
+
+    public function testToJSONRepresentsMarkupWithoutRendering(): void
+    {
+        MarkupProbe::$renders = 0;
+
+        $json = div(new MarkupProbe())->toJSON();
+
+        $this->assertSame([['markup' => MarkupProbe::class]], $json['children']);
+        $this->assertSame(0, MarkupProbe::$renders);
+    }
+
+    public function testPlainStringablesAreStillFrozenToText(): void
+    {
+        $stringable = new class () {
+            public function __toString(): string
+            {
+                return '<b>x</b>';
+            }
+        };
+
+        $this->assertSame('<div>&lt;b&gt;x&lt;/b&gt;</div>', div($stringable)->render());
+    }
+}
+
+/**
+ * A Markup implementation that counts its renders; components are the real
+ * implementation, this keeps the test independent of the component layer.
+ */
+final class MarkupProbe implements Markup
+{
+    public static int $renders = 0;
+
+    public function __toString(): string
+    {
+        self::$renders++;
+
+        return '<b>m</b>';
     }
 }

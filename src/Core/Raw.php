@@ -7,7 +7,7 @@ namespace Pure\Core;
 /**
  * Trusted markup emitted verbatim instead of being escaped.
  */
-final class Raw
+final class Raw implements Markup
 {
     private function __construct(public readonly string $value)
     {
