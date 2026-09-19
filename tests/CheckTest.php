@@ -434,6 +434,165 @@ class CheckTest extends TestCase
         $this->assertStringNotContainsString('slots are not compared', $result['stdout']);
     }
 
+    public function testFluentUnitChecksPrepareAgainstTheSlots(): void
+    {
+        $file = $this->unitFile('fluent.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckFluent', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')), div(Slot::raw('contents')))
+                ),
+                prepare: static function (string $section, string $class): array {
+                    return ['title' => strtoupper($section), 'contents' => $class];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testFluentUnitPrepareMismatchIsReported(): void
+    {
+        $file = $this->unitFile('fluent-typo.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{div, h2};
+
+            register('CheckFluentTypo', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(h2(Slot::value('title')))
+                ),
+                prepare: static function (string $section): array {
+                    return ['titel' => strtoupper($section)];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "prepare() returns 'titel' but the template does not read it (did you mean 'title'?)",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "required slot 'title' is not returned by prepare()",
+            $result['stdout']
+        );
+    }
+
+    public function testFluentUnitWithAComputedPrepareResultIsNotCompared(): void
+    {
+        $file = $this->unitFile('fluent-computed.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckFluentComputed', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (string $title): array {
+                    $data = ['title' => $title];
+
+                    return $data;
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('prepare() does not return one array literal', $result['stdout']);
+    }
+
+    public function testFluentCallSitePropsAreCheckedAgainstTheTarget(): void
+    {
+        $this->unitFile('target.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckTarget', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+            PHP);
+
+        $page = $this->unitFile('page-calls.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\section;
+
+            register('CheckPageCalls', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                section(Slot::raw('body'))
+            ));
+
+            function checkPageCallsBody(): string
+            {
+                return (string) CheckTarget('child')->titel('x');
+            }
+
+            function checkPageCallsDynamic(array $props): string
+            {
+                return (string) CheckTarget('child')->titel(...$props);
+            }
+
+            function checkPageCallsChildren(): string
+            {
+                return (string) CheckTarget('child')->children('x');
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "component 'CheckTarget': the call binds 'titel', which the target does not accept (did you mean 'title'?)",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "component 'CheckTarget': pass children to the call itself, e.g. CheckTarget(\$children)",
+            $result['stdout']
+        );
+        $this->assertStringNotContainsString('titel(...$props)', $result['stdout']);
+    }
+
     public function testUsageErrors(): void
     {
         $missing = $this->runCheck(['pure', 'check']);

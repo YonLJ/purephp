@@ -7,6 +7,10 @@ namespace Pure\Compile\Internal;
 use Closure;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Component\Registry;
+use Pure\Core\Suggestion;
+use ReflectionFunction;
+use ReflectionParameter;
 use RuntimeException;
 use Throwable;
 
@@ -31,12 +35,14 @@ final class CheckCommand
 
         Checks every *.cmp.php unit: the slots its template reads against the
         named bindings of its component function's render() call (a binding the
-        template does not read, a required slot the call does not bind), and
+        template does not read, a required slot the call does not bind), or
+        against the prepare() parameters and returned keys of a fluent unit;
         the function's parameter types against the slot kinds (a list slot
         needs an iterable, a child scope an array, a text slot a stringable).
-        Reports a slot that one template uses as both a scalar and a scope, and
-        checks *.shape.php templates for the same conflict. Directories are
-        searched recursively.
+        Also checks the fluent calls in every file: a `->prop(...)` the target
+        does not accept is an error. Reports a slot that one template uses as
+        both a scalar and a scope, and checks *.shape.php templates for the
+        same conflict. Directories are searched recursively.
 
           --strict     exit 1 on warnings too
           -h, --help   show this help
@@ -119,40 +125,54 @@ final class CheckCommand
         $errors = 0;
         $warnings = 0;
 
+        // Load every unit first: a fluent call in one file may target a
+        // component registered by another one.
+        $loaded = [];
+
         foreach (array_keys($files) as $file) {
             try {
-                $units = $this->loader->unitsOf($file);
+                $loaded[$file] = $this->loader->unitsOf($file);
             } catch (Throwable $error) {
                 $failed++;
+                unset($files[$file]);
                 fwrite($stderr, "pure: {$error->getMessage()}\n");
-
-                continue;
             }
+        }
 
+        foreach (array_keys($files) as $file) {
             try {
+                $units = $loaded[$file] ?? null;
+
                 if ($units === null) {
                     $checked++;
                     $shape = ArtifactCompiler::load($file);
                     self::report($stdout, $file, null, $this->checker->check($file, null, $shape->tree(), null), $errors, $warnings);
-
-                    continue;
-                }
-
-                if ($units === []) {
-                    throw new RuntimeException('no component unit is registered here; `pure check` skips the file.');
-                }
-
-                foreach ($units as $name => $unit) {
-                    $checked++;
-                    $shape = Compile::toShape(($unit['factory'])());
-
-                    if (!$shape instanceof Shape) {
-                        throw new RuntimeException("component '{$name}': the factory must return a tag tree or Pure\\Compile\\Shape.");
+                } else {
+                    if ($units === []) {
+                        throw new RuntimeException('no component unit is registered here; `pure check` skips the file.');
                     }
 
-                    $findings = $this->checker->check($file, $name, $shape->tree(), FunctionFinder::of($name, $file));
-                    self::report($stdout, $file, $name, $findings, $errors, $warnings);
+                    foreach ($units as $name => $unit) {
+                        $checked++;
+                        $shape = Compile::toShape(($unit['factory'])());
+
+                        if (!$shape instanceof Shape) {
+                            throw new RuntimeException("component '{$name}': the factory must return a tag tree or Pure\\Compile\\Shape.");
+                        }
+
+                        $prepare = Registry::prepare($name);
+                        $findings = $this->checker->check(
+                            $file,
+                            $name,
+                            $shape->tree(),
+                            $prepare === null ? FunctionFinder::of($name, $file) : null,
+                            $prepare === null ? null : new ReflectionFunction($prepare)
+                        );
+                        self::report($stdout, $file, $name, $findings, $errors, $warnings);
+                    }
                 }
+
+                self::reportCallSites($stdout, $file, $errors, $warnings);
             } catch (Throwable $error) {
                 $failed++;
                 fwrite($stderr, "pure: {$file}: {$error->getMessage()}\n");
@@ -169,6 +189,67 @@ final class CheckCommand
         }
 
         return 0;
+    }
+
+    /**
+     * Check the fluent component calls in one file: every `->prop(...)` of a
+     * call must be accepted by its target, which is the prepare() parameter
+     * list when the unit has one and its slot list otherwise.
+     *
+     * @param resource $stdout The output stream.
+     */
+    private static function reportCallSites($stdout, string $file, int &$errors, int &$warnings): void
+    {
+        foreach (CallSites::of($file, Registry::names()) as $site) {
+            if ($site['dynamic']) {
+                continue;
+            }
+
+            $expected = self::expectedProps($site['name']);
+
+            if ($expected === null) {
+                continue;
+            }
+
+            foreach (array_keys($site['props']) as $prop) {
+                if (in_array($prop, $expected, true)) {
+                    continue;
+                }
+
+                if ($prop === 'children') {
+                    fwrite($stdout, "error: {$file}: component '{$site['name']}': pass children to the call itself, e.g. {$site['name']}(\$children)\n");
+                    $errors++;
+
+                    continue;
+                }
+
+                $nearest = Suggestion::nearest($prop, $expected);
+                $hint = $nearest === null ? '' : " (did you mean '{$nearest}'?)";
+
+                fwrite($stdout, "error: {$file}: component '{$site['name']}': the call binds '{$prop}', which the target does not accept{$hint}\n");
+                $errors++;
+            }
+        }
+    }
+
+    /**
+     * The props a fluent call may bind: the prepare() parameters of the unit,
+     * or its root slots.
+     *
+     * @return list<string>|null
+     */
+    private static function expectedProps(string $name): ?array
+    {
+        $prepare = Registry::prepare($name);
+
+        if ($prepare !== null) {
+            return array_map(
+                static fn (ReflectionParameter $parameter): string => $parameter->getName(),
+                (new ReflectionFunction($prepare))->getParameters()
+            );
+        }
+
+        return Registry::slots($name);
     }
 
     /**

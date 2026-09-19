@@ -366,12 +366,14 @@ final class Bindings
     }
 
     /**
-     * The string keys of a function whose only return is an array literal.
+     * The string keys of a function whose only return is an array literal: the
+     * bindings of a `...bindings()` helper or of a prepare() hook, or null when
+     * the keys are branch-dependent or computed.
      *
      * @param ReflectionFunction $function The bindings helper.
      * @return array<string, true>|null
      */
-    private static function literalKeys(ReflectionFunction $function): ?array
+    public static function literalKeys(ReflectionFunction $function): ?array
     {
         $tokens = self::tokens($function);
 

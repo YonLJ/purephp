@@ -36,9 +36,10 @@ final class ContractChecker
      * @param ?string $name The registered component name.
      * @param Tag $tree The shape tree the unit builds.
      * @param ?ReflectionFunction $function The component function, when the file defines one.
+     * @param ?ReflectionFunction $prepare The registered prepare() hook of a fluent unit.
      * @return list<Finding> The findings, in report order.
      */
-    public function check(string $file, ?string $name, Tag $tree, ?ReflectionFunction $function): array
+    public function check(string $file, ?string $name, Tag $tree, ?ReflectionFunction $function, ?ReflectionFunction $prepare = null): array
     {
         $findings = [];
         $contract = RootSlots::manifest($tree);
@@ -53,6 +54,10 @@ final class ContractChecker
 
         if ($name === null) {
             return $findings;
+        }
+
+        if ($prepare !== null) {
+            return array_merge($findings, self::checkPrepare($file, $name, $contract, $prepare));
         }
 
         $parameters = [];
@@ -120,6 +125,78 @@ final class ContractChecker
                 if (!isset($bindings['variables'][$parameterName]) && !isset($contract[$parameterName])) {
                     $findings[] = Finding::warning(
                         "parameter \${$parameterName} is neither used by the function nor a slot of the template"
+                    );
+                }
+            }
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Check a fluent unit: the prepare() parameters are the prop contract, and
+     * its returned array literal is what binds the template. Children bind the
+     * reserved `children` slot from the call, not from prepare(), so a missing
+     * `children` is not reported.
+     *
+     * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
+     * @return list<Finding>
+     */
+    private static function checkPrepare(string $file, string $name, array $contract, ReflectionFunction $prepare): array
+    {
+        $findings = [];
+        $parameters = [];
+
+        foreach ($prepare->getParameters() as $parameter) {
+            $parameters[$parameter->getName()] = $parameter;
+        }
+
+        foreach ($contract as $slot => $info) {
+            if (self::conflicting($info['kinds'])) {
+                continue;
+            }
+
+            $parameter = $parameters[$slot] ?? null;
+
+            if ($parameter === null) {
+                continue;
+            }
+
+            foreach (self::typeFindings($slot, $info, $parameter) as $finding) {
+                $findings[] = $finding;
+            }
+        }
+
+        $keys = Bindings::literalKeys($prepare);
+
+        if ($keys === null) {
+            $findings[] = Finding::info('prepare() does not return one array literal; its bindings are not compared');
+        } else {
+            foreach (array_keys($keys) as $key) {
+                if (isset($contract[$key])) {
+                    continue;
+                }
+
+                $nearest = Suggestion::nearest($key, array_keys($contract));
+                $hint = $nearest === null ? '' : " (did you mean '{$nearest}'?)";
+
+                $findings[] = Finding::error("prepare() returns '{$key}' but the template does not read it{$hint}");
+            }
+
+            foreach ($contract as $slot => $info) {
+                if ($info['required'] && $slot !== 'children' && !isset($keys[$slot])) {
+                    $findings[] = Finding::error("required slot '{$slot}' is not returned by prepare()");
+                }
+            }
+        }
+
+        $bindings = Bindings::of($prepare, $name, $file);
+
+        if ($bindings['scanned']) {
+            foreach (array_keys($parameters) as $parameterName) {
+                if (!isset($bindings['variables'][$parameterName]) && !isset($contract[$parameterName])) {
+                    $findings[] = Finding::warning(
+                        "parameter \${$parameterName} is neither used by prepare() nor a slot of the template"
                     );
                 }
             }
