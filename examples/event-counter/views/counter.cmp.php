@@ -2,7 +2,7 @@
 
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
-use Pure\Core\Raw;
+
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
@@ -15,7 +15,7 @@ use function Pure\HTML\{button, div, h1, span};
  *
  * `initial` is a slot so the controller can provide a server-random start.
  */
-function CounterPageShape(): \Pure\Compile\Shape
+function CounterPageShape(): Shape
 {
     static $shape;
 
@@ -24,14 +24,14 @@ function CounterPageShape(): \Pure\Compile\Shape
             h1('JavaScript Counter App'),
             div(
                 button('+')->id('add')->onclick('handleAdd()'),
-                span(Slot::text('initial'))->id('output'),
+                span(Slot::value('initial'))->id('output'),
                 button('-')->id('subtract')
             )->class('counter-container')
         )
     );
 }
 
-register('Counter', __FILE__, static fn (): Shape => CounterPageShape());
+register('Counter', __FILE__, static fn () => CounterPageShape());
 
 /**
  * The counter page: the document skeleton comes from views/counter.shape.php
@@ -40,7 +40,7 @@ register('Counter', __FILE__, static fn (): Shape => CounterPageShape());
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
-function counterPage(array $data): Raw
+function counterPage(array $data): string
 {
-    return Raw::of('<!DOCTYPE html>' . (string)render('Counter', initial: $data['initial']));
+    return '<!DOCTYPE html>' . render('Counter', initial: $data['initial']);
 }

@@ -60,30 +60,28 @@ composer require yonld/purephp
 <?php
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h1, p};
 
-register('Page', __FILE__, static fn (): Shape => Compile::shape(
+register('Page', __FILE__, static fn () =>
     div(
-        h1(Slot::text('heading')),
-        p(Slot::text('lead')),
-        p(Slot::text('body'))
+        h1(Slot::value('heading')),
+        p(Slot::value('lead')),
+        p(Slot::value('body'))
     )->class('container')
-));
+);
 
-function pageView(array $data): Raw
+function pageView(array $data): string
 {
     // 引擎按原样输出树，文档声明在这里手动拼接。
-    return Raw::of('<!DOCTYPE html>' . (string)render(
+    return '<!DOCTYPE html>' . render(
         'Page',
         heading: $data['heading'],
         lead: $data['lead'],
         body: $data['body'],
-    ));
+    );
 }
 
 echo pageView([
@@ -117,14 +115,14 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 ```
 
 当同一调用点在单个进程内过多地调用 `Compile::shape()` 时，它会按调用点发出一次
-`E_USER_WARNING`；例如每次调用都重建的内联 `bind(...)`。文件形式的组件走
+`E_USER_WARNING`；例如每次调用都重建的内联 `Compile::shape(...)`。文件形式的组件走
 `render()`，绑定器按模板路径缓存，不会反复编译。
 
 ## 基础示例
 
 ### 使用组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性模板工厂：
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性模板工厂：
 
 ```php
 <?php
@@ -134,21 +132,19 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 require 'vendor/autoload.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
-    )->class(Slot::attr('class'))
-));
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
+    )->class(Slot::value('class'))
+);
 
-function Card(string $title, string $content, string $class = 'card'): Raw
+function Card(string $title, string $content, string $class = 'card'): string
 {
     return render('Card', title: $title, content: $content, class: $class);
 }
@@ -159,7 +155,7 @@ echo Card('Card Title', 'This is the card content');
 
 ### 设置属性
 
-静态属性设置在形状上；动态属性使用 `Slot::attr()`：
+静态属性设置在形状上；动态属性使用 `Slot::value()`：
 
 ```php
 <?php
@@ -170,7 +166,7 @@ use Pure\Core\Slot;
 use function Pure\HTML\div;
 
 $shape = Compile::shape(
-    div('Content')->class('container')->id(Slot::attr('id'))
+    div('Content')->class('container')->id(Slot::value('id'))
 );
 
 $shape(['id' => 'main-content']);

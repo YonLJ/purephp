@@ -1,6 +1,6 @@
 # 组件
 
-一个组件就是一个文件：带类型化参数、返回 `Raw` 标记的 PHP 函数，紧挨着它渲染的模板。文件
+一个组件就是一个文件：带类型化参数、返回 `string` 标记的 PHP 函数，紧挨着它渲染的模板。文件
 里注册一个惰性工厂，因此 `pure compile` 可以预编译模板，而请求只加载产物。
 
 ## 第一个组件
@@ -10,21 +10,19 @@
 
 // components/Card.cmp.php——组件单元：函数 + 模板
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
     )->class('card')
-));
+);
 
-function Card(string $title, string $content): Raw
+function Card(string $title, string $content): string
 {
     return render('Card', title: $title, content: $content);
 }
@@ -50,11 +48,11 @@ props 就是函数参数：给它们类型和默认值，然后传进模板的�
 <?php
 
 // components/Badge.cmp.php
-register('Badge', __FILE__, static fn (): Shape => Compile::shape(
-    span(Slot::text('label'))->class(Slot::attr('class'))
-));
+register('Badge', __FILE__, static fn () =>
+    span(Slot::value('label'))->class(Slot::value('class'))
+);
 
-function Badge(string $label, string $class = 'badge'): Raw
+function Badge(string $label, string $class = 'badge'): string
 {
     return render('Badge', label: $label, class: $class);
 }
@@ -68,11 +66,11 @@ function Badge(string $label, string $class = 'badge'): Raw
 <?php
 
 // components/Button.cmp.php
-register('Button', __FILE__, static fn (): Shape => Compile::shape(
-    button(Slot::raw('icon'), Slot::text('label'))->class('btn')
-));
+register('Button', __FILE__, static fn () =>
+    button(Slot::raw('icon'), Slot::value('label'))->class('btn')
+);
 
-function Button(Raw $icon, string $label): Raw
+function Button(iterable|string $icon, string $label): string
 {
     return render('Button', icon: $icon, label: $label);
 }
@@ -80,9 +78,9 @@ function Button(Raw $icon, string $label): Raw
 Button(Icon('#plus'), 'Add');
 ```
 
-列表同理：在组件函数里循环，把子组件 `Raw` 值组成的列表传给 raw 槽——它逐元素转成字符串后
-拼接，所以用不着 `implode()`。若列表项只是普通数据行、不需要逐项组件逻辑，可以在模板里直接用
-`Slot::each()`。
+列表同理：在组件函数里循环，把子组件渲染出的字符串组成的列表传给 raw 槽——它逐元素转成
+字符串后拼接，所以用不着 `implode()`。若列表项只是普通数据行、不需要逐项组件逻辑，可以在
+模板里直接用 `Slot::each()`。
 
 ## 页面
 
@@ -94,20 +92,20 @@ Button(Icon('#plus'), 'Add');
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__, static fn (): Shape => Compile::shape(
+register('Features', __FILE__, static fn () =>
     html(
-        head(title(Slot::text('title'))),
+        head(title(Slot::value('title'))),
         body(Slot::raw('content'))
     )
-));
+);
 
-function featuresPage(array $data): Raw
+function featuresPage(array $data): string
 {
     // 引擎按原样输出树，文档声明在这里手动拼接。
-    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+    return '<!DOCTYPE html>' . render('Features',
         title: $data['title'],
         content: FeaturesBody($data['content']),
-    ));
+    );
 }
 ```
 
@@ -121,18 +119,23 @@ function featuresPage(array $data): Raw
 `render()` 是底层助手的便捷形式：
 
 - `register($name, $file, $factory)` 把单元注册到一个名字下。
-- `bind($source)` 返回单元或模板的 `数据 → Raw` 绑定器。
+- `Registry::component($nameOrPath)` 返回单元或 shape 文件的
+  `Closure(array $data): string` 绑定器，便于自己持有或传递。
 
-模板是内联树（`bind(div(Slot::text('title')))`）时，或者你想自己持有绑定器变量时，
-用 `bind()`：
+内联树则编译一次并保存 shape：
 
 ```php
 <?php
 
-function Tag(string $label): Raw
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\div;
+
+function Tag(string $label): string
 {
     static $render;
-    $render ??= bind(div(Slot::text('label'))->class('tag'));
+    $render ??= Compile::shape(div(Slot::value('label'))->class('tag'));
 
     return $render(['label' => $label]);
 }
@@ -167,8 +170,8 @@ div(h2('Title'), p('Content'))->class('card')->print();
 
 ## 槽位参考
 
-组件是函数；槽位是模板*内部*的词汇：`Slot::text()`、`Slot::attr()`、`Slot::raw()`、
-`Slot::each()`、`Slot::if()`、`Slot::eachKind()` 与 `Slot::child()`。完整的数据绑定参考见
+组件是函数；槽位是模板*内部*的词汇：`Slot::value()`、`Slot::raw()`、`Slot::child()`、
+`Slot::each()`、`Slot::if()` 与 `Slot::eachKind()`。完整的数据绑定参考见
 [Props 与槽位](/zh/guide/props)。
 
 ## 下一步

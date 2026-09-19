@@ -205,19 +205,18 @@ function handleDelegatedClick(event) {
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, button, p};
 
-function Child(string $message): Raw
+function Child(string $message): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
             p('Child Component'),
-            button(Slot::text('message'))
+            button(Slot::value('message'))
                 ->onclick("handleChildClick('Hello from child!')")
                 ->class('child-btn')
         )
@@ -228,10 +227,10 @@ function Child(string $message): Raw
     return $render(['message' => $message]);
 }
 
-function ParentComponent(Raw $child): Raw
+function ParentComponent(iterable|string $child): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
             p('Parent Component'),
             Slot::raw('child'),

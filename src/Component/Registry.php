@@ -10,7 +10,6 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Renderer;
 use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use RuntimeException;
 
 /**
@@ -19,11 +18,11 @@ use RuntimeException;
  * A unit is a `*.cmp.php` file that registers a lazy factory and defines the
  * component function next to it:
  *
- *     register('Icon', __FILE__, static fn (): Shape => Compile::shape(
- *         svg(svgUse()->href(Slot::attr('href')))
+ *     register('Icon', __FILE__, static fn () => svg(
+ *         svgUse()->href(Slot::value('href'))
  *     ));
  *
- *     function Icon(string $href): Raw
+ *     function Icon(string $href): string
  *     {
  *         return render('Icon', href: $href);
  *     }
@@ -47,7 +46,7 @@ final class Registry
     /** @var array<string, string> the name or path as given => cache key */
     private static array $keys = [];
 
-    /** @var array<string, array{binder: Closure(array<int|string, mixed>): Raw, generation: int}> */
+    /** @var array<string, array{binder: Closure(array<int|string, mixed>): string, generation: int}> */
     private static array $binders = [];
 
     /** @var array<string, array{shape: Shape, generation: int}> */
@@ -67,7 +66,7 @@ final class Registry
      *
      * @param string $name The component name used by render().
      * @param string $file The unit file, normally `__FILE__`.
-     * @param Closure(): mixed $factory Builds the template; called lazily, must return a Shape.
+     * @param Closure(): mixed $factory Builds the template; called lazily, may return a tag tree or a Shape.
      * @param bool $override Replace an existing registration.
      * @return void
      */
@@ -120,7 +119,7 @@ final class Registry
      * The binder of a registered unit or of a `*.shape.php` template path.
      *
      * @param string $nameOrPath A component name or a unit/shape file path.
-     * @return Closure(array<int|string, mixed>): Raw
+     * @return Closure(array<int|string, mixed>): string
      */
     public static function component(string $nameOrPath): Closure
     {
@@ -185,7 +184,7 @@ final class Registry
 
         $binder =
             /** @param array<string, mixed> $data */
-            static fn (array $data): Raw => Raw::of($renderer->render($data));
+            static fn (array $data): string => $renderer->render($data);
 
         self::$binders[$key] = ['binder' => $binder, 'generation' => $generation];
 
@@ -273,13 +272,8 @@ final class Registry
             return $cached['shape'];
         }
 
-        $shape = (self::$units[$name]['factory'])();
-
-        if (!$shape instanceof Shape) {
-            throw new RuntimeException(
-                "component '{$name}' factory must return a Pure\\Compile\\Shape, got " . get_debug_type($shape) . '.'
-            );
-        }
+        $result = (self::$units[$name]['factory'])();
+        $shape = self::toShape($result, "component '{$name}' factory");
 
         self::$shapes[$name] = ['shape' => $shape, 'generation' => $generation];
 
@@ -314,19 +308,26 @@ final class Registry
 
         if (str_ends_with($shapeFile, '.cmp.php')) {
             // Requiring a unit registers its component and returns no Shape, so the
-            // failure would read "must return a Shape" and pass on the next call.
+            // failure would read "must return a tag tree or Shape" and pass on the next call.
             throw new RuntimeException(
                 "'{$shapeFile}' is a component unit and has no fresh artifact; require the unit file to register it and render it by name, or run `pure compile`."
             );
         }
 
-        $shape = require $shapeFile;
-
-        if (!$shape instanceof Shape) {
-            throw new RuntimeException("component template '{$shapeFile}' must return a Shape.");
-        }
+        $result = require $shapeFile;
+        $shape = self::toShape($result, "component template '{$shapeFile}'");
 
         return $shape->compile();
+    }
+
+    /**
+     * Wrap a tag tree in a Shape, or pass through a Shape as-is.
+     */
+    private static function toShape(mixed $result, string $subject): Shape
+    {
+        return Compile::toShape($result) ?? throw new RuntimeException(
+            "{$subject} must return a tag tree or Pure\\Compile\\Shape, got " . get_debug_type($result) . '.'
+        );
     }
 
     private static function forget(string $name): void

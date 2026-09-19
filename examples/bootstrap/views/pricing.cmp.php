@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
+
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
@@ -13,13 +11,13 @@ require_once __DIR__ . '/../components/PricingHeader.cmp.php';
 require_once __DIR__ . '/../components/CardDeck.cmp.php';
 require_once __DIR__ . '/../components/PageFooter.cmp.php';
 
-register('Pricing', __FILE__, static function (): Shape {
+register('Pricing', __FILE__, static function () {
     /**
      * The pricing page skeleton: everything but the four component blocks is
      * static. `pure compile` precompiles it into views/pricing.pure.php.
      */
 
-    return Compile::shape(
+    return (
         html(
             head(
                 meta()->http_equiv('Content-Type')->content('text/html; charset=UTF-8'),
@@ -49,7 +47,7 @@ register('Pricing', __FILE__, static function (): Shape {
  * controller uses the same bindings, so both flavors render one page.
  *
  * @param array<string, mixed> $data The page data from the controller.
- * @return array{header: Raw, pricing: Raw, deck: Raw, footer: Raw}
+ * @return array{header: string, pricing: string, deck: string, footer: string}
  */
 function pricingBindings(array $data): array
 {
@@ -69,7 +67,7 @@ function pricingBindings(array $data): array
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
-function pricingPage(array $data): Raw
+function pricingPage(array $data): string
 {
-    return Raw::of('<!DOCTYPE html>' . (string)render('Pricing', ...pricingBindings($data)));
+    return '<!DOCTYPE html>' . render('Pricing', ...pricingBindings($data));
 }

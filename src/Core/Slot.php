@@ -14,7 +14,7 @@ use LogicException;
  * cannot be rendered by Tag::render() directly. Nested shapes are typed against
  * ShapeContract so that Pure\Core does not depend on Pure\Compile: a bare tag
  * tree satisfies the contract (a tag is already a data-free tree), so
- * `Slot::each('items', li(Slot::text('value')))` needs no wrapper, while a
+ * `Slot::each('items', li(Slot::value('value')))` needs no wrapper, while a
  * memoized Pure\Compile\Shape is still accepted.
  */
 final class Slot
@@ -35,44 +35,26 @@ final class Slot
     }
 
     /**
-     * Text content slot: the value is coerced to string and escaped.
+     * Value slot: the bound value is interpreted by position.
      *
-     * The bound value may be a string or any Stringable (including a Raw); it
-     * is stringified before escaping, so a Raw is not emitted verbatim here —
-     * use raw() for that.
+     * In child position the value is coerced to string and escaped (true→"1",
+     * null→empty string). In attribute position the value follows
+     * Tag::setAttr() semantics (null/false omitted, true→`name="name"`).
+     * The slot name is the data key holding the value.
      *
-     * @param string $name The slot name.
+     * @param string $name The slot/data key.
      * @return self
      */
-    public static function text(string $name): self
+    public static function value(string $name): self
     {
-        return new self(SlotKind::Text, $name, null, true, null);
-    }
-
-    /**
-     * Attribute value slot: the value is coerced to string and escaped.
-     *
-     * The attribute name comes from the setter
-     * (`->class(Slot::attr('classList'))` sets `class`); $name is the data key
-     * holding the value. The bound value may be a string or any Stringable
-     * (including a Raw); it is stringified and escaped for the attribute
-     * context.
-     *
-     * @param string $name The data key holding the attribute value.
-     * @return self
-     */
-    public static function attr(string $name): self
-    {
-        return new self(SlotKind::Attr, $name, null, true, null);
+        return new self(SlotKind::Value, $name, null, true, null);
     }
 
     /**
      * Raw content slot: the value is emitted verbatim, without escaping.
      *
-     * The bound value may be a string, any Stringable (including a Raw returned
-     * by another component), or an iterable of such values: each is stringified
-     * and the results are concatenated in order. Pass a Raw or a rendered list
-     * of component markup directly, without casting to string or implode().
+     * The bound value may be a string, any Stringable, or an iterable of such
+     * values: each is stringified and the results are concatenated in order.
      *
      * Choose between the two list slots by when the markup exists: raw()
      * concatenates markup that is already rendered; each() is data-driven and

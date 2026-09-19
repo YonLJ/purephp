@@ -11,5 +11,5 @@ require_once __DIR__ . '/../../views/xml.cmp.php';
  */
 function indexController(): string
 {
-    return (string)xmlPage(xmlData());
+    return xmlPage(xmlData());
 }

@@ -54,7 +54,7 @@ class ArtifactTest extends TestCase
             use function Pure\HTML\{div, h2};
 
             return Compile::shape(
-                div(h2(Slot::text('title')))->class('card')
+                div(h2(Slot::value('title')))->class('card')
             );
             PHP);
 
@@ -74,11 +74,33 @@ class ArtifactTest extends TestCase
         $this->assertSame($shape(['title' => 'a & b']), $renderer->render(['title' => 'a & b']));
     }
 
+    public function testCompilesAShapeFileReturningABareTagTree(): void
+    {
+        $file = $this->shapeFile('bare.shape.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Core\Slot;
+
+            use function Pure\HTML\div;
+
+            return div(Slot::value('v'));
+            PHP);
+
+        $artifact = ArtifactCompiler::write($file);
+        $renderer = self::load($artifact);
+
+        $this->assertSame($this->dir . '/bare.pure.php', $artifact);
+        $this->assertInstanceOf(Renderer::class, $renderer);
+        $this->assertSame('<div>x</div>', $renderer->render(['v' => 'x']));
+    }
+
     public function testArtifactContentsAreDeterministic(): void
     {
         $file = $this->shapeFile(
             'stable.shape.php',
-            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('v')));\n"
+            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('v')));\n"
         );
 
         $first = ArtifactCompiler::build($file);
@@ -114,14 +136,14 @@ class ArtifactTest extends TestCase
             use function Pure\HTML\span;
             use function Pure\HTML\ul;
 
-            $item = Compile::shape(li(Slot::text('label'))->class(Slot::attr('class'))->id(Slot::attr('id')->default('n')));
+            $item = Compile::shape(li(Slot::value('label'))->class(Slot::value('class'))->id(Slot::value('id')->default('n')));
 
             return Compile::shape(
                 div(
-                    h1(Slot::text('title')),
-                    p(Slot::raw('body'))->title(Slot::attr('title')->default('t')),
-                    Slot::child('meta', span(Slot::text('label'))),
-                    Slot::text('subtitle')->default('none'),
+                    h1(Slot::value('title')),
+                    p(Slot::raw('body'))->title(Slot::value('title')->default('t')),
+                    Slot::child('meta', span(Slot::value('label'))),
+                    Slot::value('subtitle')->default('none'),
                     Slot::if('flag', em('on'), em('off')),
                     Slot::if('absent', em('never')),
                     ul(Slot::each('items', $item)),
@@ -129,7 +151,7 @@ class ArtifactTest extends TestCase
                         'a' => li('A'),
                         'b' => li('B'),
                     ]))
-                )->class(Slot::attr('cardClass'))
+                )->class(Slot::value('cardClass'))
             );
             PHP);
 
@@ -201,17 +223,17 @@ class ArtifactTest extends TestCase
 
             return Compile::shape(
                 div(
-                    Slot::text('req'),
+                    Slot::value('req'),
                     Slot::raw('body')->default(''),
-                    p(Slot::text('opt')->default('d')),
+                    p(Slot::value('opt')->default('d')),
                     Slot::if('flag', em('on'), em('off')),
-                    ul(Slot::each('items', li(Slot::text('label')))->default([])),
-                    Slot::child('meta', span(Slot::text('label')))->default(['label' => 'm'])
+                    ul(Slot::each('items', li(Slot::value('label')))->default([])),
+                    Slot::child('meta', span(Slot::value('label')))->default(['label' => 'm'])
                 )
-                ->class(Slot::attr('cls')->default('c'))
-                ->id(Slot::attr('ident')->default('i'))
-                ->title(Slot::attr('tip')->default(null))
-                ->hidden(Slot::attr('flagged')->default(false))
+                ->class(Slot::value('cls')->default('c'))
+                ->id(Slot::value('ident')->default('i'))
+                ->title(Slot::value('tip')->default(null))
+                ->hidden(Slot::value('flagged')->default(false))
             );
             PHP);
 
@@ -294,16 +316,16 @@ class ArtifactTest extends TestCase
             use function Pure\HTML\span;
             use function Pure\HTML\ul;
 
-            $item = Compile::shape(li(Slot::text('label'))->class(Slot::attr('class')));
+            $item = Compile::shape(li(Slot::value('label'))->class(Slot::value('class')));
 
             return Compile::shape(
                 div(
-                    h1(Slot::text('title')),
+                    h1(Slot::value('title')),
                     p(Slot::raw('body')),
-                    Slot::text('subtitle')->default('none'),
+                    Slot::value('subtitle')->default('none'),
                     Slot::if('flag', span('on'), span('off')),
                     ul(Slot::each('items', $item))
-                )->class(Slot::attr('cardClass'))->title(Slot::attr('tip')->default('t'))
+                )->class(Slot::value('cardClass'))->title(Slot::value('tip')->default('t'))
             );
             PHP);
 
@@ -378,14 +400,14 @@ class ArtifactTest extends TestCase
 
             return Compile::shape(
                 div(
-                    Slot::text('title'),
+                    Slot::value('title'),
                     Slot::child(
                         'content',
-                        div(Slot::text('heading'), Slot::each('items', li(Slot::text('label'))))
+                        div(Slot::value('heading'), Slot::each('items', li(Slot::value('label'))))
                     ),
-                    ul(Slot::each('links', li(Slot::text('label')))),
+                    ul(Slot::each('links', li(Slot::value('label')))),
                     Slot::if('flag', em('on'))
-                )->class(Slot::attr('cardClass'))
+                )->class(Slot::value('cardClass'))
             );
             PHP);
 
@@ -407,7 +429,7 @@ class ArtifactTest extends TestCase
     {
         $file = $this->shapeFile(
             'flavours.shape.php',
-            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('v')));\n"
+            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('v')));\n"
         );
         $command = new ArtifactCommand();
 
@@ -451,7 +473,7 @@ class ArtifactTest extends TestCase
             use function Pure\HTML\li;
             use function Pure\HTML\ul;
 
-            $item = Compile::shape(li(Slot::text('value')));
+            $item = Compile::shape(li(Slot::value('value')));
             $list = Compile::shape(ul(Slot::each('items', $item)));
 
             return Compile::shape(
@@ -459,8 +481,8 @@ class ArtifactTest extends TestCase
                     Slot::child('meta', $list),
                     ul(
                         Slot::eachKind('blocks', [
-                            'text' => Compile::shape(li(Slot::text('value'))),
-                            'link' => Compile::shape(li(Slot::text('value'))->class('link')),
+                            'text' => Compile::shape(li(Slot::value('value'))),
+                            'link' => Compile::shape(li(Slot::value('value'))->class('link')),
                         ])
                     )
                 )
@@ -511,9 +533,9 @@ class ArtifactTest extends TestCase
 
             return Compile::shape(
                 div(
-                    Slot::text('user-name'),
-                    Slot::text('data')->default('fallback'),
-                    Slot::text('v1')->default('numbered')
+                    Slot::value('user-name'),
+                    Slot::value('data')->default('fallback'),
+                    Slot::value('v1')->default('numbered')
                 )
             );
             PHP);
@@ -603,7 +625,7 @@ class ArtifactTest extends TestCase
     {
         $file = $this->shapeFile(
             'check.shape.php',
-            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('v')));\n"
+            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('v')));\n"
         );
         $command = new ArtifactCommand();
 
@@ -669,7 +691,7 @@ class ArtifactTest extends TestCase
     {
         $shapeFile = $this->shapeFile(
             'box.shape.php',
-            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('title')));\n"
         );
         $unit = $this->unitFile('box.cmp.php', 'Box');
 
@@ -689,7 +711,7 @@ class ArtifactTest extends TestCase
     {
         $file = $this->shapeFile(
             'guarded.shape.php',
-            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('v')));\n"
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('v')));\n"
         );
         $artifact = ArtifactCompiler::write($file);
 
@@ -720,7 +742,7 @@ class ArtifactTest extends TestCase
         $unit = $this->dir . '/badge.cmp.php';
         file_put_contents($unit, "<?php\n\n// unit placeholder: the shape is passed explicitly.\n");
 
-        $shape = Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::text('title')));
+        $shape = Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::value('title')));
         $written = ArtifactCompiler::writeUnit($unit, $shape, true);
 
         $this->assertSame($this->dir . '/badge.pure.php', $written['artifact']);
@@ -741,7 +763,7 @@ class ArtifactTest extends TestCase
     {
         $shapeFile = $this->shapeFile(
             'same.shape.php',
-            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('title')));\n"
         );
         // A distinct base name: `same.shape.php` and `same.cmp.php` would share
         // one artifact and the comparison below would read the same file twice.
@@ -750,7 +772,7 @@ class ArtifactTest extends TestCase
 
         $fromShapeFile = self::load(ArtifactCompiler::write($shapeFile));
         $fromUnit = self::load(
-            ArtifactCompiler::writeUnit($unit, Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::text('title'))))['artifact']
+            ArtifactCompiler::writeUnit($unit, Compile::shape(\Pure\HTML\div(\Pure\Core\Slot::value('title'))))['artifact']
         );
 
         $this->assertInstanceOf(Renderer::class, $fromShapeFile);
@@ -816,8 +838,8 @@ class ArtifactTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\span;
 
-            register('One', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::text('label'))));
-            register('Two', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::text('label'))));
+            register('One', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
+            register('Two', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
             PHP);
 
         $many = $this->runCommand($command, ['pure', 'compile', $two]);
@@ -828,7 +850,7 @@ class ArtifactTest extends TestCase
     public function testCommandRejectsResolversThatReturnSeveralUnits(): void
     {
         $file = $this->unitFile('badge.cmp.php', 'Badge');
-        $shape = Compile::shape(\Pure\HTML\span(\Pure\Core\Slot::text('label')));
+        $shape = Compile::shape(\Pure\HTML\span(\Pure\Core\Slot::value('label')));
         $command = new ArtifactCommand(static fn (string $path): array => [
             'One' => ['factory' => static fn (): Shape => $shape, 'document' => false],
             'Two' => ['factory' => static fn (): Shape => $shape, 'document' => false],
@@ -838,6 +860,24 @@ class ArtifactTest extends TestCase
 
         $this->assertSame(1, $result['code']);
         $this->assertStringContainsString('2 component units are registered here', $result['stderr']);
+    }
+
+    public function testCommandAcceptsAFactoryReturningABareTagTree(): void
+    {
+        $file = $this->unitFile('badge.cmp.php', null);
+        $command = new ArtifactCommand(static fn (string $path): array => [
+            'Badge' => ['factory' => static fn () => \Pure\HTML\span(\Pure\Core\Slot::value('label'))],
+        ]);
+
+        $result = $this->runCommand($command, ['pure', 'compile', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertFileExists($this->dir . '/badge.pure.php');
+        $this->assertStringContainsString('compiled:', $result['stdout']);
+
+        $renderer = self::load($this->dir . '/badge.pure.php');
+        $this->assertInstanceOf(Renderer::class, $renderer);
+        $this->assertSame('<span>x</span>', $renderer->render(['label' => 'x']));
     }
 
     public function testListReportsShapeFiles(): void
@@ -872,7 +912,7 @@ class ArtifactTest extends TestCase
 
         $broken = $this->runCommand($command, ['pure', 'compile', $this->shapeFile('broken.shape.php', "<?php\n\nreturn 42;\n")]);
         $this->assertSame(1, $broken['code']);
-        $this->assertStringContainsString('must return a Pure\\Compile\\Shape', $broken['stderr']);
+        $this->assertStringContainsString('must return a tag tree or Pure\\Compile\\Shape', $broken['stderr']);
 
         $suffix = $this->runCommand($command, ['pure', 'compile', $this->shapeFile('page.php', "<?php\n\nreturn null;\n")]);
         $this->assertSame(1, $suffix['code']);
@@ -900,7 +940,7 @@ class ArtifactTest extends TestCase
             use function Pure\HTML\{body, head, html};
 
             return Compile::shape(
-                html(head(), body(Slot::text('content')))
+                html(head(), body(Slot::value('content')))
             );
             PHP);
 
@@ -1023,7 +1063,7 @@ class ArtifactTest extends TestCase
         $fn = 'register';
         $register = $component === null
             ? ''
-            : "{$fn}('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::text('label'))));";
+            : "{$fn}('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::value('label'))));";
 
         // `{$fn}` (not a literal) keeps the import line safe: a literal
         // `Pure\Component\register` in this heredoc would turn its `\r` into a

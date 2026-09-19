@@ -114,6 +114,7 @@ $custom = HTML::myCustomTag('Custom content')->data_component('special');
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // ✅ 字符串内容被转义，不会被解析
@@ -294,21 +295,20 @@ div(
 )->class('message')->print();
 ```
 
-在编译渲染中，条件会成为一个 `Slot::if()` 占位符，各分支则是形状。诸如 `Slot::text()` 这类槽位用于代表在渲染时绑定的值：
+在编译渲染中，条件会成为一个 `Slot::if()` 占位符，各分支则是形状。诸如 `Slot::value()` 这类槽位用于代表在渲染时绑定的值：
 
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, p};
 
-function Message(bool $isLoggedIn): Raw
+function Message(bool $isLoggedIn): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
             Slot::if(
                 'isLoggedIn',
@@ -342,22 +342,21 @@ ul(
 )->class('fruits')->print();
 ```
 
-在编译渲染中，列表是 `Slot::each()` 槽位：条目形状会为所绑定可迭代对象的每个元素渲染，`Slot::text()` 标记要绑定的值：
+在编译渲染中，列表是 `Slot::each()` 槽位：条目形状会为所绑定可迭代对象的每个元素渲染，`Slot::value()` 标记要绑定的值：
 
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{ul, li};
 
-function Fruits(array $items): Raw
+function Fruits(array $items): string
 {
     static $render;
-    $render ??= bind(
-        ul(Slot::each('items', li(Slot::text('name'))))->class('fruits')
+    $render ??= Compile::shape(
+        ul(Slot::each('items', li(Slot::value('name'))))->class('fruits')
     );
 
     return $render(['items' => $items]);

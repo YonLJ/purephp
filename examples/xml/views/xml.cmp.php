@@ -2,7 +2,7 @@
 
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
-use Pure\Core\Raw;
+
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
@@ -18,10 +18,10 @@ function AddressShape(): Shape
 
     return $shape ??= Compile::shape(
         XML::address(
-            XML::street(Slot::text('street')),
-            Slot::if('city', XML::city(Slot::text('city'))),
-            XML::state(Slot::text('state')),
-            XML::zip(Slot::text('zip'))
+            XML::street(Slot::value('street')),
+            Slot::if('city', XML::city(Slot::value('city'))),
+            XML::state(Slot::value('state')),
+            XML::zip(Slot::value('zip'))
         )
     );
 }
@@ -45,7 +45,7 @@ function XmlPageShape(): Shape
     );
 }
 
-register('Xml', __FILE__, static fn (): Shape => XmlPageShape());
+register('Xml', __FILE__, static fn () => XmlPageShape());
 
 /**
  * The xml page: the document comes from views/xml.shape.php (precompiled with
@@ -54,7 +54,7 @@ register('Xml', __FILE__, static fn (): Shape => XmlPageShape());
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
-function xmlPage(array $data): Raw
+function xmlPage(array $data): string
 {
-    return Raw::of('<?xml version="1.0"?>' . (string)render('Xml', addresses: $data['addresses']));
+    return '<?xml version="1.0"?>' . render('Xml', addresses: $data['addresses']);
 }

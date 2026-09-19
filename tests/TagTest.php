@@ -314,12 +314,12 @@ class TagTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage("Slot values cannot be combined with other 'class' arguments.");
 
-        div()->class('btn', Slot::attr('c'));
+        div()->class('btn', Slot::value('c'));
     }
 
     public function testStyleAcceptsASlot(): void
     {
-        $slot = Slot::attr('s');
+        $slot = Slot::value('s');
         $tag = div()->style($slot);
 
         $this->assertSame($slot, $tag->getAttr('style'));

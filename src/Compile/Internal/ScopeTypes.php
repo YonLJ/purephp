@@ -164,7 +164,7 @@ final class ScopeTypes
     private function slotType(Slot $slot): string
     {
         return match ($slot->kind) {
-            SlotKind::Text, SlotKind::Raw, SlotKind::Attr => self::VALUE,
+            SlotKind::Value, SlotKind::Raw => self::VALUE,
             SlotKind::Child => $this->shapeType($slot->shape),
             SlotKind::Each => 'iterable<array-key, ' . $this->shapeType($slot->shape) . '>',
             SlotKind::EachKind => 'iterable<array-key, ' . $this->kindItemType($slot) . '>',

@@ -110,8 +110,7 @@ final class ShapeWalker
                 }
 
                 break;
-            case SlotKind::Text:
-            case SlotKind::Attr:
+            case SlotKind::Value:
             case SlotKind::Raw:
                 break;
         }

@@ -66,7 +66,7 @@ abstract class RendererGenerator implements ShapeVisitor
     public function attribute(string $key, string|Slot $value, string $slotPath): void
     {
         if ($value instanceof Slot) {
-            if ($value->kind !== SlotKind::Attr) {
+            if ($value->kind !== SlotKind::Value) {
                 throw CompileException::slotInAttributePosition($value->kind, $slotPath);
             }
 
@@ -153,8 +153,7 @@ abstract class RendererGenerator implements ShapeVisitor
     public function slotLeave(Slot $slot, string $slotPath): void
     {
         switch ($slot->kind) {
-            case SlotKind::Text:
-            case SlotKind::Attr:
+            case SlotKind::Value:
             case SlotKind::Raw:
                 break;
             case SlotKind::Child:
@@ -188,7 +187,7 @@ abstract class RendererGenerator implements ShapeVisitor
     private function enterValueSlot(Slot $slot, string $slotPath): bool
     {
         switch ($slot->kind) {
-            case SlotKind::Text:
+            case SlotKind::Value:
                 $this->expression($this->valueSource('text', $slot, $this->data(), $slotPath));
 
                 return true;
@@ -196,8 +195,6 @@ abstract class RendererGenerator implements ShapeVisitor
                 $this->expression($this->valueSource('raw', $slot, $this->data(), $slotPath));
 
                 return true;
-            case SlotKind::Attr:
-                throw CompileException::attributeSlotInChildPosition($slotPath);
             default:
                 return false;
         }

@@ -12,5 +12,5 @@ require_once __DIR__ . '/../../views/pricing.cmp.php';
  */
 function pricingController(): string
 {
-    return (string)pricingPage(pricingData());
+    return pricingPage(pricingData());
 }

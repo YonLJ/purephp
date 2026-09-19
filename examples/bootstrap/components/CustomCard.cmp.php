@@ -1,8 +1,4 @@
 <?php declare(strict_types=1);
-
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
@@ -12,28 +8,28 @@ use function Pure\SVG\{svg, svgUse};
 /**
  * One "custom cards" item template.
  */
-register('CustomCard', __FILE__, static fn (): Shape => Compile::shape(
+register('CustomCard', __FILE__, static fn () =>
     div(
         div(
             div(
-                h3(Slot::text('title'))->class('pt-5 mt-5 mb-4 display-6 lh-1 fw-bold'),
+                h3(Slot::value('title'))->class('pt-5 mt-5 mb-4 display-6 lh-1 fw-bold'),
                 ul(
                     li(
-                        img()->src(Slot::attr('icon'))->alt('Bootstrap')->width('32')->height('32')->class('rounded-circle border border-white')
+                        img()->src(Slot::value('icon'))->alt('Bootstrap')->width('32')->height('32')->class('rounded-circle border border-white')
                     )->class('me-auto'),
                     li(
                         svg(svgUse()->href('#geo-fill'))->class('bi me-2')->width('1em')->height('1em'),
-                        small(Slot::text('location'))
+                        small(Slot::value('location'))
                     )->class('d-flex align-items-center me-3'),
                     li(
                         svg(svgUse()->href('#calendar3'))->class('bi me-2')->width('1em')->height('1em'),
-                        small(Slot::text('date'))
+                        small(Slot::value('date'))
                     )->class('d-flex align-items-center'),
                 )->class('d-flex list-unstyled mt-auto')
             )->class('d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1')
-        )->class('card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg')->style(Slot::attr('style'))
+        )->class('card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg')->style(Slot::value('style'))
     )->class('col')
-));
+);
 
 /**
  * One "custom cards" item: the cover image is the card background, the icon is
@@ -41,7 +37,7 @@ register('CustomCard', __FILE__, static fn (): Shape => Compile::shape(
  *
  * @param array{title: string, icon: string, location: string, date: string, bgImg: string} $card
  */
-function CustomCard(array $card): Raw
+function CustomCard(array $card): string
 {
     return render(
         'CustomCard',

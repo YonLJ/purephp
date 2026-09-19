@@ -33,18 +33,16 @@ composer require yonld/purephp
 
 // components/CounterValue.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\p;
 
-register('CounterValue', __FILE__, static fn (): Shape => Compile::shape(
-    p('Current count: ', Slot::text('count'))->id('counter')
-));
+register('CounterValue', __FILE__, static fn () =>
+    p('Current count: ', Slot::value('count'))->id('counter')
+);
 
-function CounterValue(int $count): Raw
+function CounterValue(int $count): string
 {
     return render('CounterValue', count: $count);
 }
@@ -98,25 +96,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], '/to
 
 ### 4. 实时搜索
 
-结果列表是一个组件；每个结果标题都用 `Slot::text()` 绑定，端点用搜索结果渲染列表组件：
+结果列表是一个组件；每个结果标题都用 `Slot::value()` 绑定，端点用搜索结果渲染列表组件：
 
 ```php
 <?php
 
 // components/SearchResult.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\div;
 
-register('SearchResult', __FILE__, static fn (): Shape => Compile::shape(
-    div(Slot::text('title'))->class('search-result')
-));
+register('SearchResult', __FILE__, static fn () =>
+    div(Slot::value('title'))->class('search-result')
+);
 
-function SearchResult(string $title): Raw
+function SearchResult(string $title): string
 {
     return render('SearchResult', title: $title);
 }
@@ -128,21 +124,19 @@ function SearchResult(string $title): Raw
 require_once __DIR__ . '/SearchResult.cmp.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\div;
 
-register('ResultList', __FILE__, static fn (): Shape => Compile::shape(div(Slot::raw('results'))));
+register('ResultList', __FILE__, static fn () => div(Slot::raw('results')));
 
-function ResultList(array $results): Raw
+function ResultList(array $results): string
 {
     $items = [];
 
     foreach ($results as $result) {
-        $items[] = (string) SearchResult($result['title']);
+        $items[] = SearchResult($result['title']);
     }
 
     return render('ResultList', results: implode('', $items));
@@ -155,14 +149,12 @@ function ResultList(array $results): Raw
 require_once __DIR__ . '/ResultList.cmp.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, input};
 
-register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
+register('SearchBox', __FILE__, static fn () =>
     div(
         input()
             ->type('text')
@@ -172,9 +164,9 @@ register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
             ->hxTarget('#results'),
         div(Slot::raw('list'))->id('results')
     )->class('search-box')
-));
+);
 
-function SearchBox(Raw $list): Raw
+function SearchBox(iterable|string $list): string
 {
     return render('SearchBox', list: $list);
 }

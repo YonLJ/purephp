@@ -14,10 +14,10 @@ use Pure\Core\Slot;
 use function Pure\HTML\{div, h1, li, p, ul};
 
 // build + compile once per process
-$item  = Compile::shape(li(Slot::text('title')));
+$item  = Compile::shape(li(Slot::value('title')));
 $shape = Compile::shape(
     div(
-        h1(Slot::text('heading')),
+        h1(Slot::value('heading')),
         ul(Slot::each('items', $item))
     )->class('card')
 );
@@ -38,32 +38,30 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | --- | --- |
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
-| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = null)` and the readonly `source` / `id` properties |
-| `Pure\Core\Slot` | Placeholder constructors (`text`, `attr`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
+| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
+| `Pure\Core\Slot` | Placeholder constructors (`value`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
 ## Function Components
 
 A component unit registers a lazy template factory under a name; the component
-function next to it renders that name. `Pure\Component\render()` turns the
-registered template into `Raw` markup in one expression:
+function next to it renders that name. `Pure\Component\render()` returns the
+rendered markup as a string in one expression:
 
 ```php
 <?php
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
-    div(h2(Slot::text('title')), p(Slot::text('content')))->class('card')
-));
+register('Card', __FILE__, static fn () =>
+    div(h2(Slot::value('title')), p(Slot::value('content')))->class('card')
+);
 
-function Card(string $title, string $content): Raw
+function Card(string $title, string $content): string
 {
     return render('Card', title: $title, content: $content);
 }
@@ -71,35 +69,33 @@ function Card(string $title, string $content): Raw
 
 | Function | Behavior |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false): void` | Registers a component unit; the factory must be lazy and return a `Shape` |
-| `render(string $source, mixed ...$data): Raw` | Renders a unit by name or a template by path; the binder is cached |
-| `bind(Tag\|string $source): Closure` | Returns the reusable `fn (array $data): Raw` binder of a fragment |
+| `register(string $name, string $file, Closure $factory, bool $override = false): void` | Registers a component unit; the factory must be lazy and may return a tag tree or a `Shape` |
+| `render(string $source, mixed ...$data): string` | Renders a unit by name or a template by path; the binder is cached |
 
-`render()` and `bind()` emit the tree as written, with **no document header**.
 There is no page flavour: to emit a full document, prepend the header of the
 root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
 `<?xml version="1.0"?>`).
 
 `render()` takes slot values as named arguments (`render('Card', title: $title)`)
 or as an unpacked array with string keys; positional data is rejected with a
-`RuntimeException`. `bind()` is the lower-level helper for inline trees or when
-you want to hold the binder in a `static` variable.
+`RuntimeException`. To hold or pass around the binder yourself, use
+`Registry::component($source)`, which returns a `Closure(array $data): string`.
 
-A `Tag` source is compiled in place; a string is a registered name, the path of
-a `*.cmp.php` unit or the path of a `*.shape.php` template. Registering the same
-name for another file, or another name for the same file, throws unless
-`override: true` is passed; one unit file registers one component. A name and
-the path of its unit file resolve to the same binder.
+The source is a registered name, the path of a `*.cmp.php` unit or the path of
+a `*.shape.php` template. Registering the same name for another file, or another
+name for the same file, throws unless `override: true` is passed; one unit file
+registers one component. A name and the path of its unit file resolve to the
+same binder.
 
 For a file, the sibling `*.pure.php` artifact is loaded when it exists and is at
 least as new as the unit or shape file, so production skips calling the factory
 and building the shape tree; otherwise the factory runs (once per compile
 generation) or the shape file is compiled (the disk cache still applies).
-Missing files, a template that does not return a `Shape` and an artifact that
-does not return a `Renderer` all raise a `RuntimeException` naming the file. Run
-`pure compile` to build artifacts for every `*.shape.php` and `*.cmp.php` file,
-`pure compile --list` to print the units found, and `pure compile --check` to
-keep artifacts fresh in CI.
+Missing files, a template that does not return a tag tree or a `Shape` and an
+artifact that does not return a `Renderer` all raise a `RuntimeException` naming
+the file. Run `pure compile` to build artifacts for every `*.shape.php` and
+`*.cmp.php` file, `pure compile --list` to print the units found, and
+`pure compile --check` to keep artifacts fresh in CI.
 
 ## Shape vs. Data
 
@@ -111,26 +107,26 @@ function, never inside a request handler.
 
 | Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.cmp.php` unit (function + template) |
-| `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
+| `function Card(array $props): HTML` | `function Card(string $title): string` with a `Card.cmp.php` unit (function + template) |
+| `h2($title)` | `h2(Slot::value('title'))` |
+| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::value('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject the joined markup through `Slot::raw()` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | call `Child(...)` and inject its `Raw` through `Slot::raw()` |
+| `<Child($props)>` | call `Child(...)` and inject the returned markup through `Slot::raw()` |
 
-A child component with no props can also be passed straight into the template as
-a child: `Raw` is valid tag content, and the subtree is compiled into literals.
+A child component's markup is a plain string, so it enters a template through a
+raw slot — a bare string child would be escaped as text:
 
 ```php
-$shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
+$shape = Compile::shape(div(Slot::raw('header'), Slot::each('rows', $row))->class('page'));
+$shape(['header' => Header(), 'rows' => $rows]);
 ```
 
 ## Slot Types
 
 | Constructor | Value | Behavior |
 | --- | --- | --- |
-| `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders as empty content |
-| `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
+| `Slot::value($name)` | stringable or `null` | position decides the semantics: child position coerces to string and escapes (`null` renders as empty content, `true` as "1"); attribute position follows `setAttr()` (`true` renders `name="name"`, `false`/`null` omit the attribute) |
 | `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated |
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
@@ -143,16 +139,16 @@ Modifiers:
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
 
-Value slots (`text`, `attr`, `raw`) must be stringable: `null`, scalars, and
-`Stringable` (including the `Raw` a child component returns) are accepted; other
-objects raise an `InvalidArgumentException` naming the full slot path. A `raw`
-slot additionally accepts an iterable of stringable values and concatenates them
-verbatim; a non-stringable element names its offset, e.g.
+Value and raw slots must be stringable: `null`, scalars, and `Stringable`
+(including a `Raw`) are accepted; other objects raise an
+`InvalidArgumentException` naming the full slot path. A `raw` slot additionally
+accepts an iterable of stringable values and concatenates them verbatim; a
+non-stringable element names its offset, e.g.
 `slot 'items[2]' must be stringable`.
 
 Pick a list slot by whether the markup is already rendered: `raw()` concatenates
-markup that already exists (pass a `Raw`, or a list of them); `each()` is
-data-driven and renders every item through its own shape.
+markup that already exists (pass the rendered string, a `Raw`, or a list of
+them); `each()` is data-driven and renders every item through its own shape.
 
 ## Static Subtree Folding
 
@@ -161,10 +157,16 @@ single literal by rendering it once at compile time, so such subtrees cost
 nothing at render time:
 
 ```php
-$shape = Compile::shape(div(Header(), Slot::text('title')));
+$shape = Compile::shape(div(
+    Slot::raw('header'),
+    div('Static footer')->class('footer'),
+    Slot::value('title')
+));
 ```
 
-`Header()` is emitted as a literal; only `title` remains dynamic.
+`div('Static footer')` is folded into a literal; `header` and `title` stay
+dynamic, and already-rendered `Header()` markup enters through the raw slot at
+render time.
 
 ## Structure Fingerprint
 
@@ -189,21 +191,19 @@ $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
 ```php
 $compiled = $shape->compile();
 
-$compiled->render($data);         // string
-$compiled->save($path, $data);    // write to file, returns bytes written
-$compiled->source;                // generated PHP source (empty for precompiled artifacts)
-$compiled->header;                // document header captured at compile time
-$compiled->id;                    // structure fingerprint (same as Shape::id())
+$compiled->render($data);                    // string
+$compiled->save($path, $data);               // write to file, returns bytes written
+$compiled->save($path, $data, $header);      // prepend $header to the file
+$compiled->source;                           // generated PHP source (empty for precompiled artifacts)
+$compiled->id;                               // structure fingerprint (same as Shape::id())
 ```
 
 `Shape::save($path, $data)` is the user-facing shortcut: it writes the rendered
 output, prepending the document header of the root tag (for example
 `<!DOCTYPE html>` or the XML declaration) unless you pass your own header.
-`Renderer::save()` uses the header captured at compile time when `$header` is
-null — empty for renderers compiled at runtime, the root tag's header for
-[precompiled artifacts](/guide/compiled#precompiled-artifacts). `Renderer::$header`
-exposes that header, so a handler can print a whole document with
-`$renderer->header . $renderer->render($data)`.
+`Renderer::save()` instead takes the header as an optional third parameter,
+empty by default, so a handler that wants a whole document prepends it itself:
+`'<!DOCTYPE html>' . $renderer->render($data)`.
 
 ## On-Disk Cache
 
@@ -252,7 +252,7 @@ process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
 
 - Missing required slot: `Pure\Core\MissingSlotException` with the full path,
   for example `slot 'items[].title' is required but was not provided.`
-- Wrong placement (`Slot::attr` as a child, `Slot::text` as an attribute value)
+- Wrong placement (raw slot as an attribute value)
   or a missing shape: `LogicException` at compile time.
 - `Slot::eachKind()` with no variants or with an empty/numeric kind key:
   `InvalidArgumentException` at build time (and `required()`/`default()` on

@@ -21,13 +21,8 @@ final class CompileException extends LogicException
         return new self("slot '{$slotPath}' is missing a shape.");
     }
 
-    public static function attributeSlotInChildPosition(string $slotPath): self
-    {
-        return new self("attribute slots are not allowed in child position: '{$slotPath}'.");
-    }
-
     public static function slotInAttributePosition(SlotKind $kind, string $slotPath): self
     {
-        return new self("only attribute slots are allowed in attribute position, got '{$kind->name}' for '{$slotPath}'.");
+        return new self("only value slots are allowed in attribute position, got '{$kind->name}' for '{$slotPath}'.");
     }
 }

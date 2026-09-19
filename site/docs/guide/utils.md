@@ -4,7 +4,7 @@ PurePHP provides several utility functions to simplify development. These functi
 
 *`clx()` and `sty()` are unchanged by compiled rendering: use them
 while building static attributes in a shape, and bind dynamic values with
-`Slot::text()` / `Slot::attr()` / `Slot::raw()` — see
+`Slot::value()` / `Slot::raw()` — see
 [Compiled Components](/guide/compiled). Most examples below use the tag API,
 which remains valid for snippets and debugging.*
 
@@ -168,10 +168,9 @@ are slots:
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\button;
 use function Pure\Utils\sty;
 
@@ -181,14 +180,14 @@ function ActionButton(
     string $size = 'medium',
     bool $loading = false,
     ?string $style = null
-): Raw {
+): string {
     static $renders = [];
 
-    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= bind(
-        button(Slot::text('text'))
+    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+        button(Slot::value('text'))
             ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
-            ->style(Slot::attr('style'))
-            ->disabled(Slot::attr('disabled'))
+            ->style(Slot::value('style'))
+            ->disabled(Slot::value('disabled'))
     );
 
     return $render([
@@ -209,19 +208,19 @@ The card accepts an HTML child, so its content is bound with `Slot::raw()`:
 ```php
 <?php
 
+use Pure\Compile\Compile;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h3, p};
 
-function Card(string $title, Raw $content, string $theme = 'light', bool $featured = false): Raw
+function Card(string $title, iterable|string $content, string $theme = 'light', bool $featured = false): string
 {
     static $renders = [];
 
-    $render = $renders["{$theme}|" . (int) $featured] ??= bind(
+    $render = $renders["{$theme}|" . (int) $featured] ??= Compile::shape(
         div(
-            h3(Slot::text('title'))->class('card-title'),
+            h3(Slot::value('title'))->class('card-title'),
             p(Slot::raw('content'))->class('card-content')
         )
         ->class('card', "card-{$theme}", $featured ? 'card-featured' : null)

@@ -1,8 +1,5 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
@@ -13,22 +10,22 @@ require_once __DIR__ . '/Icon.cmp.php';
 /**
  * One "icon grid" item template.
  */
-register('CellIcon', __FILE__, static fn (): Shape => Compile::shape(
+register('CellIcon', __FILE__, static fn () =>
     div(
         Slot::raw('icon'),
         div(
-            h3(Slot::text('title'))->class('fw-bold mb-0 fs-4'),
-            p(Slot::text('content'))
+            h3(Slot::value('title'))->class('fw-bold mb-0 fs-4'),
+            p(Slot::value('content'))
         )
     )->class('col d-flex align-items-start')
-));
+);
 
 /**
  * One "icon grid" item.
  *
  * @param array{icon: string, title: string, content: string} $item
  */
-function CellIcon(array $item): Raw
+function CellIcon(array $item): string
 {
     return render(
         'CellIcon',

@@ -116,6 +116,7 @@ strings are shown as text instead of being parsed:
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // ✅ String content is escaped, not parsed
@@ -297,22 +298,21 @@ div(
 ```
 
 With compiled rendering, the condition becomes a `Slot::if()` placeholder and
-the branches are shapes. Slots such as `Slot::text()` stand in for the values
+the branches are shapes. Slots such as `Slot::value()` stand in for the values
 that are bound at render time:
 
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, p};
 
-function Message(bool $isLoggedIn): Raw
+function Message(bool $isLoggedIn): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
             Slot::if(
                 'isLoggedIn',
@@ -348,23 +348,22 @@ ul(
 ```
 
 With compiled rendering, lists are `Slot::each()` slots: the item shape is
-rendered for every element of the bound iterable, with `Slot::text()` marking
+rendered for every element of the bound iterable, with `Slot::value()` marking
 the value to bind:
 
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{ul, li};
 
-function Fruits(array $items): Raw
+function Fruits(array $items): string
 {
     static $render;
-    $render ??= bind(
-        ul(Slot::each('items', li(Slot::text('name'))))->class('fruits')
+    $render ??= Compile::shape(
+        ul(Slot::each('items', li(Slot::value('name'))))->class('fruits')
     );
 
     return $render(['items' => $items]);

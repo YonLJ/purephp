@@ -16,7 +16,7 @@ final class Compile
      * Bump when the generated-code format, the fingerprint composition or a
      * class name referenced by generated code changes.
      */
-    public const CACHE_VERSION = 9;
+    public const CACHE_VERSION = 10;
 
     private static int $generation = 0;
 
@@ -58,6 +58,31 @@ final class Compile
         ShapeGuard::check();
 
         return new Shape($shape);
+    }
+
+    /**
+     * Wrap a tag tree in a Shape, or pass a Shape through unchanged.
+     *
+     * Shared by the component registry and the artifact compiler, which accept
+     * either form from a unit factory or a `*.shape.php` template. Callers
+     * memoize their shapes, so the development guard is not consulted here:
+     * every bare-tree wrap would otherwise count as one call site.
+     *
+     * @internal
+     * @param mixed $result A factory or template result.
+     * @return Shape|null The shape, or null when the result is neither a tag tree nor a Shape.
+     */
+    public static function toShape(mixed $result): ?Shape
+    {
+        if ($result instanceof Shape) {
+            return $result;
+        }
+
+        if ($result instanceof Tag) {
+            return new Shape($result);
+        }
+
+        return null;
     }
 
     /**

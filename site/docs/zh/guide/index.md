@@ -25,27 +25,26 @@ PurePHP 有两条渲染路径：
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h1, p};
 
-function pageView(array $data): Raw
+function pageView(array $data): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
-            h1(Slot::text('heading')),
-            p(Slot::text('lead'))
+            h1(Slot::value('heading')),
+            p(Slot::value('lead'))
         )->class('container')
     );
 
     // 引擎不附加文档声明，在这里手动拼接。
-    return Raw::of('<!DOCTYPE html>' . (string)$render([
+    return '<!DOCTYPE html>' . $render([
         'heading' => $data['heading'],
         'lead' => $data['lead'],
-    ]));
+    ]);
 }
 
 echo pageView(['heading' => 'Welcome to PurePHP', 'lead' => 'A PHP template engine']);

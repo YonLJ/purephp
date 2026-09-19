@@ -11,5 +11,5 @@ require_once __DIR__ . '/../../views/cover.php';
  */
 function coverController(): string
 {
-    return (string)coverPage();
+    return coverPage();
 }

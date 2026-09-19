@@ -51,8 +51,8 @@ use function Pure\HTML\{div, h1, p};
 
 $shape = Compile::shape(
     div(
-        h1(Slot::text('heading')),
-        p(Slot::text('lead'))
+        h1(Slot::value('heading')),
+        p(Slot::value('lead'))
     )->class('container')
 );
 ```
@@ -61,15 +61,13 @@ $shape = Compile::shape(
 
 | 槽位 | 绑定 | 是否创建嵌套作用域 |
 | --- | --- | --- |
-| `Slot::text()` | 可字符串化的值，会转义 | 否 |
-| `Slot::attr()` | 属性值，会转义 | 否 |
+| `Slot::value()` | 标量 / `null` / `Stringable` | 否——子节点位转义为文本；属性位按 `setAttr()` 语义（`true`→`name="name"`，`false`/`null` 省略） |
 | `Slot::raw()` | 可字符串化的值（或这类值的可迭代集合），原样输出 | 否 |
 | `Slot::child()` | 数组 | 是 |
 | `Slot::each()` | 数组的可迭代集合 | 是，逐项 |
 | `Slot::if()` | 真值条件 | 否（各分支共享作用域） |
-| `Slot::eachKind()` | 带判别键的数组的可迭代集合 | 是，逐项 |
 
-槽位名字始终是**数据键**（也是错误路径），而不是标签名或属性名：在 `a(Slot::text('label'))->class(Slot::attr('classList'))` 中，文本绑定 `label`，class 属性绑定 `classList`，而 `a` 与 `class` 来自树本身。
+槽位名字始终是**数据键**（也是错误路径），而不是标签名或属性名：在 `a(Slot::value('label'))->class(Slot::value('classList'))` 中，文本绑定 `label`，class 属性绑定 `classList`，而 `a` 与 `class` 来自树本身。
 
 ## 编译
 
@@ -101,7 +99,7 @@ $shape([
 ```php
 <?php
 
-$list = Compile::shape(ul(Slot::each('items', li(Slot::text('title')))));
+$list = Compile::shape(ul(Slot::each('items', li(Slot::value('title')))));
 
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```
@@ -110,7 +108,7 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 
 ## 组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性模板
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性模板
 工厂：
 
 ```php
@@ -118,21 +116,19 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 
 // components/Card.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
-    )->class(Slot::attr('class'))
-));
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
+    )->class(Slot::value('class'))
+);
 
-function Card(string $title, string $content, string $class = 'card'): Raw
+function Card(string $title, string $content, string $class = 'card'): string
 {
     return render('Card', title: $title, content: $content, class: $class);
 }
@@ -149,12 +145,11 @@ function Card(string $title, string $content, string $class = 'card'): Raw
 ```php
 <?php
 
-use Pure\Core\Raw;
 
 use function Pure\HTML\{button, div, p};
 use function Pure\Component\render;
 
-function Counter(int $count): Raw
+function Counter(int $count): string
 {
     return render('Counter', count: $count);
 }
@@ -187,6 +182,26 @@ class Store
 Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
+
+## 条件与异构列表
+
+上文的主表覆盖日常槽位。对于混合列表——同一份数据、多种标记形态——`Slot::eachKind()`
+按判别键把每一项分派到对应的形状：
+
+```php
+$blocks = Compile::shape(div(Slot::eachKind('blocks', [
+    'text' => p(Slot::value('value')),
+    'link' => a(Slot::value('value'))->href(Slot::value('href')),
+])));
+
+$blocks(['blocks' => [
+    ['kind' => 'text', 'value' => '你好'],
+    ['kind' => 'link', 'value' => '文档', 'href' => '/docs'],
+]]);
+```
+
+未知 kind 会抛出异常。完整处理见编译组件指南的
+[异构列表](/zh/guide/compiled#异构列表-eachkind)。
 
 ## 下一步
 

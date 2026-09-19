@@ -35,7 +35,7 @@ div('Content')->class('btn', $isActive ? 'active' : null);
 div('Content')->class(['btn', 'btn-primary']);
 
 // 动态类名（编译渲染）
-div('Content')->class(\Pure\Core\Slot::attr('classList'));
+div('Content')->class(\Pure\Core\Slot::value('classList'));
 ```
 
 ### `className(array|bool|int|float|string|Slot|null ...$args): self`

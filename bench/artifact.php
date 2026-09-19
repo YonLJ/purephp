@@ -76,7 +76,10 @@ $artifactRender = (hrtime(true) - $start) / 1000 / $iterations;
 $start = hrtime(true);
 $unitFile = $root . '/examples/bootstrap/views/features.cmp.php';
 require_once $unitFile;
-$shape = (\Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
+$shape = \Pure\Compile\Compile::toShape((\Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])());
+if ($shape === null) {
+    throw new \RuntimeException('the Features factory must return a tag tree or a Pure\\Compile\\Shape.');
+}
 $shape->compile();
 $compile = (hrtime(true) - $start) / 1000;
 

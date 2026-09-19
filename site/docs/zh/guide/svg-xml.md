@@ -117,31 +117,29 @@ XML 标签同样继承自 `Tag`，因此文档以编译形状构建：树及其�
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\bind;
-
-function Address(array $address): Raw
+function Address(array $address): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         XML::address(
-            XML::street(Slot::text('street')),
-            Slot::if('city', XML::city(Slot::text('city'))),
-            XML::state(Slot::text('state')),
-            XML::zip(Slot::text('zip'))
+            XML::street(Slot::value('street')),
+            Slot::if('city', XML::city(Slot::value('city'))),
+            XML::state(Slot::value('state')),
+            XML::zip(Slot::value('zip'))
         )
     );
 
     return $render($address);
 }
 
-function Customers(array $addresses): Raw
+function Customers(array $addresses): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         XML::customers(
             XML::customer(
                 XML::name('Charter Group'),
@@ -153,7 +151,7 @@ function Customers(array $addresses): Raw
     $html = '';
 
     foreach ($addresses as $address) {
-        $html .= (string)Address($address);
+        $html .= Address($address);
     }
 
     return $render(['addresses' => $html]);
@@ -180,7 +178,7 @@ use Pure\Core\Slot;
 use Pure\Core\XML;
 
 $setting = Compile::shape(
-    XML::setting(Slot::text('value'))->key(Slot::attr('key'))
+    XML::setting(Slot::value('value'))->key(Slot::value('key'))
 );
 
 $config = Compile::shape(
@@ -248,7 +246,7 @@ XML::root(Raw::of('<item>This is preserved</item>'))->print();
 - 处理预格式化的标记
 - 包含复杂的嵌套结构
 
-两条渲染路径行为一致；绑定的数据由 `Slot::text()` / `Slot::attr()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `Raw::of()` 的等价原样输出。
+两条渲染路径行为一致；绑定的数据由 `Slot::value()` 转义，当数据必须保留标记时，`Slot::raw()` 是 `Raw::of()` 的等价原样输出。
 
 ## 最佳实践
 

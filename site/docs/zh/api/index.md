@@ -53,7 +53,7 @@ use Pure\Core\Slot;
 use function Pure\HTML\{div, h1};
 
 $shape = Compile::shape(
-    div(h1(Slot::text('title')))->class('card')
+    div(h1(Slot::value('title')))->class('card')
 );
 
 $shape->print(['title' => 'Hello']);

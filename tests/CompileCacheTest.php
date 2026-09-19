@@ -56,8 +56,8 @@ class CompileCacheTest extends TestCase
     {
         // Both shapes read one slot at one path; only the attribute the value
         // lands in differs, and the cache is keyed by the id alone.
-        $asClass = Compile::shape(div('t')->class(Slot::attr('x')));
-        $asId = Compile::shape(div('t')->id(Slot::attr('x')));
+        $asClass = Compile::shape(div('t')->class(Slot::value('x')));
+        $asId = Compile::shape(div('t')->id(Slot::value('x')));
 
         $this->assertNotSame($asClass->id(), $asId->id());
         $this->assertSame('<div class="v">t</div>', $asClass(['x' => 'v']));
@@ -68,17 +68,17 @@ class CompileCacheTest extends TestCase
 
         $this->assertSame(
             '<div class="v">t</div>',
-            Compile::shape(div('t')->class(Slot::attr('x')))(['x' => 'v'])
+            Compile::shape(div('t')->class(Slot::value('x')))(['x' => 'v'])
         );
         $this->assertSame(
             '<div id="v">t</div>',
-            Compile::shape(div('t')->id(Slot::attr('x')))(['x' => 'v'])
+            Compile::shape(div('t')->id(Slot::value('x')))(['x' => 'v'])
         );
     }
 
     public function testCacheWritesAndReloadsByteIdentically(): void
     {
-        $shape = Compile::shape(div(span(Slot::text('v')))->class('c'));
+        $shape = Compile::shape(div(span(Slot::value('v')))->class('c'));
         $first = $shape(['v' => 'a & b']);
         $source = $shape->compile()->source;
         $file = $this->dir . '/' . $shape->id() . '.php';
@@ -87,7 +87,7 @@ class CompileCacheTest extends TestCase
 
         Compile::flush();
 
-        $reloaded = Compile::shape(div(span(Slot::text('v')))->class('c'));
+        $reloaded = Compile::shape(div(span(Slot::value('v')))->class('c'));
         $second = $reloaded(['v' => 'a & b']);
 
         $this->assertSame($first, $second);
@@ -97,7 +97,7 @@ class CompileCacheTest extends TestCase
 
     public function testCacheHitUsesTheStoredRenderer(): void
     {
-        $item = Compile::shape(li(Slot::text('label')));
+        $item = Compile::shape(li(Slot::value('label')));
         $build = static fn (): \Pure\Compile\Shape => Compile::shape(ul(Slot::each('items', $item)));
         $shape = $build();
         $shape(['items' => [['label' => 'a']]]);
@@ -143,7 +143,7 @@ class CompileCacheTest extends TestCase
 
     public function testMutatingATreeAfterCompileCannotPoisonTheCache(): void
     {
-        $tree = div(span(Slot::text('v')))->class('c');
+        $tree = div(span(Slot::value('v')))->class('c');
         $shape = Compile::shape($tree);
 
         $this->assertSame('<div class="c"><span>a</span></div>', $shape(['v' => 'a']));
@@ -154,7 +154,7 @@ class CompileCacheTest extends TestCase
 
         $this->assertSame('<div class="late"><span>a</span></div>', $shape(['v' => 'a']));
 
-        $fresh = Compile::shape(div(span(Slot::text('v')))->class('c'));
+        $fresh = Compile::shape(div(span(Slot::value('v')))->class('c'));
 
         $this->assertNotSame($shape->id(), $fresh->id());
         $this->assertSame('<div class="c"><span>a</span></div>', $fresh(['v' => 'a']));
@@ -162,7 +162,7 @@ class CompileCacheTest extends TestCase
 
     public function testIdFollowsTreeMutationWithoutPoisoningTheCache(): void
     {
-        $tree = div(span(Slot::text('v')));
+        $tree = div(span(Slot::value('v')));
         $shape = Compile::shape($tree);
         $idBefore = $shape->id();
 
@@ -171,7 +171,7 @@ class CompileCacheTest extends TestCase
         $this->assertNotSame($idBefore, $shape->id());
         $this->assertSame('<div class="late"><span>a</span></div>', $shape(['v' => 'a']));
 
-        $fresh = Compile::shape(div(span(Slot::text('v'))));
+        $fresh = Compile::shape(div(span(Slot::value('v'))));
 
         $this->assertNotSame($shape->id(), $fresh->id());
         $this->assertSame('<div><span>a</span></div>', $fresh(['v' => 'a']));
@@ -203,7 +203,7 @@ class CompileCacheTest extends TestCase
 
     public function testFlushInvalidatesMemoryRenderers(): void
     {
-        $shape = Compile::shape(div(Slot::text('v')));
+        $shape = Compile::shape(div(Slot::value('v')));
 
         $first = $shape->compile();
         $this->assertSame($first, $shape->compile());

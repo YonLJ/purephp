@@ -72,13 +72,11 @@ npx tailwindcss -i ./src/input.css -o ./public/output.css --watch
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
-
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h1, p};
 
-function Card(string $title, string $content, string $variant = 'default'): Raw
+function Card(string $title, string $content, string $variant = 'default'): string
 {
     static $renders = [];
 
@@ -91,10 +89,10 @@ function Card(string $title, string $content, string $variant = 'default'): Raw
         default => 'border border-gray-200'
     };
 
-    $render = $renders[$variant] ??= bind(
+    $render = $renders[$variant] ??= Compile::shape(
         div(
-            h1(Slot::text('title'))->class('text-xl font-bold text-gray-900 mb-2'),
-            p(Slot::text('content'))->class('text-gray-600 leading-relaxed')
+            h1(Slot::value('title'))->class('text-xl font-bold text-gray-900 mb-2'),
+            p(Slot::value('content'))->class('text-gray-600 leading-relaxed')
         )->class("{$baseClasses} {$variantClasses}")
     );
 
@@ -115,22 +113,20 @@ echo Card('Welcome to PurePHP', 'This is a card component styled with TailwindCS
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
-
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h2, p, img};
 
-function ProjectCard(string $title, string $description, string $image): Raw
+function ProjectCard(string $title, string $description, string $image): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
-            img()->src(Slot::attr('image'))->alt(Slot::attr('title'))
+            img()->src(Slot::value('image'))->alt(Slot::value('title'))
                 ->class('w-full h-48 object-cover rounded-t-lg'),
             div(
-                h2(Slot::text('title'))->class('text-lg font-semibold mb-2'),
-                p(Slot::text('description'))->class('text-gray-600 text-sm')
+                h2(Slot::value('title'))->class('text-lg font-semibold mb-2'),
+                p(Slot::value('description'))->class('text-gray-600 text-sm')
             )->class('p-4')
         )->class('bg-white rounded-lg shadow-md overflow-hidden')
     );
@@ -138,10 +134,10 @@ function ProjectCard(string $title, string $description, string $image): Raw
     return $render(['title' => $title, 'description' => $description, 'image' => $image]);
 }
 
-function ResponsiveGrid(array $items): Raw
+function ResponsiveGrid(array $items): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(Slot::raw('items'))
             ->class('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6')
     );
@@ -149,7 +145,7 @@ function ResponsiveGrid(array $items): Raw
     $cards = [];
 
     foreach ($items as $item) {
-        $cards[] = (string)ProjectCard($item['title'], $item['description'], $item['image']);
+        $cards[] = ProjectCard($item['title'], $item['description'], $item['image']);
     }
 
     return $render(['items' => implode('', $cards)]);
@@ -170,10 +166,8 @@ echo ResponsiveGrid([
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
-
-use function Pure\Component\bind;
 use function Pure\HTML\{form, div, label, input, button, span};
 
 const INPUT_CLASS = 'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300';
@@ -186,12 +180,12 @@ function FormField(
     bool $required = false,
     string $inputClass = INPUT_CLASS,
     string $error = ''
-): Raw {
+): string {
     static $renders = [];
 
     $key = "{$labelText}|{$name}|{$type}|{$placeholder}|" . (int)$required;
 
-    $render = $renders[$key] ??= bind(
+    $render = $renders[$key] ??= Compile::shape(
         div(
             label($labelText)
                 ->for($name)
@@ -202,18 +196,18 @@ function FormField(
                 ->id($name)
                 ->placeholder($placeholder)
                 ->required($required)
-                ->class(Slot::attr('inputClass')),
-            Slot::if('error', span(Slot::text('error'))->class('text-red-500 text-sm mt-1'))
+                ->class(Slot::value('inputClass')),
+            Slot::if('error', span(Slot::value('error'))->class('text-red-500 text-sm mt-1'))
         )->class('mb-4')
     );
 
     return $render(['inputClass' => $inputClass, 'error' => $error]);
 }
 
-function ContactForm(array $fields): Raw
+function ContactForm(array $fields): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         form(
             Slot::raw('fields'),
             button('Submit')
@@ -225,7 +219,7 @@ function ContactForm(array $fields): Raw
     $html = '';
 
     foreach ($fields as $field) {
-        $html .= (string)FormField(
+        $html .= FormField(
             $field['label'],
             $field['name'],
             $field['type'] ?? 'text',
@@ -264,10 +258,8 @@ echo ContactForm([
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
-
-use function Pure\Component\bind;
 use function Pure\HTML\button;
 
 function ActionButton(
@@ -276,7 +268,7 @@ function ActionButton(
     string $size = 'md',
     bool $disabled = false,
     bool $fullWidth = false
-): Raw {
+): string {
     static $renders = [];
 
     $baseClasses = 'font-medium rounded-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
@@ -304,8 +296,8 @@ function ActionButton(
 
     $key = "{$variant}|{$size}|" . (int)$disabled . (int)$fullWidth;
 
-    $render = $renders[$key] ??= bind(
-        button(Slot::text('text'))
+    $render = $renders[$key] ??= Compile::shape(
+        button(Slot::value('text'))
             ->class($allClasses)
             ->disabled($disabled)
     );
@@ -324,30 +316,28 @@ echo ActionButton('Primary Button', 'primary', 'lg');
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
-
-use function Pure\Component\bind;
 use function Pure\HTML\{div, main, h1, button};
 
-function Page(string $title): Raw
+function Page(string $title): string
 {
     static $render;
-    $render ??= bind(
-        main(h1(Slot::text('title')))->class('container mx-auto p-6')
+    $render ??= Compile::shape(
+        main(h1(Slot::value('title')))->class('container mx-auto p-6')
     );
 
     return $render(['title' => $title]);
 }
 
-function ThemeToggle(string $currentTheme = 'light'): Raw
+function ThemeToggle(string $currentTheme = 'light'): string
 {
     static $renders = [];
 
     $newTheme = $currentTheme === 'light' ? 'dark' : 'light';
     $icon = $currentTheme === 'light' ? '🌙' : '☀️';
 
-    $render = $renders[$currentTheme] ??= bind(
+    $render = $renders[$currentTheme] ??= Compile::shape(
         button("{$icon} Toggle Theme")
             ->onclick("toggleTheme('{$newTheme}')")
             ->class('fixed top-4 right-4 px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600')
@@ -356,7 +346,7 @@ function ThemeToggle(string $currentTheme = 'light'): Raw
     return $render([]);
 }
 
-function ThemeProvider(string $theme, Raw $toggle, Raw $page): Raw
+function ThemeProvider(string $theme, iterable|string $toggle, iterable|string $page): string
 {
     static $renders = [];
 
@@ -366,7 +356,7 @@ function ThemeProvider(string $theme, Raw $toggle, Raw $page): Raw
         default => 'bg-white text-gray-900'
     };
 
-    $render = $renders[$theme] ??= bind(
+    $render = $renders[$theme] ??= Compile::shape(
         div(
             Slot::raw('toggle'),
             Slot::raw('page')

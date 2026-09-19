@@ -27,7 +27,7 @@ abstract class Tag implements ShapeContract
 
     /**
      * A tag is already a data-free tree, so it satisfies the shape contract by
-     * returning itself: `Slot::each('items', li(Slot::text('value')))` needs no
+     * returning itself: `Slot::each('items', li(Slot::value('value')))` needs no
      * `Compile::shape()` wrapper. Wrap a tree in a shape when it is built and
      * memoized separately.
      *

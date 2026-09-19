@@ -22,11 +22,11 @@ use Pure\Core\Slot;
 use function Pure\HTML\{div, h1, li, ul};
 
 // A shape is a normal tag tree with Slot placeholders instead of data.
-$item = Compile::shape(li(Slot::text('title')));
+$item = Compile::shape(li(Slot::value('title')));
 
 $root = Compile::shape(
     div(
-        h1(Slot::text('heading')),
+        h1(Slot::value('heading')),
         ul(Slot::each('items', $item))
     )->class('card')
 );
@@ -51,13 +51,11 @@ paths share the same escaping implementation.
 
 | Constructor | Value | Behavior |
 | --- | --- | --- |
-| `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders empty content |
-| `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
+| `Slot::value($name)` | scalar / `null` / `Stringable` | coerced to string and escaped in child position (`true`→"1", `null`→empty); in attribute position follows `setAttr()` (`true`→`name="name"`, `false`/`null` omitted) |
 | `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is stringified element by element and concatenated |
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
-| `Slot::eachKind($name, ['kind' => $shape, ...])` | iterable of arrays | dispatches every item on `$item['kind']`; an unknown kind throws an `InvalidArgumentException` |
 
 Modifiers:
 
@@ -65,12 +63,17 @@ Modifiers:
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
 
-Value coercion: `null`, scalars and `Stringable` are accepted for
-text/attribute/raw slots, so the `Raw` a child component returns needs no
-`(string)` cast; arrays and other objects raise an `InvalidArgumentException`
-naming the full slot path. Only a raw slot additionally accepts an iterable of
-stringable values, which it concatenates — a list of rendered rows can go in as
-it is, without `implode()`. A nested array is still an error.
+Value coercion: `null`, scalars and `Stringable` are accepted for value/raw
+slots, so a component's string result needs no `(string)` cast. A raw slot also
+accepts an iterable of stringable values, which it concatenates — a list of
+rendered rows can go in as it is, without `implode()`. A nested array still
+raises an `InvalidArgumentException` naming the full slot path.
+
+> **Trust boundary** — after `render()` returns a `string`, there is no type
+> distinction between "trusted rendered markup" passed into a raw slot and
+> ordinary text passed into a value slot. Trust is now carried by the raw slot
+> contract itself: values in raw slots are emitted verbatim, values in value
+> slots are always escaped.
 
 ## Scope and Missing Data
 
@@ -80,13 +83,12 @@ resolve against that scope. Missing required keys throw
 `slot 'items[].title' is required but was not provided.` Use `default()` or
 `required(false)` for optional data.
 
-`Slot::if()` and `Slot::eachKind()` branches share the current scope, so this
-works naturally:
+`Slot::if()` branches share the current scope, so this works naturally:
 
 ```php
 $item = Compile::shape(
     li(
-        Slot::text('name'),
+        Slot::value('name'),
         Slot::if('admin', span('(admin)'))
     )
 );
@@ -95,7 +97,7 @@ $item = Compile::shape(
 ## Components
 
 A component is a `*.cmp.php` unit: a function with typed parameters returning
-`Raw`, plus the lazy factory registered next to it (see
+`string`, plus the lazy factory registered next to it (see
 [Components](/guide/components) and [Caching](#caching) for the PHP-FPM case):
 
 ```php
@@ -103,95 +105,46 @@ A component is a `*.cmp.php` unit: a function with typed parameters returning
 
 // Card.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
-    )->class(Slot::attr('class'))
-));
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
+    )->class(Slot::value('class'))
+);
 
-function Card(string $title, string $content, string $class = 'card'): Raw
+function Card(string $title, string $content, string $class = 'card'): string
 {
     return render('Card', title: $title, content: $content, class: $class);
 }
 ```
 
 Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`,
-mixed lists use `Slot::eachKind()`, optional/conditional markup uses
-`Slot::if()`, and rendered child components enter through `Slot::raw()`.
+optional/conditional markup uses `Slot::if()`, and rendered child components
+enter through `Slot::raw()`. Mixed-list dispatch is in the
+[Heterogeneous Lists](#heterogeneous-lists-eachkind) appendix.
 
 ### Lists
 
 ```php
-$row = Compile::shape(li(Slot::text('label')));
+$row = Compile::shape(li(Slot::value('label')));
 
 $shape = Compile::shape(ul(Slot::each('rows', $row)));
 $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 ```
 
-### Heterogeneous lists
-
-```php
-$text = Compile::shape(p(Slot::text('value')));
-$link = Compile::shape(a(Slot::text('value'))->href(Slot::attr('href')));
-
-$shape = Compile::shape(div(Slot::eachKind('blocks', [
-    'text' => $text,
-    'link' => $link,
-])));
-
-$shape(['blocks' => [
-    ['kind' => 'text', 'value' => 'hello'],
-    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
-]]);
-```
-
-Every item must be an array carrying the discriminator key (`kind` by default;
-pass a different key as the third argument of `Slot::eachKind()`).
-
 ## Caching
 
-By default compiled renderers live in memory only, which pays off in
-long-running workers that keep state between requests. Under standard PHP-FPM
-the shape tree is rebuilt and the renderer regenerated on every request — that
-is slower than immediate rendering — so opt in to the on-disk renderer cache,
-which loads generated code instead of regenerating it:
-
-```php
-use Pure\Compile\Compile;
-
-// Once during bootstrap
-Compile::cachePath(__DIR__ . '/var/cache/purephp');
-```
-
-- Cache files are content-addressed by `Shape::id()`; a changed shape
-  produces a new file.
-- Writes are atomic (temp file + rename), so concurrent workers are safe.
-- Cache files are plain PHP and opcache-friendly. The directory must be
-  private: owned by the PHP user, not writable by group or others (0700 is
-  created when missing), and outside the web root — `cachePath()` rejects loose
-  or foreign-owned directories. Do not point it at a shared location such as
-  `/tmp` itself.
-- `Compile::clearCache()` deletes the files written by the library.
-- `Compile::flush()` invalidates in-memory renderers (useful in long-running
-  workers after a deploy).
-
-To catch shapes that are rebuilt per request (instead of being memoized),
-enable the development guard:
-
-```php
-Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
-```
-
-When the same call site calls `Compile::shape()` too many times in one process,
-PHP emits an `E_USER_WARNING` suggesting the `static $shape ??=` pattern.
+Production needs are simple: **use `pure compile` for artifacts (production),
+and optionally set `Compile::cachePath($dir)` for long-running workers**. The
+cache is content-addressed by shape fingerprint; writes are atomic; directories
+must be private (0700). `clearCache()` removes own files, `flush()` drops in-memory
+renderers. See [Cache & Ops Details](#cache-ops-details) for the full API surface,
+`guard()` warnings, and opcache considerations.
 
 ## Precompiled Artifacts
 
@@ -257,37 +210,36 @@ Components in `examples/bootstrap` are units built on that:
 
 ```php
 // components/Icon.cmp.php: typed props, backed by its precompiled template
-register('Icon', __FILE__, static fn (): Shape => Compile::shape(
-    svg(svgUse()->href(Slot::attr('href')))->class(Slot::attr('class'))
-));
+register('Icon', __FILE__, static fn () =>
+    svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class'))
+);
 
-function Icon(string $href, string $class = 'bi'): Raw
+function Icon(string $href, string $class = 'bi'): string
 {
     return render('Icon', href: $href, class: $class);
 }
 
 // views/features.cmp.php: the page skeleton plus the rendered body
-register('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+register('Features', __FILE__, static fn () => html(/* ... */));
 
-function featuresPage(array $data): Raw
+function featuresPage(array $data): string
 {
     // Prepend the document header; the tree itself renders without one.
-    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+    return '<!DOCTYPE html>' . render('Features',
         title: $data['title'],
         content: FeaturesBody($data['content']),
-    ));
+    );
 }
 ```
 
-A child component's `Raw` goes straight into a raw slot — no `(string)` cast —
-and an array of them is concatenated in order.
+A child component's markup is a plain string that goes straight into a raw slot
+— no `(string)` cast — and a list of them is concatenated in order.
 
 `Pure\Component\render()` loads the artifact of a unit or shape file when one
 exists next to it and is at least as new as the file; otherwise it calls the
 registered factory (once per compile generation) or compiles the shape file (the
 disk cache still applies). It returns the fragment only — the document header,
-if you want one, is the caller's to prepend. The binder underneath is `bind()`,
-which you can hold yourself for inline trees.
+if you want one, is the caller's to prepend.
 
 Its `PlainFeaturesController` passes the same bindings through the example's
 `plain()` helper (an app function: it requires the view file and extracts the
@@ -348,11 +300,10 @@ single-file bundle was prototyped and rejected on that data: it compiled slower
 cold than the readable templates together and tied warm, so the library ships
 no bundle.
 
-### Dependency-Free Views
+### Dependency-Free Exports (Optional)
 
-`pure compile --plain` also writes a `*.plain.php` view next to the artifact:
-markup and native PHP that renders without purephp installed. Loading it is the
-classic view contract — the data array is extracted into locals:
+`pure compile --plain` writes a `*.plain.php` view: markup and native PHP that
+runs without purephp installed. Load it by extracting data into locals:
 
 ```php
 ob_start();
@@ -361,55 +312,13 @@ require 'views/index.plain.php';
 $html = (string)ob_get_clean();
 ```
 
-A root slot reads as an ordinary variable and a nested slot as the array it
-lives in, and escaping is inlined, so the view is exactly as portable as a
-hand-written template:
-
-```php
-<title><?= htmlspecialchars((string)$title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></title>
-<h2><?= htmlspecialchars((string)$content['columns']['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h2>
-<?php foreach ($content['columns']['contents'] as $item1): ?><h3><?= htmlspecialchars((string)$item1['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h3><?php endforeach; ?>
-```
-
-For ordinary data a plain view renders byte-identical output to its artifact
-(the tests assert it), and it is the fastest flavor: values go straight into
-`htmlspecialchars()`, with no runtime accessor call. It is a plain view, not a
-compiled component, so the strict slot semantics stay with the artifact:
-
-- a missing required slot is an undefined variable, not `MissingSlotException`;
-- a `null` attribute prints an empty value instead of disappearing;
-- list slots are not checked for being iterable, and values are stringified by
-  PHP rather than by `SlotRuntime`;
-- a raw slot prints exactly one value: a `Raw` or any `Stringable` is fine, an
-  iterable of them is not, because the view has no `SlotRuntime::raw()` to join
-  it. Pass `implode('', $rows)` from the controller, or bind a string.
-
-With function components the controller renders the components first and passes
-their markup as the raw bindings the page shape prints, so the view file stays
-dependency-free while the request handler uses the library.
-
-The view declares every root slot with an `@var` annotation derived from the
-shape, so static analyzers read the extracted locals without an exclusion and
-without configuration:
-
-```php
-/**
- * @var scalar|null|\Stringable $title
- * @var array{columns: array{title: scalar|null|\Stringable, contents: iterable<array-key, array{title: scalar|null|\Stringable}>}} $content
- */
-```
-
-Value slots are `scalar|null|\Stringable` (what `htmlspecialchars()` accepts),
-condition slots are `mixed`, and child and list scopes become array shapes and
-iterables of them. Odd slot names are declared on the loader's `$data` array.
-The annotations are comments: they add no output bytes. An optional container
-slot without an array default stays flagged, because its generated read falls
-back to `null` and the annotation says so.
-
-Reach for `--plain` when the views have to run without the library — a
-deployment that ships only `public/` and `views/`, or a template directory
-handed to someone else. Views are includes, so enable opcache: without it every
-render parses the file again, which is the one case where the artifact wins.
+Reach for `--plain` when views must run without the library — a deployment that
+ships only `public/` and `views/`, or a template directory handed to someone else.
+For ordinary data a plain view renders byte-identical output to its artifact.
+It is a plain view, not a compiled component, so the strict slot semantics stay
+with the artifact. See [Plain View Caveats](#plain-view-caveats) for the four
+semantic differences (undefined variable on missing slot, empty string on null
+attribute, no iterable check on lists, single-value raw slots only).
 
 ## Performance
 
@@ -443,8 +352,8 @@ figure, not a page render.
 ## Limitations
 
 - Tag names cannot depend on data: a shape always uses the same tags. Use
-  `Slot::if()` / `Slot::eachKind()` for structural variation, or normalize the
-  data before rendering.
+  `Slot::if()` for conditional markup or `Slot::eachKind()` for mixed lists
+  ([appendix](#heterogeneous-lists-eachkind)), or normalize the data before rendering.
 - Compiled code is tied to the shape structure; changing a shape changes its
   `id()` and therefore its cache file.
 - A shape tree is read live while it compiles, and `id()` reflects the tree as
@@ -458,12 +367,81 @@ figure, not a page render.
 
 | Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` with a `Card.cmp.php` unit (function + template) |
-| `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::attr('classList'))` for dynamic ones |
+| `function Card(array $props): HTML` | `function Card(string $title): string` with a `Card.cmp.php` unit (function + template) |
+| `h2($title)` | `h2(Slot::value('title'))` |
+| `->class($classList)` | `->class($classList)` for static values, `->class(Slot::value('classList'))` for dynamic ones |
 | `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject through `Slot::raw()` |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | call `Child(...)` and inject its `Raw` through `Slot::raw()` |
+| `<Child($props)>` | call `Child(...)` and inject its result through `Slot::raw()` |
 
 Immediate (`render()`) tag trees remain available for snippets and debugging;
 see [Basic Usage](/guide/basic-usage).
+
+## Cache & Ops Details
+
+- `Compile::cachePath($dir)` enables the on-disk renderer cache; pass `null`
+  to disable (default). The directory must be private: owned by the PHP user,
+  not writable by group or others (`0700` is created when missing), and outside
+  the web root — `cachePath()` rejects loose or foreign-owned directories.
+- `Compile::clearCache()` deletes the files written by the library.
+- `Compile::flush()` invalidates in-memory renderers (useful in long-running
+  workers after a deploy).
+- To catch shapes that are rebuilt per request, enable the development guard:
+  `Compile::guard(true)` or set `PURE_COMPILE_GUARD=1`. When the same call site
+  calls `Compile::shape()` too many times, PHP emits an `E_USER_WARNING`
+  suggesting the `static $shape ??=` pattern.
+- `Compile::CACHE_VERSION` is bumped when the generated-code format or
+  fingerprint composition changes. An artifact written by another version
+  throws `RuntimeException` on load with a message naming `pure compile`.
+  `*.plain.php` views carry the version in a comment but have no executable
+  guard, so they silently serve stale output until `pure compile --check --plain`
+  catches the mismatch.
+
+## Plain View Caveats
+
+A plain view is markup and native PHP — it renders without purephp installed,
+but it does not carry the strict slot semantics of the compiled renderer:
+
+- a missing required slot is an undefined variable, not `MissingSlotException`;
+- a `null` attribute prints an empty value instead of disappearing;
+- list slots are not checked for being iterable, and values are stringified by
+  PHP rather than by `SlotRuntime`;
+- a raw slot prints exactly one value: an iterable of stringable values is not
+  joined. Pass `implode('', $rows)` from the controller, or bind a string.
+
+The view declares every root slot with an `@var` annotation derived from the
+shape, so static analyzers read the extracted locals without an exclusion:
+
+```php
+/**
+ * @var scalar|null|\Stringable $title
+ * @var array{columns: ...} $content
+ */
+```
+
+Value slots are `scalar|null|\Stringable`, condition slots are `mixed`, and
+child/list scopes become array shapes and iterables of them. Odd slot names are
+declared on the loader's `$data` array. Annotations are comments: they add no
+output bytes.
+
+## Heterogeneous Lists (eachKind)
+
+`Slot::eachKind()` dispatches every item on a discriminator key (default `'kind'`)
+to the matching shape. An unknown kind throws `InvalidArgumentException`.
+
+```php
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
+    'text'  => Compile::shape(p(Slot::value('value'))),
+    'link'  => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
+])));
+
+$shape(['blocks' => [
+    ['kind' => 'text', 'value' => 'hi'],
+    ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
+]]);
+// → <div><p>hi</p><a href="#x">go</a></div>
+```
+
+Kind keys must be non-empty strings; PHP array keys that look numeric are ints
+at runtime and cannot match the string kinds used by the generated dispatch, so
+they are rejected at construction time.

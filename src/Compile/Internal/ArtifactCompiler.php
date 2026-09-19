@@ -34,7 +34,7 @@ final class ArtifactCompiler
     /**
      * The artifact contents for one shape file.
      *
-     * @param string $shapeFile The path of a `*.shape.php` file returning a Shape.
+     * @param string $shapeFile The path of a `*.shape.php` file returning a tag tree or a Shape.
      * @param bool $plain Build the plain view instead of the Renderer artifact.
      * @return string The generated source.
      */
@@ -50,7 +50,7 @@ final class ArtifactCompiler
      *
      * The shape file is loaded once, so both flavors describe the same tree.
      *
-     * @param string $shapeFile The path of a `*.shape.php` file returning a Shape.
+     * @param string $shapeFile The path of a `*.shape.php` file returning a tag tree or a Shape.
      * @param bool $plain Also build the plain view.
      * @return array{artifact: string, plain: ?string}
      */
@@ -83,7 +83,7 @@ final class ArtifactCompiler
      * The artifact is written atomically and loaded once before the rename, so
      * an artifact on disk always loads as the renderer it was built from.
      *
-     * @param string $shapeFile The path of a `*.shape.php` file returning a Shape.
+     * @param string $shapeFile The path of a `*.shape.php` file returning a tag tree or a Shape.
      * @param bool $plain Also write the plain view next to the artifact.
      * @return string The artifact path.
      */
@@ -101,7 +101,7 @@ final class ArtifactCompiler
      * and the rename are skipped for unchanged files, which is most of the cost
      * of compiling an unchanged tree.
      *
-     * @param string $shapeFile The path of a `*.shape.php` file returning a Shape.
+     * @param string $shapeFile The path of a `*.shape.php` file returning a tag tree or a Shape.
      * @param bool $plain Also write the plain view next to the artifact.
      * @return array{artifact: string, plain: ?string, artifactWritten: bool, plainWritten: bool}
      */
@@ -343,7 +343,7 @@ final class ArtifactCompiler
         ob_start();
 
         try {
-            $shape = (static fn (string $file): mixed => require $file)($shapeFile);
+            $result = (static fn (string $file): mixed => require $file)($shapeFile);
         } catch (Throwable $error) {
             self::discardOutput($level);
 
@@ -352,8 +352,10 @@ final class ArtifactCompiler
 
         self::discardOutput($level);
 
-        if (!$shape instanceof Shape) {
-            throw new InvalidArgumentException("'{$shapeFile}' must return a Pure\\Compile\\Shape, got " . get_debug_type($shape) . '.');
+        $shape = Compile::toShape($result);
+
+        if ($shape === null) {
+            throw new InvalidArgumentException("'{$shapeFile}' must return a tag tree or Pure\\Compile\\Shape, got " . get_debug_type($result) . '.');
         }
 
         return $shape;

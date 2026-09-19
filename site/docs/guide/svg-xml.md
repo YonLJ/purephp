@@ -121,31 +121,29 @@ data provides it:
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\bind;
-
-function Address(array $address): Raw
+function Address(array $address): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         XML::address(
-            XML::street(Slot::text('street')),
-            Slot::if('city', XML::city(Slot::text('city'))),
-            XML::state(Slot::text('state')),
-            XML::zip(Slot::text('zip'))
+            XML::street(Slot::value('street')),
+            Slot::if('city', XML::city(Slot::value('city'))),
+            XML::state(Slot::value('state')),
+            XML::zip(Slot::value('zip'))
         )
     );
 
     return $render($address);
 }
 
-function Customers(array $addresses): Raw
+function Customers(array $addresses): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         XML::customers(
             XML::customer(
                 XML::name('Charter Group'),
@@ -157,7 +155,7 @@ function Customers(array $addresses): Raw
     $html = '';
 
     foreach ($addresses as $address) {
-        $html .= (string)Address($address);
+        $html .= Address($address);
     }
 
     return $render(['addresses' => $html]);
@@ -188,7 +186,7 @@ use Pure\Core\Slot;
 use Pure\Core\XML;
 
 $setting = Compile::shape(
-    XML::setting(Slot::text('value'))->key(Slot::attr('key'))
+    XML::setting(Slot::value('value'))->key(Slot::value('key'))
 );
 
 $config = Compile::shape(
@@ -260,8 +258,8 @@ XML::root(Raw::of('<item>This is preserved</item>'))->print();
 - Including complex nested structures
 
 Both render paths behave the same way; bound data is escaped by
-`Slot::text()` / `Slot::attr()`, and `Slot::raw()` is the verbatim equivalent of
-`Raw::of()` when data must keep its markup.
+`Slot::value()`, and `Slot::raw()` is the verbatim equivalent of `Raw::of()`
+when data must keep its markup.
 
 ## Best Practices
 

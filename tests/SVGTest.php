@@ -170,7 +170,7 @@ class SVGTest extends TestCase
 
     public function testUseElementRendersSelfClosedThroughASlot(): void
     {
-        $shape = Compile::shape(svg(svgUse()->href(Slot::attr('href'))));
+        $shape = Compile::shape(svg(svgUse()->href(Slot::value('href'))));
 
         $this->assertSame('<svg><use href="#i" /></svg>', $shape(['href' => '#i']));
     }

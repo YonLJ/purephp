@@ -29,7 +29,7 @@ However, with Purephp:
 
 ## Quick start
 
-A component is one file: a function with typed props that returns `Raw`, plus
+A component is one file: a function with typed props that returns `string`, plus
 the template it renders, registered lazily so `pure compile` can precompile it:
 
 ```php
@@ -37,22 +37,19 @@ the template it renders, registered lazily so `pure compile` can precompile it:
 
 // components/Card.cmp.php
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
     )->class('card')
-));
+);
 
-function Card(string $title, string $content): Raw
+function Card(string $title, string $content): string
 {
     return render('Card', title: $title, content: $content);
 }
@@ -113,7 +110,7 @@ Everything else is plain PHP.
 
 A parent takes its children's markup as an ordinary value and passes it through
 a raw slot: `div(Slot::raw('body'))` bound as `render('Page', body: Card(...))`.
-A `Raw` needs no `(string)` cast, and an array of them is concatenated in order.
+Pre-rendered markup passed into a raw slot needs no `(string)` cast, and an array of them is concatenated in order.
 
 For production, `pure compile` precompiles every `*.cmp.php` unit (and every
 lower-level `*.shape.php` template) into a `*.pure.php` artifact that returns a
@@ -129,7 +126,7 @@ vendor/bin/pure compile --list components     # name -> file (component|page)
 $page = require __DIR__ . '/page.pure.php';
 
 echo $page->render(['title' => 'Card Title']);        // the view body
-echo $page->header . $page->render($data);            // the whole document
+echo '<!DOCTYPE html>' . $page->render($data);        // a whole document
 ```
 
 A `*.plain.php` view is markup and native PHP only — load it by extracting the

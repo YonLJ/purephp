@@ -6,8 +6,7 @@ namespace Pure\Core;
 
 enum SlotKind
 {
-    case Text;
-    case Attr;
+    case Value;
     case Raw;
     case Child;
     case Each;

@@ -14,5 +14,5 @@ require_once __DIR__ . '/../../views/features.cmp.php';
  */
 function featuresController(): string
 {
-    return (string)featuresPage(featuresData());
+    return featuresPage(featuresData());
 }

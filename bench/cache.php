@@ -28,7 +28,10 @@ if (in_array('--clear', $argv, true)) {
 
 $unitFile = __DIR__ . '/../examples/bootstrap/views/features.cmp.php';
 require_once $unitFile;
-$shape = (Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
+$shape = Compile::toShape((Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])());
+if ($shape === null) {
+    throw new RuntimeException('the Features factory must return a tag tree or a Pure\\Compile\\Shape.');
+}
 $file = $dir . '/' . $shape->id() . '.php';
 $warm = is_file($file);
 

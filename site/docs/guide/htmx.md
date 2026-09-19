@@ -34,18 +34,16 @@ component with the new count. Each component is its own unit:
 
 // components/CounterValue.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\p;
 
-register('CounterValue', __FILE__, static fn (): Shape => Compile::shape(
-    p('Current count: ', Slot::text('count'))->id('counter')
-));
+register('CounterValue', __FILE__, static fn () =>
+    p('Current count: ', Slot::value('count'))->id('counter')
+);
 
-function CounterValue(int $count): Raw
+function CounterValue(int $count): string
 {
     return render('CounterValue', count: $count);
 }
@@ -58,14 +56,12 @@ function CounterValue(int $count): Raw
 require_once __DIR__ . '/CounterValue.cmp.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{button, div};
 
-register('Counter', __FILE__, static fn (): Shape => Compile::shape(
+register('Counter', __FILE__, static fn () =>
     div(
         Slot::raw('counter'),
         button('Increment')
@@ -73,11 +69,11 @@ register('Counter', __FILE__, static fn (): Shape => Compile::shape(
             ->hxTarget('#counter')
             ->hxSwap('innerHTML')
     )->class('counter')
-));
+);
 
-function Counter(int $count): Raw
+function Counter(int $count): string
 {
-    return render('Counter', counter: (string) CounterValue($count));
+    return render('Counter', counter: CounterValue($count));
 }
 ```
 
@@ -130,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], '/to
 
 ### 4. Live Search
 
-The result list is a component; every result title is bound with `Slot::text()`,
+The result list is a component; every result title is bound with `Slot::value()`,
 and the endpoint renders the list component with the search results:
 
 ```php
@@ -138,18 +134,16 @@ and the endpoint renders the list component with the search results:
 
 // components/SearchResult.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\div;
 
-register('SearchResult', __FILE__, static fn (): Shape => Compile::shape(
-    div(Slot::text('title'))->class('search-result')
-));
+register('SearchResult', __FILE__, static fn () =>
+    div(Slot::value('title'))->class('search-result')
+);
 
-function SearchResult(string $title): Raw
+function SearchResult(string $title): string
 {
     return render('SearchResult', title: $title);
 }
@@ -162,21 +156,19 @@ function SearchResult(string $title): Raw
 require_once __DIR__ . '/SearchResult.cmp.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\div;
 
-register('ResultList', __FILE__, static fn (): Shape => Compile::shape(div(Slot::raw('results'))));
+register('ResultList', __FILE__, static fn () => div(Slot::raw('results')));
 
-function ResultList(array $results): Raw
+function ResultList(array $results): string
 {
     $items = [];
 
     foreach ($results as $result) {
-        $items[] = (string) SearchResult($result['title']);
+        $items[] = SearchResult($result['title']);
     }
 
     return render('ResultList', results: implode('', $items));
@@ -190,14 +182,12 @@ function ResultList(array $results): Raw
 require_once __DIR__ . '/ResultList.cmp.php';
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, input};
 
-register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
+register('SearchBox', __FILE__, static fn () =>
     div(
         input()
             ->type('text')
@@ -207,9 +197,9 @@ register('SearchBox', __FILE__, static fn (): Shape => Compile::shape(
             ->hxTarget('#results'),
         div(Slot::raw('list'))->id('results')
     )->class('search-box')
-));
+);
 
-function SearchBox(Raw $list): Raw
+function SearchBox(iterable|string $list): string
 {
     return render('SearchBox', list: $list);
 }

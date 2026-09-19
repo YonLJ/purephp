@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
-use Pure\Compile\Compile;
-use Pure\Compile\Shape;
+
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
@@ -19,16 +18,16 @@ require_once __DIR__ . '/../components/Section.cmp.php';
 require_once __DIR__ . '/../components/Divider.cmp.php';
 require_once __DIR__ . '/../components/FeatureSection.cmp.php';
 
-register('Features', __FILE__, static function (): Shape {
+register('Features', __FILE__, static function () {
     /**
-     * The features page skeleton: the head and the SVG symbol sheet are static, the
-     * title and the rendered body come from the page function. `pure compile`
-     * precompiles it into views/features.pure.php.
+     * The features page skeleton: the head and the SVG symbol sheet are static,
+     * the body is composed from raw slots populated by featuresBindings().
+     * `pure compile` precompiles it into views/features.pure.php.
      */
     $site = 'https://getbootstrap.com/docs/5.2';
     $favicons = $site . '/assets/img/favicons';
 
-    return Compile::shape(
+    return (
         html(
             head(
                 meta()->charset('utf-8'),
@@ -37,7 +36,7 @@ register('Features', __FILE__, static function (): Shape {
                 meta()->name('author')->content('Mark Otto, Jacob Thornton, and Bootstrap contributors'),
                 meta()->name('generator')->content('Hugo 0.104.2'),
                 meta()->name('theme-color')->content('#712cf9'),
-                title(Slot::text('title')),
+                title(Slot::value('title')),
                 link()->rel('canonical')->href($site . '/examples/features/'),
                 link()->rel('stylesheet')->crossorigin('anonymous')->href($site . '/dist/css/bootstrap.min.css')->integrity('sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65'),
                 link()->rel('apple-touch-icon')->sizes('180x180')->href($favicons . '/apple-touch-icon.png'),
@@ -50,25 +49,39 @@ register('Features', __FILE__, static function (): Shape {
                 link()->rel('stylesheet')->href('./style.css')
             ),
             body(
-                IconSheet(),
-                Slot::raw('content')
+                Raw::of(IconSheet()),
+                main(
+                    h1('Features examples')->class('visually-hidden'),
+                    Slot::raw('columns'),
+                    Slot::raw('hanging'),
+                    Slot::raw('cards'),
+                    Slot::raw('grid'),
+                    Slot::raw('features')
+                )
             )
         )
     );
 });
 
 /**
- * The data of the features page: the title and the rendered body. The plain
- * view controller uses the same bindings, so both flavors render one page.
+ * The data of the features page: the title and rendered markup for each
+ * section. The plain view controller uses the same bindings, so both flavors
+ * render one page.
  *
  * @param array<string, mixed> $data The page data from the controller.
- * @return array{title: string, content: Raw}
+ * @return array{title: string, columns: string, hanging: string, cards: string, grid: string, features: string}
  */
 function featuresBindings(array $data): array
 {
+    $content = $data['content'];
+
     return [
         'title' => $data['title'],
-        'content' => FeaturesBody($data['content']),
+        'columns' => Section($content['columns']['title'], renderItems($content['columns']['contents'], IconColumn(...)), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
+        'hanging' => Divider() . Section($content['hanging']['title'], renderItems($content['hanging']['contents'], HangingIcon(...)), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
+        'cards' => Divider() . Section($content['cards']['title'], renderItems($content['cards']['contents'], CustomCard(...)), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'),
+        'grid' => Divider() . Section($content['grid']['title'], renderItems($content['grid']['contents'], CellIcon(...)), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'),
+        'features' => Divider() . FeatureSection($content['features']['title'], $content['features']['main'], $content['features']['features']),
     ];
 }
 
@@ -80,38 +93,16 @@ function featuresBindings(array $data): array
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
-function featuresPage(array $data): Raw
+function featuresPage(array $data): string
 {
-    return Raw::of('<!DOCTYPE html>' . (string)render('Features', ...featuresBindings($data)));
-}
-
-/**
- * The body of the features page: the sections are composed from the component
- * functions, each section item rendered by its own function.
- *
- * @param array<string, mixed> $content The page content.
- */
-function FeaturesBody(array $content): Raw
-{
-    return Raw::of(main(
-        h1('Features examples')->class('visually-hidden'),
-        Section($content['columns']['title'], Raw::of(renderItems($content['columns']['contents'], IconColumn(...))), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        Divider(),
-        Section($content['hanging']['title'], Raw::of(renderItems($content['hanging']['contents'], HangingIcon(...))), 'row g-4 py-5 row-cols-1 row-cols-lg-3'),
-        Divider(),
-        Section($content['cards']['title'], Raw::of(renderItems($content['cards']['contents'], CustomCard(...))), 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5'),
-        Divider(),
-        Section($content['grid']['title'], Raw::of(renderItems($content['grid']['contents'], CellIcon(...))), 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5'),
-        Divider(),
-        FeatureSection($content['features']['title'], $content['features']['main'], $content['features']['features']),
-    )->render());
+    return '<!DOCTYPE html>' . render('Features', ...featuresBindings($data));
 }
 
 /**
  * Render one list of section items with its component function.
  *
  * @param list<array<string, string>> $items
- * @param callable(array<string, string>): Raw $component
+ * @param callable(array<string, string>): string $component
  */
 function renderItems(array $items, callable $component): string
 {

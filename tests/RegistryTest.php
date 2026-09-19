@@ -7,7 +7,6 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Shape;
 
-use function Pure\Component\bind;
 use function Pure\Component\register;
 
 use Pure\Component\Registry;
@@ -52,8 +51,24 @@ class RegistryTest extends TestCase
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
-        $this->assertSame('<span>x</span>', (string)render('Badge', label: 'x'));
-        $this->assertSame('<span>y</span>', (string)bind('Badge')(['label' => 'y']));
+        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>y</span>', render('Badge', label: 'y'));
+    }
+
+    public function testFactoryReturningABareTagTreeIsWrapped(): void
+    {
+        $file = $this->unitFile();
+        register('Badge', $file, fn () => span(Slot::value('label')));
+
+        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+    }
+
+    public function testShapeFileReturningABareTagTreeIsWrapped(): void
+    {
+        $file = $this->dir . '/bare.shape.php';
+        file_put_contents($file, "<?php\n\nreturn Pure\\HTML\\span(Pure\\Core\\Slot::value('label'));\n");
+
+        $this->assertSame('<span>x</span>', render($file, label: 'x'));
     }
 
     public function testNameAndPathResolveToTheSameBinder(): void
@@ -61,8 +76,8 @@ class RegistryTest extends TestCase
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
-        $this->assertSame(bind('Badge'), bind($file));
-        $this->assertSame('<span>x</span>', (string)render($file, label: 'x'));
+        $this->assertSame(Registry::component('Badge'), Registry::component($file));
+        $this->assertSame('<span>x</span>', render($file, label: 'x'));
     }
 
     public function testFactoryIsLazyWhenTheArtifactIsFresh(): void
@@ -78,7 +93,7 @@ class RegistryTest extends TestCase
         ArtifactCompiler::writeUnit($file, $this->badgeShape());
         clearstatcache();
 
-        $this->assertSame('<span>x</span>', (string)render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
         $this->assertSame(0, $calls);
     }
 
@@ -109,7 +124,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, static fn (): mixed => 'not a shape');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must return a Pure\\Compile\\Shape');
+        $this->expectExceptionMessage('must return a tag tree or Pure\\Compile\\Shape');
 
         render('Badge', label: 'x');
     }
@@ -120,7 +135,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
         register('Badge', $file, fn (): Shape => Compile::shape(span('other')));
 
-        $this->assertSame('<span>x</span>', (string)render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
     }
 
     public function testDuplicateNameThrowsUnlessOverridden(): void
@@ -138,7 +153,7 @@ class RegistryTest extends TestCase
 
         register('Badge', $second, fn (): Shape => Compile::shape(span('override')), override: true);
 
-        $this->assertSame('<span>override</span>', (string)render('Badge', label: 'x'));
+        $this->assertSame('<span>override</span>', render('Badge', label: 'x'));
         $this->assertSame([], Registry::unitsFor($first));
     }
 
@@ -178,11 +193,11 @@ class RegistryTest extends TestCase
     public function testRenderDoesNotPrependTheDocumentHeader(): void
     {
         $file = $this->unitFile('Page.cmp.php');
-        register('Page', $file, fn (): Shape => Compile::shape(html(body(Slot::text('title')))));
+        register('Page', $file, fn (): Shape => Compile::shape(html(body(Slot::value('title')))));
 
         // No page concept: the tree renders as written, the header is the
         // caller's to prepend.
-        $body = (string)render('Page', title: 'a');
+        $body = render('Page', title: 'a');
         $this->assertSame('<html><body>a</body></html>', $body);
         $this->assertSame('<!DOCTYPE html><html><body>a</body></html>', '<!DOCTYPE html>' . $body);
     }
@@ -218,10 +233,10 @@ class RegistryTest extends TestCase
         $file = $this->dir . '/legacy.shape.php';
         file_put_contents(
             $file,
-            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('title')));\n"
         );
 
-        $this->assertSame('<div>x</div>', (string)render($file, title: 'x'));
+        $this->assertSame('<div>x</div>', render($file, title: 'x'));
     }
 
     public function testAnUnregisteredUnitPathIsNotLoadedAsATemplate(): void
@@ -250,7 +265,7 @@ class RegistryTest extends TestCase
         require_once $file;
 
         $this->assertSame(['Loose'], Registry::names());
-        $this->assertSame('<em>l</em>', (string)render('Loose'));
+        $this->assertSame('<em>l</em>', render('Loose'));
     }
 
     public function testAPathLikeTypoListsKnownComponents(): void
@@ -278,21 +293,21 @@ class RegistryTest extends TestCase
         register('Badge', $file, function () use (&$calls): Shape {
             $calls++;
 
-            return Compile::shape(div(Slot::text('label')));
+            return Compile::shape(div(Slot::value('label')));
         });
 
         ArtifactCompiler::writeUnit($file, $this->badgeShape());
         clearstatcache();
         $this->assertSame(filemtime($file), filemtime(ArtifactCompiler::artifactPath($file)));
 
-        $this->assertSame('<span>x</span>', (string)render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
         $this->assertSame(0, $calls);
 
         touch($file, (int) filemtime($file) + 1);
         clearstatcache();
         Compile::flush();
 
-        $this->assertSame('<div>x</div>', (string)render('Badge', label: 'x'));
+        $this->assertSame('<div>x</div>', render('Badge', label: 'x'));
         $this->assertSame(1, $calls);
     }
 
@@ -318,12 +333,12 @@ class RegistryTest extends TestCase
     {
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
-        register('Label', $file, fn (): Shape => Compile::shape(div(Slot::text('label'))), override: true);
+        register('Label', $file, fn (): Shape => Compile::shape(div(Slot::value('label'))), override: true);
 
         // One file registers one component: the replaced name is gone entirely.
         $this->assertSame(['Label'], Registry::names());
         $this->assertSame(['Label'], array_keys(Registry::unitsFor($file)));
-        $this->assertSame('<div>x</div>', (string)render('Label', label: 'x'));
+        $this->assertSame('<div>x</div>', render('Label', label: 'x'));
 
         try {
             render('Badge', label: 'x');
@@ -343,7 +358,7 @@ class RegistryTest extends TestCase
 
     private function badgeShape(): Shape
     {
-        return Compile::shape(span(Slot::text('label')));
+        return Compile::shape(span(Slot::value('label')));
     }
 
     private function remove(string $dir): void

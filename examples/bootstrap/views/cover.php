@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 
-use Pure\Core\Raw;
 
 use function Pure\HTML\a;
 use function Pure\HTML\body;
@@ -24,10 +23,9 @@ use function Pure\HTML\style;
  * compile step. CoverController echoes it, and it writes its own doctype the
  * way a hand-written page does.
  */
-function coverPage(): Raw
+function coverPage(): string
 {
-    return Raw::of(
-        '<!DOCTYPE html>'
+    return '<!DOCTYPE html>'
         . html(
 
     head(
@@ -130,6 +128,5 @@ function coverPage(): Raw
             )->class('mt-auto text-white-50')
         )->class('cover-container d-flex w-100 h-100 p-3 mx-auto flex-column')
     )->class('d-flex h-100 text-center text-bg-dark')
-        )->lang('en')->class('h-100')->render()
-    );
+        )->lang('en')->class('h-100')->render();
 }

@@ -1,7 +1,7 @@
 # Components
 
 A component is one file: a PHP function with typed parameters that returns
-`Raw` markup, next to the template it renders. The file registers a lazy
+`string`, next to the template it renders. The file registers a lazy
 factory, so `pure compile` can precompile the template while a request only
 loads the artifact.
 
@@ -12,21 +12,19 @@ loads the artifact.
 
 // components/Card.cmp.php — the component unit: function + template
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
     )->class('card')
-));
+);
 
-function Card(string $title, string $content): Raw
+function Card(string $title, string $content): string
 {
     return render('Card', title: $title, content: $content);
 }
@@ -56,11 +54,11 @@ template; anything that changes per render belongs in the bindings.
 <?php
 
 // components/Badge.cmp.php
-register('Badge', __FILE__, static fn (): Shape => Compile::shape(
-    span(Slot::text('label'))->class(Slot::attr('class'))
-));
+register('Badge', __FILE__, static fn () =>
+    span(Slot::value('label'))->class(Slot::value('class'))
+);
 
-function Badge(string $label, string $class = 'badge'): Raw
+function Badge(string $label, string $class = 'badge'): string
 {
     return render('Badge', label: $label, class: $class);
 }
@@ -75,11 +73,11 @@ A parent component calls its children and injects their output through
 <?php
 
 // components/Button.cmp.php
-register('Button', __FILE__, static fn (): Shape => Compile::shape(
-    button(Slot::raw('icon'), Slot::text('label'))->class('btn')
-));
+register('Button', __FILE__, static fn () =>
+    button(Slot::raw('icon'), Slot::value('label'))->class('btn')
+);
 
-function Button(Raw $icon, string $label): Raw
+function Button(iterable|string $icon, string $label): string
 {
     return render('Button', icon: $icon, label: $label);
 }
@@ -88,7 +86,7 @@ Button(Icon('#plus'), 'Add');
 ```
 
 Lists work the same way: loop in the component function and pass the list of
-child `Raw` values into a raw slot — it is stringified element by element and
+child rendered strings into a raw slot — it is stringified element by element and
 concatenated, so there is no `implode()` to remember. Use `Slot::each()` inside
 the template when the items are plain data rows that need no per-item component
 logic.
@@ -105,20 +103,20 @@ or SVG one:
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__, static fn (): Shape => Compile::shape(
+register('Features', __FILE__, static fn () =>
     html(
-        head(title(Slot::text('title'))),
+        head(title(Slot::value('title'))),
         body(Slot::raw('content'))
     )
-));
+);
 
-function featuresPage(array $data): Raw
+function featuresPage(array $data): string
 {
     // The engine emits the tree as written; prepend the document header here.
-    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+    return '<!DOCTYPE html>' . render('Features',
         title: $data['title'],
         content: FeaturesBody($data['content']),
-    ));
+    );
 }
 ```
 
@@ -134,19 +132,23 @@ bindings either way.
 `render()` is a convenience over the lower-level helpers:
 
 - `register($name, $file, $factory)` registers a unit under a name.
-- `bind($source)` returns the `data → Raw` binder of a unit or template.
+- `Registry::component($nameOrPath)` returns the `Closure(array $data): string`
+  binder of a unit or shape file, to hold or pass around yourself.
 
-Use `bind()` when the template is an inline tree
-(`bind(div(Slot::text('title')))`), or when you want to hold the binder in a
-variable yourself:
+For an inline tree, compile it once and keep the shape:
 
 ```php
 <?php
 
-function Tag(string $label): Raw
+use Pure\Compile\Compile;
+use Pure\Core\Slot;
+
+use function Pure\HTML\div;
+
+function Tag(string $label): string
 {
     static $render;
-    $render ??= bind(div(Slot::text('label'))->class('tag'));
+    $render ??= Compile::shape(div(Slot::value('label'))->class('tag'));
 
     return $render(['label' => $label]);
 }
@@ -187,8 +189,8 @@ a template so escaping and structure costs are paid once.
 ## Slot Reference
 
 Components are functions; slots are the vocabulary *inside* a template:
-`Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::each()`, `Slot::if()`,
-`Slot::eachKind()` and `Slot::child()`. See [Props and Slots](/guide/props) for
+`Slot::value()`, `Slot::raw()`, `Slot::child()`, `Slot::each()`, `Slot::if()`
+and `Slot::eachKind()`. See [Props and Slots](/guide/props) for
 the complete binding reference.
 
 ## Next Steps

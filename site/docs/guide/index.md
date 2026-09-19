@@ -25,27 +25,26 @@ Describe the page once, bind data at render time:
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h1, p};
 
-function pageView(array $data): Raw
+function pageView(array $data): string
 {
     static $render;
-    $render ??= bind(
+    $render ??= Compile::shape(
         div(
-            h1(Slot::text('heading')),
-            p(Slot::text('lead'))
+            h1(Slot::value('heading')),
+            p(Slot::value('lead'))
         )->class('container')
     );
 
     // No document header is added by the engine; prepend it here.
-    return Raw::of('<!DOCTYPE html>' . (string)$render([
+    return '<!DOCTYPE html>' . $render([
         'heading' => $data['heading'],
         'lead' => $data['lead'],
-    ]));
+    ]);
 }
 
 echo pageView(['heading' => 'Welcome to PurePHP', 'lead' => 'A PHP template engine']);

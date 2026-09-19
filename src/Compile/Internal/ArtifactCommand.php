@@ -6,6 +6,7 @@ namespace Pure\Compile\Internal;
 
 use Closure;
 use InvalidArgumentException;
+use Pure\Compile\Compile;
 use Pure\Compile\Shape;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -26,7 +27,7 @@ final class ArtifactCommand
         Usage:
           pure compile <path>... [--check] [--plain] [--list]
 
-        Compiles every *.shape.php file that returns a Pure\Compile\Shape and
+        Compiles every *.shape.php file that returns a tag tree or a Pure\Compile\Shape and
         every *.cmp.php unit that registers a component into a sibling
         *.pure.php artifact. Directories are searched recursively.
 
@@ -173,11 +174,12 @@ final class ArtifactCommand
                     );
                 }
 
-                $shape = (reset($units)['factory'])();
+                $result = (reset($units)['factory'])();
+                $shape = Compile::toShape($result);
 
-                if (!$shape instanceof Shape) {
+                if ($shape === null) {
                     throw new InvalidArgumentException(
-                        'the unit factory must return a Pure\\Compile\\Shape, got ' . get_debug_type($shape) . '.'
+                        'the unit factory must return a tag tree or Pure\\Compile\\Shape, got ' . get_debug_type($result) . '.'
                     );
                 }
 

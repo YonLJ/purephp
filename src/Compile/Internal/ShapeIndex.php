@@ -60,7 +60,7 @@ final class ShapeIndex implements ShapeVisitor
     public function attribute(string $key, string|Slot $value, string $slotPath): void
     {
         // The attribute name belongs to the identity: its slot path carries the
-        // slot name only, so `->class(Slot::attr('x'))` and `->id(Slot::attr('x'))`
+        // slot name only, so `->class(Slot::value('x'))` and `->id(Slot::value('x'))`
         // would otherwise share a fingerprint and share a cached renderer.
         $this->parts[] = 'attr:' . $key . '=' . ($value instanceof Slot
             ? $this->describeSlot($value, $slotPath)

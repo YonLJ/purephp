@@ -13,8 +13,8 @@ First public version. No tag has been cut yet.
 
 - Component units: a `*.cmp.php` file registers a lazy template factory with
   `Pure\Component\register()` and defines the component function next to it.
-  `render()` and `bind()` accept the registered name next to a file path; a name
-  and the path of its unit file resolve to the same binder, the factory is only
+  `render()` accepts the registered name next to a file path; a name
+  and the path of its unit file resolve to the same renderer, the factory is only
   called when no fresh artifact serves the unit (and then once per compile
   generation), and duplicate registrations throw unless `override: true` is
   passed. The examples ship as units now.
@@ -37,20 +37,14 @@ First public version. No tag has been cut yet.
   template owns `a.pure.php`.
 
 - `Pure\Component\render()` renders a `*.shape.php` template in one expression
-  (`render($file, title: $title)`), caching the binder per path; it returns the
-  fragment only, and the document header of a full document is the caller's to
+  (`render($file, title: $title)`), caching the renderer per path; it returns a
+  string fragment, and the document header of a full document is the caller's to
   prepend.
-- `Pure\Component\bind()` binds a shape tree or a `*.shape.php` template to a
-  `data → Raw` function, which is what component functions are built on. When
-  the sibling `*.pure.php` artifact exists and is at least as new as the shape
-  file, the binder loads it instead of compiling, so production skips building
-  the shape tree and computing the fingerprint; otherwise it compiles the shape
-  file (the disk cache still applies).
 - Compiled rendering: `Pure\Compile\Compile::shape()` compiles a data-free shape
   tree with `Pure\Core\Slot` placeholders into a flat PHP renderer
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
   subtrees without slots are folded into literals.
-- Slot types `Slot::text()`, `Slot::attr()`, `Slot::raw()`, `Slot::child()`,
+- Slot types `Slot::value()`, `Slot::raw()`, `Slot::child()`,
   `Slot::each()`, `Slot::if()` and `Slot::eachKind()`, with `required(false)`
   and `default()` modifiers.
 - `Pure\Core\MissingSlotException` with full slot paths for missing data, and
@@ -83,9 +77,9 @@ First public version. No tag has been cut yet.
   (a missing slot is an undefined variable, a `null` attribute prints empty);
   `--check --plain` reports stale or missing views.
 - `pure compile <path>...` precompiles every `*.shape.php` file that returns a
-  `Shape` into a sibling `*.pure.php` artifact (`bin/pure`). An artifact returns
-  a `Renderer` without building the shape tree and carries the document header
-  of the root tag (`Renderer::$header`), so `require` is all production needs;
+  tag tree or a `Shape` into a sibling `*.pure.php` artifact (`bin/pure`). An
+  artifact returns a `Renderer` without building the shape tree, so `require` is
+  all production needs; the document header is the caller's to prepend.
   `--check` reports stale or missing artifacts for CI. Artifacts are written as
   readable templates (`<?= ... ?>` values, `if (...): ... endif;`,
   `foreach (...): ... endforeach;`) with the compiled closure defined once and
@@ -102,17 +96,33 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- `Slot::value($name)` replaces `Slot::text()` and `Slot::attr()`: the slot name
+  is the data key and its position decides the semantics (child position
+  escapes to text; attribute position follows `Tag::setAttr()` with bool/null
+  omission). Generated code is byte-identical for equivalent usages; the
+  fingerprint encodes the slot kind name, so it keys differently and
+  `Compile::CACHE_VERSION` is bumped 9 → 10. Local `*.pure.php` / `*.plain.php`
+  artifacts become stale and must be regenerated with `pure compile --plain`
+  (plain views are not rebuilt or checked without `--plain`); they are
+  gitignored and not committed.
+- `register()` factories and `*.shape.php` templates may now return a bare tag
+  tree; `Registry` and `ArtifactCompiler` wrap it in `Compile::shape()`
+  automatically. `Compile::shape()` stays as the explicit API.
+- `render()` returns `string` instead of `Raw`. Component function signatures
+  change from `: Raw` to `: string` and the `Raw::of()` wrapper is dropped.
+  `Raw` remains available in `Pure\Core` for verbatim children inside a raw
+  slot.
+
 - `Slot::child()`, `Slot::each()`, `Slot::if()` and `Slot::eachKind()` accept a
   bare tag tree: `Tag` implements `ShapeContract` by returning itself, so
-  `Slot::each('items', li(Slot::text('value')))` no longer needs a
+  `Slot::each('items', li(Slot::value('value')))` no longer needs a
   `Compile::shape()` wrapper (which is still accepted, and still the way to
   build and memoize a nested tree separately). The examples, tests and guides
-  use the bare form, with one test keeping the wrapped form covered. Generated
-  code and fingerprints are unchanged, so existing artifacts stay current.
+  use the bare form, with one test keeping the wrapped form covered.
 - A `Slot::raw()` value may be an iterable of stringable values, not only a
   single one: `SlotRuntime::raw()` stringifies each element and concatenates
   them, so a rendered list of component markup goes straight into the slot
-  without an `implode()`. Raw and text/attribute slots accept a `Raw` (or any
+  without an `implode()`. Value and raw slots accept a `Raw` (or any
   `Stringable`) as it is, so a component result is passed to its parent without
   a `(string)` cast; the examples and guides drop theirs. Nested arrays still
   raise an `InvalidArgumentException` naming the slot path.
@@ -137,7 +147,7 @@ First public version. No tag has been cut yet.
   upgrade (see the artifact guard below).
 
 - The examples are function components: each component is a function with typed
-  parameters returning `Raw`, backed by a fixed `*.shape.php` template, and
+  parameters returning `string`, backed by a fixed `*.shape.php` template, and
   pages are functions too (`featuresPage()`, `pricingPage()`, `counterPage()`,
   `xmlPage()`, `coverPage()`). Child components are called by their parent and
   injected through `Slot::raw()`; controllers call the page functions, the
@@ -151,9 +161,9 @@ First public version. No tag has been cut yet.
   tags are created with the functions or the magic static surface
   (`HTML::customTag()`, `XML::customer()`), shapes with `Compile::shape()`; the
   docs no longer present constructors as a user-facing alternative.
-- `Slot::attr($name)` treats `$name` as the data key everywhere: compile errors
+- `Slot::value($name)` treats `$name` as the data key everywhere: compile errors
   and missing-slot exceptions now report the slot name instead of the attribute
-  name, so `->class(Slot::attr('classList'))` reports `classList`.
+  name, so `->class(Slot::value('classList'))` reports `classList`.
 - Generated sources are memoized per fingerprint in memory (on top of the
   on-disk cache), so a tree rebuilt in the same process is re-evaluated instead
   of regenerated. The memo is bounded by a byte budget (oldest sources are dropped
@@ -265,6 +275,12 @@ First public version. No tag has been cut yet.
 
 ### Removed
 
+- **Breaking** — `Pure\Component\bind()` is removed. Inline trees bind through
+  `Compile::shape($tree)` (invokable) or `Compile::shape($tree)->compile()->render($data)`;
+  file-backed templates bind through `Registry::component($nameOrPath)`, which
+  returns a `Closure(array): string`.
+- **Breaking** — `Slot::text()` and `Slot::attr()` are removed in favour of
+  `Slot::value()`.
 - **Breaking** — The `$map` third argument of `Slot::child()`, `Slot::each()` and
   `Slot::eachKind()`, along with the closure-copying machinery that carried maps
   into artifacts (`Pure\Compile\Internal\ClosureSource`, namespace blocks and

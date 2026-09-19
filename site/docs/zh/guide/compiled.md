@@ -17,11 +17,11 @@ use Pure\Core\Slot;
 use function Pure\HTML\{div, h1, li, ul};
 
 // 形状就是普通标签树，只是把数据换成 Slot 占位符。
-$item = Compile::shape(li(Slot::text('title')));
+$item = Compile::shape(li(Slot::value('title')));
 
 $root = Compile::shape(
     div(
-        h1(Slot::text('heading')),
+        h1(Slot::value('heading')),
         ul(Slot::each('items', $item))
     )->class('card')
 );
@@ -45,8 +45,7 @@ echo $root([
 
 | 构造器 | 值 | 行为 |
 | --- | --- | --- |
-| `Slot::text($name)` | 可字符串化或 `null` | 转字符串后转义；`null` 渲染为空内容 |
-| `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 省略该属性（与 `setAttr(null)` 一致） |
+| `Slot::value($name)` | 标量 / `null` / `Stringable` | 子节点位转成字符串并转义（`true`→"1"，`null`→空）；属性位遵循 `setAttr()`（`true`→`name="name"`，`false`/`null` 省略） |
 | `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；可迭代集合会逐元素转成字符串后拼接 |
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个项渲染 `$shape` |
@@ -60,7 +59,7 @@ echo $root([
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - `Slot::child()` / `Slot::each()` / `Slot::eachKind()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
-值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`，因此子组件返回的 `Raw` 不需要 `(string)` 强制转换；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
+值转换：值槽位与 raw 槽位接受 `null`、标量与 `Stringable`，因此子组件返回的字符串不需要 `(string)` 强制转换；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
 
 ## 作用域与缺失数据
 
@@ -71,7 +70,7 @@ echo $root([
 ```php
 $item = Compile::shape(
     li(
-        Slot::text('name'),
+        Slot::value('name'),
         Slot::if('admin', span('(admin)'))
     )
 );
@@ -79,7 +78,7 @@ $item = Compile::shape(
 
 ## 组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `Raw` 的函数，加上紧挨着注册的惰性工厂
+组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性工厂
 （参见[组件](/zh/guide/components)与[缓存](#缓存)中的 PHP-FPM 场景）：
 
 ```php
@@ -87,21 +86,19 @@ $item = Compile::shape(
 
 // Card.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
-    )->class(Slot::attr('class'))
-));
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
+    )->class(Slot::value('class'))
+);
 
-function Card(string $title, string $content, string $class = 'card'): Raw
+function Card(string $title, string $content, string $class = 'card'): string
 {
     return render('Card', title: $title, content: $content, class: $class);
 }
@@ -113,7 +110,7 @@ function Card(string $title, string $content, string $class = 'card'): Raw
 ### 列表
 
 ```php
-$row = Compile::shape(li(Slot::text('label')));
+$row = Compile::shape(li(Slot::value('label')));
 
 $shape = Compile::shape(ul(Slot::each('rows', $row)));
 $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
@@ -122,8 +119,8 @@ $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 ### 异构列表
 
 ```php
-$text = Compile::shape(p(Slot::text('value')));
-$link = Compile::shape(a(Slot::text('value'))->href(Slot::attr('href')));
+$text = Compile::shape(p(Slot::value('value')));
+$link = Compile::shape(a(Slot::value('value'))->href(Slot::value('href')));
 
 $shape = Compile::shape(div(Slot::eachKind('blocks', [
     'text' => $text,
@@ -222,31 +219,33 @@ $pureBody = static function (array $v): string {
 
 ```php
 // components/Icon.cmp.php：类型化 props，背后是预编译模板
-register('Icon', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+register('Icon', __FILE__, static fn () =>
+    svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class'))
+);
 
-function Icon(string $href, string $class = 'bi'): Raw
+function Icon(string $href, string $class = 'bi'): string
 {
     return render('Icon', href: $href, class: $class);
 }
 
 // views/features.cmp.php：页面骨架加已渲染的正文
-register('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+register('Features', __FILE__, static fn () => html(/* ... */));
 
-function featuresPage(array $data): Raw
+function featuresPage(array $data): string
 {
     // 手动补上文档声明；树本身不带文档声明。
-    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+    return '<!DOCTYPE html>' . render('Features',
         title: $data['title'],
         content: FeaturesBody($data['content']),
-    ));
+    );
 }
 ```
 
-子组件的 `Raw` 直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的数组按顺序拼接。
+子组件渲染出的字符串直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的列表按顺序拼接。
 
 `Pure\Component\render()` 会在 shape 文件旁边存在产物、且产物不早于 shape 文件时直接加载产物，
 否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件（磁盘缓存仍然生效）。它只
-返回片段——要文档声明就由调用方自己拼接。底层绑定器是 `bind()`，内联树可以直接持有它。
+返回片段——要文档声明就由调用方自己拼接。
 
 它的 `PlainFeaturesController` 把同一份 bindings 交给示例自带的 `plain()` 助手（一个应用
 函数：它 require 视图文件并展开数据）；单一入口
@@ -285,7 +284,7 @@ function featuresPage(array $data): Raw
 - **`opcache.preload`**——preload 只把代码常驻内存，不会让 static 变量跨请求保留（PHP preload
   RFC 已明确说明），因此不能替代上面两种做法。
 
-### 无依赖视图
+### 无依赖导出（可选）
 
 `pure compile --plain` 会在产物旁边额外写出 `*.plain.php`：只有标记与原生 PHP，
 渲染时不需要安装 purephp。加载方式就是经典的视图约定——把数据数组展开成局部变量：
@@ -297,40 +296,11 @@ require 'views/index.plain.php';
 $html = (string)ob_get_clean();
 ```
 
-顶层槽读取为普通变量，嵌套槽读取为它所在的数组，转义直接内联，因此它和手写模板一样可移植：
-
-```php
-<title><?= htmlspecialchars((string)$title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></title>
-<h2><?= htmlspecialchars((string)$content['columns']['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h2>
-<?php foreach ($content['columns']['contents'] as $item1): ?><h3><?= htmlspecialchars((string)$item1['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false) ?></h3><?php endforeach; ?>
-```
-
-常规数据下，无依赖视图与产物输出逐字节一致（测试有断言），而且它是最快的形态：值直接进入
-`htmlspecialchars()`，没有运行时访问器调用。但它是普通视图而非编译组件，严格语义仍由产物提供：
-
-- 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
-- `null` 属性输出为空值，而不是整个属性消失；
-- 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`；
-- raw 槽只输出单个值：`Raw` 或任何 `Stringable` 都可以，它们的可迭代集合不行，因为视图里
-  没有 `SlotRuntime::raw()` 去拼接它。请由控制器传入 `implode('', $rows)`，或者绑定字符串。
-
-使用函数组件时，控制器会先渲染组件、再把它们的标记作为 raw bindings 传给页面形状，因此视图
-文件仍然无依赖，而请求处理器会用到库。
-
-视图会按形状结构为每个顶层槽生成 `@var` 注解，静态分析器无需排除规则或额外配置即可读取这些展开的局部变量：
-
-```php
-/**
- * @var scalar|null|\Stringable $title
- * @var array{columns: array{title: scalar|null|\Stringable, contents: iterable<array-key, array{title: scalar|null|\Stringable}>}} $content
- */
-```
-
-值槽是 `scalar|null|\Stringable`（即 `htmlspecialchars()` 可接受的类型），条件槽是 `mixed`，child 与列表作用域会推导成 array shape 及它们的 iterable。特殊槽名声明在加载器的 `$data` 数组上。这些注解只是注释，不会增加任何输出字节。唯一仍会告警的是没有数组默认值的可选容器槽：生成的读取会回退到 `null`，注解如实反映这一点。
-
-当你需要「视图脱离库运行」时用 `--plain`：例如部署只带 `public/` 与 `views/`，
-或把模板目录交给其他人。视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，
-那是产物唯一更快的场景。
+需要让视图脱离库运行时才用 `--plain`：例如部署只带 `public/` 与 `views/`，
+或把模板目录交给其他人。常规数据下无依赖视图与产物输出逐字节一致（测试有断言），
+而且它是最快的形态：值直接进入 `htmlspecialchars()`，没有运行时访问器调用。
+但它是普通视图而非编译组件，严格槽位语义仍由产物提供——四处语义差异与
+`@var` 注解说明见[无依赖视图注意事项](#无依赖视图注意事项)。
 
 ## 性能
 
@@ -366,11 +336,78 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
-| `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | 静态值直接 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
+| `function Card(array $props): HTML` | `function Card(string $title): string` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
+| `h2($title)` | `h2(Slot::value('title'))` |
+| `->class($classList)` | 静态值直接 `->class($classList)`，动态值用 `->class(Slot::value('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | 调用 `Child(...)` 并把它的 `Raw` 经 `Slot::raw()` 注入 |
+| `<Child($props)>` | 调用 `Child(...)` 并把它返回的 `string` 经 `Slot::raw()` 注入 |
 
 即时（`render()`）标签树仍然可用于代码片段与调试；参见[基本用法](/zh/guide/basic-usage)。
+
+## 缓存与运维细节
+
+- `Compile::cachePath($dir)` 开启磁盘渲染器缓存；传 `null` 关闭（默认）。目录必须是
+  私有目录：归 PHP 运行用户所有、组与其他用户不可写（缺失时以 0700 创建）、并位于
+  Web 根目录之外——`cachePath()` 会拒绝权限过松或属主不符的目录；不要把缓存目录
+  直接指向 `/tmp` 这类共享位置。
+- 缓存文件以 `Shape::id()` 为内容寻址，形状变化会生成新文件；写入是原子的（临时文件 +
+  重命名），并发 worker 安全；缓存文件是普通 PHP，对 opcache 友好。
+- `Compile::clearCache()` 删除由本库写入的文件。
+- `Compile::flush()` 使内存中的渲染器失效（部署后的长驻 worker 中很有用）。
+- 要发现每个请求都重新构建（而不是被记忆化）的形状，请启用开发守卫：
+  `Compile::guard(true)` 或设置 `PURE_COMPILE_GUARD=1`。当同一个调用点在一个进程中
+  调用 `Compile::shape()` 次数过多时，PHP 会发出 `E_USER_WARNING`，建议采用
+  `static $shape ??=` 模式。
+- `Compile::CACHE_VERSION` 在生成代码格式或指纹构成变化时递增。由其他版本写出的
+  产物加载时抛出带 `pure compile` 提示的 `RuntimeException`；`*.plain.php` 视图只在
+  注释中携带版本号、没有可执行守卫，升级后会静默输出过期内容，直到
+  `pure compile --check --plain` 发现不一致。
+
+## 无依赖视图注意事项
+
+无依赖视图是标记 + 原生 PHP——脱离 purephp 也能渲染，但它不携带编译渲染器的
+严格槽位语义：
+
+- 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
+- `null` 属性输出为空值，而不是整个属性消失；
+- 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`；
+- raw 槽只输出单个值：可字符串化值的可迭代集合不会被拼接。请由控制器传入
+  `implode('', $rows)`，或者绑定字符串。
+
+顶层槽读取为普通变量，嵌套槽读取为它所在的数组，转义直接内联，因此它和手写
+模板一样可移植。
+
+使用函数组件时，控制器会先渲染组件、再把它们的标记作为 raw bindings 传给页面
+形状，因此视图文件仍然无依赖，而请求处理器会用到库。
+
+视图会按形状结构为每个顶层槽生成 `@var` 注解，静态分析器无需排除规则或额外
+配置即可读取这些展开的局部变量：值槽是 `scalar|null|\Stringable`（即
+`htmlspecialchars()` 可接受的类型），条件槽是 `mixed`，child 与列表作用域会推导成
+array shape 及它们的 iterable；特殊槽名声明在加载器的 `$data` 数组上。这些注解
+只是注释，不增加任何输出字节。唯一仍会告警的是没有数组默认值的可选容器槽：
+生成的读取会回退到 `null`，注解如实反映这一点。
+
+视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，那是
+无依赖视图唯一比产物更快的场景。
+
+## 异构列表 (eachKind)
+
+`Slot::eachKind()` 按判别键（默认 `'kind'`）把每一项分派到对应的形状；未知
+kind 会抛出 `InvalidArgumentException`。
+
+```php
+$shape = Compile::shape(div(Slot::eachKind('blocks', [
+    'text'  => Compile::shape(p(Slot::value('value'))),
+    'link'  => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
+])));
+
+$shape(['blocks' => [
+    ['kind' => 'text', 'value' => 'hi'],
+    ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
+]]);
+// → <div><p>hi</p><a href="#x">go</a></div>
+```
+
+判别键必须是非空字符串：看似数字的 PHP 数组键在运行时是 int，无法匹配生成
+分派所用的字符串 kind，因此在构造时就被拒绝。

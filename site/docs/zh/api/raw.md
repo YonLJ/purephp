@@ -2,6 +2,17 @@
 
 `Pure\Core\Raw` 表示可信标记，会按原样输出，不会被转义。
 
+## Core，而非组件层
+
+`Raw` 位于 `Pure\Core`，用于形状树中的 verbatim 子节点（例如
+`div(Raw::of('<b>x</b>'))`），以及把已渲染的标记传入 `Slot::raw()` 槽位。
+组件层本身（`render()`、组件函数）返回的是普通 `string`，组件 API 中没有
+`Raw` 类型。
+
+> **信任边界**——`render()` 返回 `string` 之后，类型系统无法再区分那个字符串
+> 是"可信的已渲染标记"还是普通文本。信任改由 raw 槽约定承载：传入 raw 槽的
+> 值原样输出，传入 value 槽的值必然转义。
+
 ## 为什么原始内容很重要
 
 字符串内容一律会被转义，因此形似标记的文本会显示出来，而不会被解析：
@@ -22,6 +33,7 @@ Raw 类用于在需要可信标记时按原样输出：
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // 原始内容保留标记
@@ -68,6 +80,7 @@ echo $raw; // 输出: <em>斜体文本</em>
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // 嵌入预格式化的 HTML 内容
@@ -86,6 +99,7 @@ echo $content;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\{div, h1};
 
 // 包含来自外部源的内容
@@ -105,6 +119,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\{html, head, title, body};
 
 function includeTemplate(string $templatePath): string
@@ -132,6 +147,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use Pure\Core\XML;
 
 $document = XML::document(
@@ -152,6 +168,7 @@ echo $document;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 $isDevelopment = true;
@@ -172,6 +189,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // ❌ 危险 - 永远不要对用户输入这样做

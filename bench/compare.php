@@ -56,9 +56,9 @@ function pageShape(): Shape
 {
     $item = Compile::shape(
         div(
-            span(Slot::text('title'))->class('title'),
-            p(Slot::text('text'))->class('text')
-        )->class('row')->id(Slot::attr('id'))->data_index(Slot::attr('index'))
+            span(Slot::value('title'))->class('title'),
+            p(Slot::value('text'))->class('text')
+        )->class('row')->id(Slot::value('id'))->data_index(Slot::value('index'))
     );
 
     return Compile::shape(

@@ -36,8 +36,8 @@ $data = featuresData();
 $shapeStart = hrtime(true);
 require_once __DIR__ . '/views/features.cmp.php';
 $unitFile = __DIR__ . '/views/features.cmp.php';
-$pageShape = (\Pure\Component\Registry::unitsFor($unitFile)['Features']['factory'])();
-$pageShape->compile();
+$pageShape = \Pure\Component\Registry::unitsFor($unitFile)['Features']['factory']();
+\Pure\Compile\Compile::shape($pageShape)->compile();
 $shapeTime = (hrtime(true) - $shapeStart) / 1000;
 
 $requireStart = hrtime(true);
@@ -45,7 +45,7 @@ $renderer = require __DIR__ . '/views/features.pure.php';
 $requireTime = (hrtime(true) - $requireStart) / 1000;
 
 $firstStart = hrtime(true);
-$first = (string)featuresPage($data);
+$first = featuresPage($data);
 $firstTime = (hrtime(true) - $firstStart) / 1000;
 
 printf("page shape + compile: %.1f us (once) | artifact require: %.1f us (once)\n", $shapeTime, $requireTime);
@@ -59,11 +59,13 @@ $bindings = featuresBindings($data);
 $classic = fn (): string => classicFeaturesPage(featuresContent())->render();
 
 $classicTime = bench('classic build + render', $iters, $classic);
-$pageTime = bench('page function (components + artifact)', $iters, fn (): string => (string)featuresPage($data));
+$pageTime = bench('page function (components + artifact)', $iters, fn (): string => featuresPage($data));
 $artifactTime = bench('skeleton artifact + bindings', $iters, fn (): string => $renderer->render($bindings));
 $plainTime = bench('plain view + bindings', $iters, fn (): string => plain('features', $bindings));
 
-$document = $renderer->header . $renderer->render($bindings);
+// The page function prepends this header itself; artifacts carry no header.
+$header = '<!DOCTYPE html>';
+$document = $header . $renderer->render($bindings);
 printf(
     "\npage identical: %s (%d bytes) | page vs classic: %.2fx\n",
     $first === $document ? 'yes' : 'NO',
@@ -72,7 +74,7 @@ printf(
 );
 printf(
     "skeleton identical: %s | %d bytes | artifact vs page: %.2fx\n",
-    $renderer->render($bindings) === substr($document, strlen($renderer->header)) ? 'yes' : 'NO',
+    $renderer->render($bindings) === substr($document, strlen($header)) ? 'yes' : 'NO',
     strlen($document),
     $artifactTime / $pageTime
 );

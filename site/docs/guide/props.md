@@ -68,25 +68,26 @@ input()->type('checkbox')->checked(true);  // checked="checked"
 input()->type('checkbox')->checked(false); // no checked attribute
 ```
 
-`Slot::attr()` follows the same rules at render time, so static and dynamic
+`Slot::value()` follows the same rules at render time, so static and dynamic
 attributes cannot drift apart: a bound `false` omits the attribute and a bound
 `true` renders `checked="checked"`.
 
 ## Dynamic Props
 
-Dynamic attribute values use `Slot::attr()`. The argument is the data key, not
+Dynamic attribute values use `Slot::value()`. The argument is the data key, not
 the attribute name — the attribute name comes from the setter, so
-`->class(Slot::attr('classList'))` binds `classList` from the data and writes it
+`->class(Slot::value('classList'))` binds `classList` from the data and writes it
 into `class`. A `null` value omits the attribute at render time (a bound `false`
 behaves the same), which is also how conditional attributes work:
 
 ```php
 <?php
 
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
 $shape = Compile::shape(
-    button('Save')->class(Slot::attr('classList'))->disabled(Slot::attr('disabled'))
+    button('Save')->class(Slot::value('classList'))->disabled(Slot::value('disabled'))
 );
 
 $shape(['classList' => 'btn btn-primary', 'disabled' => null]);       // <button class="btn btn-primary">Save</button>
@@ -97,8 +98,7 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 
 | Slot | Value | Behavior |
 | --- | --- | --- |
-| `Slot::text($name)` | stringable or `null` | escaped text content; `null` renders empty |
-| `Slot::attr($name)` | stringable or `null` | escaped attribute value ($name is the data key); `null` omits the attribute |
+| `Slot::value($name)` | stringable or `null` | position decides the semantics: child position escapes to text (`null` renders empty, `true` renders "1"); attribute position follows `setAttr()` (`true` renders `name="name"`, `false`/`null` omit the attribute) |
 | `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated in order |
 | `Slot::child($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
@@ -112,8 +112,8 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 
 use Pure\Core\Slot;
 
-Slot::text('subtitle')->required(false);   // missing key renders as empty
-Slot::text('subtitle')->default('—');       // fallback for a missing key
+Slot::value('subtitle')->required(false);   // missing key renders as empty
+Slot::value('subtitle')->default('—');       // fallback for a missing key
 ```
 
 - `required(false)` makes a slot optional; its value is then read with `??`
@@ -126,16 +126,17 @@ Slot::text('subtitle')->default('—');       // fallback for a missing key
 
 ## Value Coercion and Escaping
 
-Text, attribute and raw slots accept `null`, scalars and `Stringable`
-objects — including the `Raw` a component returns, which needs no cast. They are
+Value and raw slots accept `null`, scalars and `Stringable`
+objects — including a `Raw`, which needs no cast. They are
 converted to string before use; arrays and other objects raise an
 `InvalidArgumentException` naming the full slot path. A raw slot goes one step
 further and accepts an iterable of stringable values, concatenating them in
 order.
 
-- `Slot::text()` escapes with `htmlspecialchars(..., double_encode: false)`,
-  so entities you already escaped (`&copy;`) stay intact.
-- `Slot::attr()` escapes with `double_encode: true`.
+- `Slot::value()` in child position escapes with
+  `htmlspecialchars(..., double_encode: false)`, so entities you already escaped
+  (`&copy;`) stay intact.
+- `Slot::value()` in attribute position escapes with `double_encode: true`.
 - `Slot::raw()` performs no escaping — only use it with trusted markup.
 - Invalid UTF-8 is substituted with the replacement character instead of
   producing broken output.
@@ -163,16 +164,17 @@ derive them in the data layer before rendering:
 ```php
 <?php
 
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-$badge = Compile::shape(span(Slot::text('label'))->class('badge'));
+$badge = Compile::shape(span(Slot::value('label'))->class('badge'));
 
 $shape = Compile::shape(div(Slot::child('user', $badge)));
 
 $shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></div>
 ```
 
-A nested shape can be a bare tag tree — `Slot::child('user', span(Slot::text('label')))`
+A nested shape can be a bare tag tree — `Slot::child('user', span(Slot::value('label')))`
 works too; `Compile::shape()` is only needed when the nested tree is built and
 memoized separately.
 

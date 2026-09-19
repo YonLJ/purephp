@@ -94,7 +94,7 @@ final class PlainGenerator extends TemplateGenerator
             return;
         }
 
-        if ($value->kind !== SlotKind::Attr) {
+        if ($value->kind !== SlotKind::Value) {
             throw CompileException::slotInAttributePosition($value->kind, $slotPath);
         }
 

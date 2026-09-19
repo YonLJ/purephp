@@ -49,7 +49,7 @@ class CompileTest extends TestCase
     public function testTextAndAttributeSlotsAreEscaped(): void
     {
         $shape = Compile::shape(
-            h1(Slot::text('title'))->class(Slot::attr('cls'))
+            h1(Slot::value('title'))->class(Slot::value('cls'))
         );
 
         $this->assertSame(
@@ -67,14 +67,14 @@ class CompileTest extends TestCase
 
     public function testNullTextSlotRendersEmptyContent(): void
     {
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
 
         $this->assertSame('<div></div>', $shape(['value' => null]));
     }
 
     public function testNullTextSlotDoesNotEmitDeprecations(): void
     {
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
 
         set_error_handler(static function (int $severity, string $message): bool {
             throw new ErrorException($message, 0, $severity);
@@ -89,7 +89,7 @@ class CompileTest extends TestCase
 
     public function testScalarTextSlotValuesMatchTheRuntimeHelper(): void
     {
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
         $cases = [[0, '0'], [1, '1'], [-3, '-3'], [2.5, '2.5'], [true, '1'], [false, ''], ['', ''], ['0', '0'], ['a & b', 'a &amp; b']];
 
         foreach ($cases as [$value, $expected]) {
@@ -101,7 +101,7 @@ class CompileTest extends TestCase
 
     public function testNullAttributeSlotOmitsTheAttribute(): void
     {
-        $shape = Compile::shape(div('x')->class(Slot::attr('cls')));
+        $shape = Compile::shape(div('x')->class(Slot::value('cls')));
 
         $this->assertSame('<div>x</div>', $shape(['cls' => null]));
         $this->assertSame('<div class="a">x</div>', $shape(['cls' => 'a']));
@@ -111,7 +111,7 @@ class CompileTest extends TestCase
     {
         $staticFalse = Compile::shape(HTML::input()->disabled(false));
         $staticTrue = Compile::shape(HTML::input()->disabled(true));
-        $slotted = Compile::shape(HTML::input()->disabled(Slot::attr('disabled')));
+        $slotted = Compile::shape(HTML::input()->disabled(Slot::value('disabled')));
 
         $this->assertSame('<input />', $staticFalse([]));
         $this->assertSame('<input disabled="disabled" />', $staticTrue([]));
@@ -129,7 +129,7 @@ class CompileTest extends TestCase
             }
         };
 
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
 
         $this->assertSame('<div>a &amp; b</div>', $shape(['value' => $value]));
         // The non-scalar fallback must render exactly like its string form.
@@ -138,7 +138,7 @@ class CompileTest extends TestCase
 
     public function testTextSlotEscapingUsesTheSharedEscaperConstants(): void
     {
-        $source = Compile::shape(div(Slot::text('title')))->compile()->source;
+        $source = Compile::shape(div(Slot::value('title')))->compile()->source;
 
         // Escaping config stays owned by Escaper: generated code references the
         // shared constants instead of copying the flag values. Whether the
@@ -158,13 +158,13 @@ class CompileTest extends TestCase
         // Same text next to a slot, so the walker emits it instead of folding.
         $this->assertSame(
             '<div>sa&lt;b2&lt;3&lt;p&gt;x&lt;/p&gt;</div>',
-            Compile::shape(div(Slot::text('v'), 'a<b', '2<3', '<p>x</p>'))(['v' => 's'])
+            Compile::shape(div(Slot::value('v'), 'a<b', '2<3', '<p>x</p>'))(['v' => 's'])
         );
     }
 
     public function testRequiredSlotThrowsWithFullPath(): void
     {
-        $item = Compile::shape(li(Slot::text('title')));
+        $item = Compile::shape(li(Slot::value('title')));
         $shape = Compile::shape(ul(Slot::each('items', $item)));
 
         try {
@@ -177,7 +177,7 @@ class CompileTest extends TestCase
 
     public function testOptionalSlotFallsBackToDefault(): void
     {
-        $shape = Compile::shape(div(Slot::text('maybe')->default('fallback')));
+        $shape = Compile::shape(div(Slot::value('maybe')->default('fallback')));
 
         $this->assertSame('<div>fallback</div>', $shape([]));
         $this->assertSame('<div>set</div>', $shape(['maybe' => 'set']));
@@ -185,7 +185,7 @@ class CompileTest extends TestCase
 
     public function testEachSlotRendersEveryItem(): void
     {
-        $item = Compile::shape(li(Slot::text('title')));
+        $item = Compile::shape(li(Slot::value('title')));
         $shape = Compile::shape(ul(Slot::each('items', $item))->class('list'));
 
         $this->assertSame(
@@ -196,8 +196,8 @@ class CompileTest extends TestCase
 
     public function testChildSlotUsesNestedDataScope(): void
     {
-        $card = Compile::shape(div(span(Slot::text('name')))->class('card'));
-        $shape = Compile::shape(div(Slot::child('card', $card), Slot::text('after')));
+        $card = Compile::shape(div(span(Slot::value('name')))->class('card'));
+        $shape = Compile::shape(div(Slot::child('card', $card), Slot::value('after')));
 
         $this->assertSame(
             '<div><div class="card"><span>n</span></div>!</div>',
@@ -207,7 +207,7 @@ class CompileTest extends TestCase
 
     public function testNestedEachSlotsDoNotCollide(): void
     {
-        $cell = Compile::shape(td(Slot::text('v')));
+        $cell = Compile::shape(td(Slot::value('v')));
         $row = Compile::shape(tr(Slot::each('cells', $cell)));
         $shape = Compile::shape(table(Slot::each('rows', $row)));
 
@@ -222,14 +222,14 @@ class CompileTest extends TestCase
 
     public function testInvalidUtf8IsSubstituted(): void
     {
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
 
         $this->assertSame("<div>caf\u{FFFD}</div>", $shape(['value' => "caf\xE9"]));
     }
 
     public function testNonStringableSlotValueIsRejected(): void
     {
-        $shape = Compile::shape(div(Slot::text('value')));
+        $shape = Compile::shape(div(Slot::value('value')));
 
         $this->expectException(InvalidArgumentException::class);
 
@@ -238,7 +238,7 @@ class CompileTest extends TestCase
 
     public function testNonArrayChildValueIsRejected(): void
     {
-        $card = Compile::shape(div(Slot::text('name')));
+        $card = Compile::shape(div(Slot::value('name')));
         $shape = Compile::shape(div(Slot::child('card', $card)));
 
         $this->expectException(InvalidArgumentException::class);
@@ -248,7 +248,7 @@ class CompileTest extends TestCase
 
     public function testNonIterableEachValueIsRejected(): void
     {
-        $item = Compile::shape(li(Slot::text('title')));
+        $item = Compile::shape(li(Slot::value('title')));
         $shape = Compile::shape(ul(Slot::each('items', $item)));
 
         $this->expectException(InvalidArgumentException::class);
@@ -256,33 +256,74 @@ class CompileTest extends TestCase
         $shape(['items' => 'not-iterable']);
     }
 
-    public function testAttributeSlotInChildPositionIsRejected(): void
+    public function testValueSlotIsValidInBothChildAndAttributePosition(): void
+    {
+        $child = Compile::shape(div(Slot::value('x')));
+        $this->assertSame('<div>x &amp; y</div>', $child(['x' => 'x & y']));
+
+        $attr = Compile::shape(div('x')->class(Slot::value('cls')));
+        $this->assertSame('<div class="c">x</div>', $attr(['cls' => 'c']));
+    }
+
+    public function testRawSlotInAttributePositionIsRejected(): void
     {
         try {
-            Compile::shape(div(Slot::attr('x')))->compile();
+            Compile::shape(div('x')->class(Slot::raw('r')))->compile();
             $this->fail('Expected LogicException to be thrown.');
         } catch (LogicException $e) {
-            $this->assertSame("attribute slots are not allowed in child position: 'x'.", $e->getMessage());
+            $this->assertSame("only value slots are allowed in attribute position, got 'Raw' for 'r'.", $e->getMessage());
         }
     }
 
-    public function testTextSlotInAttributePositionIsRejected(): void
+    public function testValueSlotAttributeSemantics(): void
     {
-        try {
-            Compile::shape(div('x')->class(Slot::text('cls')))->compile();
-            $this->fail('Expected LogicException to be thrown.');
-        } catch (LogicException $e) {
-            $this->assertSame(
-                "only attribute slots are allowed in attribute position, got 'Text' for 'cls'.",
-                $e->getMessage()
-            );
-        }
+        $trueShape = Compile::shape(div('x')->disabled(Slot::value('flag')));
+        $this->assertSame('<div disabled="disabled">x</div>', $trueShape(['flag' => true]));
+
+        $falseShape = Compile::shape(div('x')->disabled(Slot::value('flag')));
+        $this->assertSame('<div>x</div>', $falseShape(['flag' => false]));
+
+        $nullShape = Compile::shape(div('x')->disabled(Slot::value('flag')));
+        $this->assertSame('<div>x</div>', $nullShape(['flag' => null]));
+
+        $defaultNullShape = Compile::shape(div('x')->disabled(Slot::value('flag')->default(null)));
+        $this->assertSame('<div>x</div>', $defaultNullShape([]));
+
+        $defaultDShape = Compile::shape(div('x')->disabled(Slot::value('flag')->default('d')));
+        $this->assertSame('<div disabled="d">x</div>', $defaultDShape([]));
+    }
+
+    public function testValueSlotChildSemantics(): void
+    {
+        $trueShape = Compile::shape(div(Slot::value('flag')));
+        $this->assertSame('<div>1</div>', $trueShape(['flag' => true]));
+
+        $nullShape = Compile::shape(div(Slot::value('flag')));
+        $this->assertSame('<div></div>', $nullShape(['flag' => null]));
+
+        $defaultNullShape = Compile::shape(div(Slot::value('flag')->default(null)));
+        $this->assertSame('<div></div>', $defaultNullShape([]));
+    }
+
+    public function testValueSlotSameKeyNameDifferentPositionsHaveDifferentFingerprints(): void
+    {
+        $childOnly = Compile::shape(div(Slot::value('x')));
+        $attrOnly = Compile::shape(div('x')->class(Slot::value('x')));
+        $both = Compile::shape(div(Slot::value('x'))->class(Slot::value('x')));
+
+        $this->assertNotSame($childOnly->id(), $attrOnly->id());
+        $this->assertNotSame($childOnly->id(), $both->id());
+        $this->assertNotSame($attrOnly->id(), $both->id());
+
+        $this->assertSame('<div>x</div>', $childOnly(['x' => 'x']));
+        $this->assertSame('<div class="x">x</div>', $attrOnly(['x' => 'x']));
+        $this->assertSame('<div class="x">x</div>', $both(['x' => 'x']));
     }
 
     public function testSlotTreesCannotBeRenderedDirectly(): void
     {
         try {
-            div(Slot::text('title'))->render();
+            div(Slot::value('title'))->render();
             $this->fail('Expected LogicException to be thrown.');
         } catch (LogicException $e) {
             $this->assertSame(
@@ -294,7 +335,7 @@ class CompileTest extends TestCase
 
     public function testToJsonDescribesSlots(): void
     {
-        $json = div(Slot::text('title'))->class(Slot::attr('cls'))->toJSON();
+        $json = div(Slot::value('title'))->class(Slot::value('cls'))->toJSON();
 
         $this->assertSame('div', $json['tagName']);
         $this->assertSame(['slot' => 'title'], $json['children'][0]);
@@ -320,7 +361,7 @@ class CompileTest extends TestCase
 
     public function testCompiledRenderReturnsOutput(): void
     {
-        $compiled = Compile::shape(div(Slot::text('title')))->compile();
+        $compiled = Compile::shape(div(Slot::value('title')))->compile();
 
         $this->assertSame('<div>hi</div>', $compiled->render(['title' => 'hi']));
     }
@@ -342,18 +383,18 @@ class CompileTest extends TestCase
         $text = 'a & b < c &copy;';
 
         $literalAttr = Compile::shape(div('x')->title($attribute));
-        $slottedAttr = Compile::shape(div('x')->title(Slot::attr('value')));
+        $slottedAttr = Compile::shape(div('x')->title(Slot::value('value')));
         $this->assertSame($literalAttr([]), $slottedAttr(['value' => $attribute]));
 
         $literalText = Compile::shape(p($text));
-        $slottedText = Compile::shape(p(Slot::text('value')));
+        $slottedText = Compile::shape(p(Slot::value('value')));
         $this->assertSame($literalText([]), $slottedText(['value' => $text]));
     }
 
     public function testStaticSubtreesAreFoldedFromRender(): void
     {
         $shape = Compile::shape(div(
-            Slot::text('title'),
+            Slot::value('title'),
             div(span('static & more < 10'))->class('note')
         ));
 
@@ -400,11 +441,11 @@ class CompileTest extends TestCase
     {
         $path = sys_get_temp_dir() . '/purephp-shape-save.html';
 
-        $this->assertNotFalse(Compile::shape(div(Slot::text('title')))->save($path, ['title' => 'hi']));
+        $this->assertNotFalse(Compile::shape(div(Slot::value('title')))->save($path, ['title' => 'hi']));
         $this->assertSame('<!DOCTYPE html><div>hi</div>', file_get_contents($path));
 
         $this->assertNotFalse(
-            Compile::shape(div(Slot::text('title')))->save($path, ['title' => 'hi'], '<!-- custom -->')
+            Compile::shape(div(Slot::value('title')))->save($path, ['title' => 'hi'], '<!-- custom -->')
         );
         $this->assertSame('<!-- custom --><div>hi</div>', file_get_contents($path));
     }
@@ -413,13 +454,13 @@ class CompileTest extends TestCase
     {
         $path = sys_get_temp_dir() . '/purephp-shape-save.xml';
 
-        $this->assertNotFalse(Compile::shape(XML::root(Slot::text('v')))->save($path, ['v' => 'x']));
+        $this->assertNotFalse(Compile::shape(XML::root(Slot::value('v')))->save($path, ['v' => 'x']));
         $this->assertSame('<?xml version="1.0"?><root>x</root>', file_get_contents($path));
     }
 
     public function testRebuiltShapeRendersItsOwnData(): void
     {
-        $tree = static fn () => div(Slot::text('title'));
+        $tree = static fn () => div(Slot::value('title'));
 
         $first = Compile::shape($tree());
         $second = Compile::shape($tree());
@@ -445,7 +486,7 @@ class CompileTest extends TestCase
 
         $this->assertSame(
             '<div><span>x</span></div>',
-            Compile::shape(div(span(Slot::text('memo'))))(['memo' => 'x'])
+            Compile::shape(div(span(Slot::value('memo'))))(['memo' => 'x'])
         );
 
         /** @var array<string, string> $remaining */
@@ -459,7 +500,7 @@ class CompileTest extends TestCase
         putenv('PURE_COMPILE_MEMO_BYTES=0');
 
         try {
-            $shape = Compile::shape(div(span(Slot::text('env-memo'))));
+            $shape = Compile::shape(div(span(Slot::value('env-memo'))));
 
             $this->assertSame('<div><span>x</span></div>', $shape(['env-memo' => 'x']));
 
@@ -474,14 +515,14 @@ class CompileTest extends TestCase
 
     public function testStyleSlotRendersEscapedAttribute(): void
     {
-        $shape = Compile::shape(div('x')->style(Slot::attr('s')));
+        $shape = Compile::shape(div('x')->style(Slot::value('s')));
 
         $this->assertSame('<div style="a&quot;b">x</div>', $shape(['s' => 'a"b']));
     }
 
     public function testRequiredFalseMakesSlotOptionalWithoutDefault(): void
     {
-        $shape = Compile::shape(div(Slot::text('v')->required(false)));
+        $shape = Compile::shape(div(Slot::value('v')->required(false)));
 
         $this->assertSame('<div></div>', $shape([]));
         $this->assertSame('<div>x</div>', $shape(['v' => 'x']));
@@ -496,7 +537,7 @@ class CompileTest extends TestCase
             }
         };
 
-        $shape = Compile::shape(div('x')->class(Slot::attr('c')));
+        $shape = Compile::shape(div('x')->class(Slot::value('c')));
 
         $this->assertSame('<div class="a &amp; b">x</div>', $shape(['c' => $value]));
         $this->assertSame($shape(['c' => 'a & b']), $shape(['c' => $value]));
@@ -542,7 +583,7 @@ class CompileTest extends TestCase
 
     public function testMissingAttributeSlotThrows(): void
     {
-        $shape = Compile::shape(div('x')->class(Slot::attr('cls')));
+        $shape = Compile::shape(div('x')->class(Slot::value('cls')));
 
         try {
             $shape([]);
@@ -554,7 +595,7 @@ class CompileTest extends TestCase
 
     public function testShapePrintOutputsRenderedHTML(): void
     {
-        $shape = Compile::shape(div(Slot::text('v')));
+        $shape = Compile::shape(div(Slot::value('v')));
 
         ob_start();
 

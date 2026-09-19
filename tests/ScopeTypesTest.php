@@ -30,10 +30,10 @@ final class ScopeTypesTest extends TestCase
     public function testValueConditionAndOddSlotsAreDeclared(): void
     {
         $tree = Compile::shape(div(
-            Slot::text('title'),
-            Slot::text('subtitle')->default('none'),
-            Slot::if('city', span(Slot::text('city'))),
-            Slot::text('user-name')
+            Slot::value('title'),
+            Slot::value('subtitle')->default('none'),
+            Slot::if('city', span(Slot::value('city'))),
+            Slot::value('user-name')
         ))->tree();
 
         $this->assertSame(
@@ -50,8 +50,8 @@ final class ScopeTypesTest extends TestCase
     public function testEachKindItemsShareOneFlattenedShape(): void
     {
         $tree = Compile::shape(ul(Slot::eachKind('blocks', [
-            'text' => li(Slot::text('value')),
-            'link' => li(Slot::text('value'))->class(Slot::attr('class')),
+            'text' => li(Slot::value('value')),
+            'link' => li(Slot::value('value'))->class(Slot::value('class')),
         ])))->tree();
 
         $this->assertSame(
@@ -65,7 +65,7 @@ final class ScopeTypesTest extends TestCase
     public function testIfBranchesShareTheCurrentScope(): void
     {
         $tree = Compile::shape(div(
-            Slot::if('flag', span(Slot::text('then')), span(Slot::text('else')))
+            Slot::if('flag', span(Slot::value('then')), span(Slot::value('else')))
         ))->tree();
 
         $this->assertSame(
@@ -82,7 +82,7 @@ final class ScopeTypesTest extends TestCase
     {
         $tree = Compile::shape(div(
             Slot::child('box', span('static'))->required(false),
-            Slot::each('list', li(Slot::text('value')))->required(false)
+            Slot::each('list', li(Slot::value('value')))->required(false)
         ))->tree();
 
         $this->assertSame(
@@ -100,7 +100,7 @@ final class ScopeTypesTest extends TestCase
         // so the value type is what survives.
         $tree = Compile::shape(div(
             Slot::if('mode', span('a'), span('b')),
-            Slot::text('mode')->default('m')
+            Slot::value('mode')->default('m')
         ))->tree();
 
         $this->assertSame(

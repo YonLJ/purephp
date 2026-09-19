@@ -2,7 +2,7 @@
 
 PurePHP 提供了一些实用的工具函数来简化开发，这些函数在设置元素属性时会自动使用。
 
-*`clx()` 和 `sty()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::text()` / `Slot::attr()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
+*`clx()` 和 `sty()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::value()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
 
 ## clx 函数
 
@@ -162,10 +162,9 @@ div('Content')->style($styles)->print();
 ```php
 <?php
 
-use Pure\Core\Raw;
+use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\button;
 use function Pure\Utils\sty;
 
@@ -175,14 +174,14 @@ function ActionButton(
     string $size = 'medium',
     bool $loading = false,
     ?string $style = null
-): Raw {
+): string {
     static $renders = [];
 
-    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= bind(
-        button(Slot::text('text'))
+    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= Compile::shape(
+        button(Slot::value('text'))
             ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
-            ->style(Slot::attr('style'))
-            ->disabled(Slot::attr('disabled'))
+            ->style(Slot::value('style'))
+            ->disabled(Slot::value('disabled'))
     );
 
     return $render([
@@ -203,19 +202,19 @@ echo ActionButton('Submit', 'success', 'large', false, sty(['opacity' => 1, 'cur
 ```php
 <?php
 
+use Pure\Compile\Compile;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\bind;
 use function Pure\HTML\{div, h3, p};
 
-function Card(string $title, Raw $content, string $theme = 'light', bool $featured = false): Raw
+function Card(string $title, iterable|string $content, string $theme = 'light', bool $featured = false): string
 {
     static $renders = [];
 
-    $render = $renders["{$theme}|" . (int) $featured] ??= bind(
+    $render = $renders["{$theme}|" . (int) $featured] ??= Compile::shape(
         div(
-            h3(Slot::text('title'))->class('card-title'),
+            h3(Slot::value('title'))->class('card-title'),
             p(Slot::raw('content'))->class('card-content')
         )
         ->class('card', "card-{$theme}", $featured ? 'card-featured' : null)

@@ -43,7 +43,7 @@ class SlotTest extends TestCase
     public function testIfBranchesShareTheCurrentScope(): void
     {
         $shape = Compile::shape(div(
-            Slot::if('admin', span(Slot::text('name')))
+            Slot::if('admin', span(Slot::value('name')))
         ));
 
         $this->assertSame('<div><span>Tom</span></div>', $shape(['admin' => true, 'name' => 'Tom']));
@@ -51,7 +51,7 @@ class SlotTest extends TestCase
 
     public function testIfInsideEachUsesItemScope(): void
     {
-        $item = Compile::shape(li(Slot::text('name'), Slot::if('admin', span('(a)'))));
+        $item = Compile::shape(li(Slot::value('name'), Slot::if('admin', span('(a)'))));
         $shape = Compile::shape(ul(Slot::each('items', $item)));
 
         $this->assertSame(
@@ -63,15 +63,15 @@ class SlotTest extends TestCase
     public function testNestedSlotsAcceptBareTagTrees(): void
     {
         $bare = Compile::shape(div(
-            Slot::child('box', span(Slot::text('label'))),
-            Slot::each('items', li(Slot::text('value'))),
+            Slot::child('box', span(Slot::value('label'))),
+            Slot::each('items', li(Slot::value('value'))),
             Slot::if('flag', em('on'), em('off')),
             Slot::eachKind('kinds', ['a' => i('A'), 'b' => b('B')]),
         ));
 
         $wrapped = Compile::shape(div(
-            Slot::child('box', Compile::shape(span(Slot::text('label')))),
-            Slot::each('items', Compile::shape(li(Slot::text('value')))),
+            Slot::child('box', Compile::shape(span(Slot::value('label')))),
+            Slot::each('items', Compile::shape(li(Slot::value('value')))),
             Slot::if('flag', Compile::shape(em('on')), Compile::shape(em('off'))),
             Slot::eachKind('kinds', ['a' => Compile::shape(i('A')), 'b' => Compile::shape(b('B'))]),
         ));
@@ -110,7 +110,7 @@ class SlotTest extends TestCase
     {
         foreach ([static fn (): string => 'x', ['nested' => new stdClass()], new stdClass()] as $bad) {
             try {
-                Slot::text('value')->default($bad);
+                Slot::value('value')->default($bad);
                 $this->fail('Expected InvalidArgumentException to be thrown.');
             } catch (InvalidArgumentException $e) {
                 $this->assertStringContainsString('default must be null, a scalar or an array of value types', $e->getMessage());
@@ -120,7 +120,7 @@ class SlotTest extends TestCase
 
     public function testDefaultAcceptsAValueTypeArray(): void
     {
-        $item = Compile::shape(li(Slot::text('v')));
+        $item = Compile::shape(li(Slot::value('v')));
         $shape = Compile::shape(ul(Slot::each('items', $item)->default([])));
 
         $this->assertSame('<ul></ul>', $shape([]));
@@ -129,8 +129,8 @@ class SlotTest extends TestCase
     public function testEachKindDispatchesByKind(): void
     {
         $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::text('value'))),
-            'link' => Compile::shape(a(Slot::text('value'))->href(Slot::attr('href'))),
+            'text' => Compile::shape(p(Slot::value('value'))),
+            'link' => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
         ])));
 
         $this->assertSame(
@@ -154,7 +154,7 @@ class SlotTest extends TestCase
     public function testEachKindRejectsUnknownKindWithFullPath(): void
     {
         $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::text('value'))),
+            'text' => Compile::shape(p(Slot::value('value'))),
         ])));
 
         try {
@@ -169,7 +169,7 @@ class SlotTest extends TestCase
     public function testEachKindRejectsNonArrayAndMissingKind(): void
     {
         $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::text('value'))),
+            'text' => Compile::shape(p(Slot::value('value'))),
         ])));
 
         try {

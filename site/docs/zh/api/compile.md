@@ -12,10 +12,10 @@ use Pure\Core\Slot;
 use function Pure\HTML\{div, h1, li, p, ul};
 
 // 每个进程构建 + 编译一次
-$item  = Compile::shape(li(Slot::text('title')));
+$item  = Compile::shape(li(Slot::value('title')));
 $shape = Compile::shape(
     div(
-        h1(Slot::text('heading')),
+        h1(Slot::value('heading')),
         ul(Slot::each('items', $item))
     )->class('card')
 );
@@ -36,31 +36,28 @@ echo $shape([
 | --- | --- |
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
-| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = null)`，以及只读属性 `source` / `id` |
-| `Pure\Core\Slot` | 占位符构造器（`text`、`attr`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
+| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
+| `Pure\Core\Slot` | 占位符构造器（`value`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
 ## 函数组件
-
 组件单元把惰性模板工厂注册到一个名字下，紧挨着的组件函数渲染这个名字。
-`Pure\Component\render()` 在一个表达式里把注册的模板变成 `Raw` 标记：
+`Pure\Component\render()` 在一个表达式里返回渲染好的 string：
 
 ```php
 <?php
 
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
-    div(h2(Slot::text('title')), p(Slot::text('content')))->class('card')
-));
+register('Card', __FILE__, static fn () =>
+    div(h2(Slot::value('title')), p(Slot::value('content')))->class('card')
+);
 
-function Card(string $title, string $content): Raw
+function Card(string $title, string $content): string
 {
     return render('Card', title: $title, content: $content);
 }
@@ -68,25 +65,24 @@ function Card(string $title, string $content): Raw
 
 | 函数 | 行为 |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false): void` | 注册组件单元；工厂必须惰性且返回 `Shape` |
-| `render(string $source, mixed ...$data): Raw` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
-| `bind(Tag\|string $source): Closure` | 返回片段可复用的 `fn (array $data): Raw` 绑定器 |
+| `register(string $name, string $file, Closure $factory, bool $override = false): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape` |
+| `render(string $source, mixed ...$data): string` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
 
-`render()` 与 `bind()` 按原样输出树，**不带文档头**；整份文档的文档头由调用方
+`render()` 按原样输出树，**不带文档头**；整份文档的文档头由调用方
 自己拼接（`$root->documentHeader()`，或字面量 `<!DOCTYPE html>` /
 `<?xml version="1.0"?>`）。
 
 `render()` 的槽位值按名字传入（`render('Card', title: $title)`），也可以传解包的字符串键
-数组；位置参数会被 `RuntimeException` 拒绝。`bind()` 是更底层的助手，
-用于内联树，或需要自己把绑定器存进 `static` 变量的场合。
+数组；位置参数会被 `RuntimeException` 拒绝。需要自己持有或传递绑定器时，用
+`Registry::component($source)`，它返回 `Closure(array $data): string`。
 
-传入 `Tag` 时就地编译；传入字符串时视为注册名、`*.cmp.php` 单元路径或 `*.shape.php` 模板
+传入字符串时视为注册名、`*.cmp.php` 单元路径或 `*.shape.php` 模板
 路径。同名注册到另一个文件、或同一文件注册另一个名字都会抛异常，除非传 `override: true`；
 一个单元文件只注册一个组件。名字与它单元文件的路径解析到同一个绑定器。
 
 对文件而言，相邻的 `*.pure.php` 产物存在且不早于单元/shape 文件时直接加载，生产环境因此
 跳过工厂调用与形状树构建；否则调用工厂（每个编译 generation 一次）或编译 shape 文件
-（磁盘缓存仍然生效）。文件缺失、模板未返回 `Shape`、产物未返回 `Renderer` 都会抛出带文件名
+（磁盘缓存仍然生效）。文件缺失、模板未返回标签树或 `Shape`、产物未返回 `Renderer` 都会抛出带文件名
 的 `RuntimeException`。用 `pure compile` 为所有 `*.shape.php` 与 `*.cmp.php` 构建产物，
 用 `pure compile --list` 打印发现的单元，用 `pure compile --check` 在 CI 中保证产物新鲜。
 
@@ -100,26 +96,25 @@ function Card(string $title, string $content): Raw
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): Raw` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
-| `h2($title)` | `h2(Slot::text('title'))` |
-| `->class($classList)` | 静态值用 `->class($classList)`，动态值用 `->class(Slot::attr('classList'))` |
+| `function Card(array $props): HTML` | `function Card(string $title): string` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
+| `h2($title)` | `h2(Slot::value('title'))` |
+| `->class($classList)` | 静态值用 `->class($classList)`，动态值用 `->class(Slot::value('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，把拼接好的标记经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | 调用 `Child(...)` 并把它的 `Raw` 经 `Slot::raw()` 注入 |
+| `<Child($props)>` | 调用 `Child(...)`，把返回的标记经 `Slot::raw()` 注入 |
 
-没有 props 的子组件也可以直接作为子节点传给模板：`Raw` 是合法的标签内容，该子树会被
-编译成字面量。
+子组件的标记就是普通字符串，因此要经 raw 槽位进入模板——直接作为字符串子节点会被转义成文本：
 
 ```php
-$shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
+$shape = Compile::shape(div(Slot::raw('header'), Slot::each('rows', $row))->class('page'));
+$shape(['header' => Header(), 'rows' => $rows]);
 ```
 
 ## 槽位类型
 
 | 构造器 | 值 | 行为 |
 | --- | --- | --- |
-| `Slot::text($name)` | 可字符串化或 `null` | 转换为字符串后转义；`null` 渲染为空内容 |
-| `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 时省略该属性（与 `setAttr(null)` 相同） |
+| `Slot::value($name)` | 可字符串化或 `null` | 位置决定语义：子节点位转字符串后转义（`null` 渲染为空内容，`true` 为 "1"）；属性位遵循 `setAttr()`（`true` 渲染 `name="name"`，`false`/`null` 省略该属性） |
 | `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；集合按顺序拼接 |
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个 item 渲染一次 `$shape` |
@@ -133,13 +128,13 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - 嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
-值槽位（`text`、`attr`、`raw`）必须可字符串化：接受 `null`、标量和 `Stringable`（含子
-组件返回的 `Raw`）；其它对象抛出 `InvalidArgumentException`，错误信息中会指出完整槽位路径。
+值槽位与 raw 槽位必须可字符串化：接受 `null`、标量和 `Stringable`（含 `Raw`）；其它对象
+抛出 `InvalidArgumentException`，错误信息中会指出完整槽位路径。
 `raw` 槽位额外接受这类值的可迭代集合并原样拼接；某个元素不可字符串化时，报错会带上下标，
 例如 `slot 'items[2]' must be stringable`。
 
-选择列表槽位看标记是否已渲染：`raw()` 直接拼接已渲染好的标记（传单个 `Raw` 或它们的列表），
-`each()` 则是数据驱动、逐项用自己的 shape 渲染。
+选择列表槽位看标记是否已渲染：`raw()` 直接拼接已渲染好的标记（传渲染好的字符串、单个
+`Raw` 或它们的列表），`each()` 则是数据驱动、逐项用自己的 shape 渲染。
 
 ## 静态子树折叠
 
@@ -147,10 +142,15 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 因此这类子树在渲染期没有任何开销：
 
 ```php
-$shape = Compile::shape(div(Header(), Slot::text('title')));
+$shape = Compile::shape(div(
+    Slot::raw('header'),
+    div('Static footer')->class('footer'),
+    Slot::value('title')
+));
 ```
 
-`Header()` 作为字面量输出；只有 `title` 保持动态。
+`div('Static footer')` 会被折叠成字面量；`header` 与 `title` 保持动态，已渲染好的
+`Header()` 标记则在渲染时经 raw 槽位进入。
 
 ## 结构指纹
 
@@ -170,18 +170,17 @@ $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
 ```php
 $compiled = $shape->compile();
 
-$compiled->render($data);         // 返回 string
-$compiled->save($path, $data);    // 写入文件，返回写入的字节数
-$compiled->source;                // 生成的 PHP 源码（预编译产物为空）
-$compiled->header;                // 编译期捕获的文档声明
-$compiled->id;                    // 结构指纹（与 Shape::id() 相同）
+$compiled->render($data);                    // 返回 string
+$compiled->save($path, $data);               // 写入文件，返回写入的字节数
+$compiled->save($path, $data, $header);      // 在文件开头补上 $header
+$compiled->source;                           // 生成的 PHP 源码（预编译产物为空）
+$compiled->id;                               // 结构指纹（与 Shape::id() 相同）
 ```
 
 `Shape::save($path, $data)` 是面向用户的便捷方法：写出渲染结果，并补上根标签的文档声明
 （例如 `<!DOCTYPE html>` 或 XML 声明），除非你传入自己的声明。
-`Renderer::save()` 在 `$header` 为 null 时使用编译期捕获的声明——运行时编译的渲染器为空，
-[预编译产物](/zh/guide/compiled#预编译产物) 则为根标签的声明。`Renderer::$header`
-暴露该声明，因此处理器可以直接输出完整文档：`$renderer->header . $renderer->render($data)`。
+`Renderer::save()` 则把声明作为可选的第三个参数，默认为空，因此需要整份文档的处理器
+自己拼接：`'<!DOCTYPE html>' . $renderer->render($data)`。
 
 ## 磁盘缓存
 
@@ -224,8 +223,7 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 
 - 必填槽位缺失：`Pure\Core\MissingSlotException`，带完整路径，例如
   `slot 'items[].title' is required but was not provided.`
-- 位置错误（`Slot::attr` 用作子节点、`Slot::text` 用作属性值）或缺少形状：编译期抛
-  `LogicException`。
+- 位置错误（raw 槽用作属性值）或缺少形状：编译期抛 `LogicException`。
 - `Slot::eachKind()` 没有分支形状，或判别键为空、数字形：构建期抛
   `InvalidArgumentException`（对 `Slot::if()` 使用 `required()` / `default()` 会抛
   `LogicException`）。

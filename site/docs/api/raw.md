@@ -3,6 +3,18 @@
 `Pure\Core\Raw` represents trusted markup that is emitted verbatim instead of
 being escaped.
 
+## Core, Not Component Layer
+
+`Raw` lives in `Pure\Core` and is useful for verbatim children inside a shape
+tree (e.g. `div(Raw::of('<b>x</b>'))`) and for passing already-rendered markup
+into a `Slot::raw()` slot. The component layer itself (`render()`, component
+functions) returns plain `string`; there is no `Raw` type at the component API.
+
+> **Trust boundary** — once `render()` returns a `string`, the type system can
+> no longer tell whether that string is trusted markup or ordinary text. Trust
+> is now carried by the raw slot contract: values passed into a raw slot are
+> emitted verbatim; values passed into a value slot are always escaped.
+
 ## Why Raw Content is Important
 
 String content is always escaped, so markup-looking text is displayed instead of
@@ -24,6 +36,7 @@ The Raw class emits content verbatim when you need trusted markup:
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // Raw content preserves markup
@@ -71,6 +84,7 @@ echo $raw; // Output: <em>Italic text</em>
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // Embed pre-formatted HTML content
@@ -89,6 +103,7 @@ echo $content;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\{div, h1};
 
 // Include content from external source
@@ -108,6 +123,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\{html, head, title, body};
 
 function includeTemplate(string $templatePath): string
@@ -135,6 +151,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use Pure\Core\XML;
 
 $document = XML::document(
@@ -155,6 +172,7 @@ echo $document;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 $isDevelopment = true;
@@ -175,6 +193,7 @@ echo $page;
 <?php
 
 use Pure\Core\Raw;
+
 use function Pure\HTML\div;
 
 // ❌ DANGEROUS - Never do this with user input

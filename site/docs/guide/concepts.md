@@ -62,8 +62,8 @@ use function Pure\HTML\{div, h1, p};
 
 $shape = Compile::shape(
     div(
-        h1(Slot::text('heading')),
-        p(Slot::text('lead'))
+        h1(Slot::value('heading')),
+        p(Slot::value('lead'))
     )->class('container')
 );
 ```
@@ -72,16 +72,14 @@ Slot types:
 
 | Slot | Binds | Creates a nested scope |
 | --- | --- | --- |
-| `Slot::text()` | stringable value, escaped | no |
-| `Slot::attr()` | attribute value, escaped | no |
+| `Slot::value()` | scalar / `null` / `Stringable` | no — child position escapes to text; attribute position follows `setAttr()` semantics (`true`→`name="name"`, `false`/`null` omitted) |
 | `Slot::raw()` | stringable value (or a list of them), verbatim | no |
 | `Slot::child()` | array | yes |
 | `Slot::each()` | iterable of arrays | yes, per item |
 | `Slot::if()` | truthy condition | no (branches share the scope) |
-| `Slot::eachKind()` | iterable of arrays with a discriminator | yes, per item |
 
 A slot name is always the **data key** (and the error path), never a tag or
-attribute name: in `a(Slot::text('label'))->class(Slot::attr('classList'))` the
+attribute name: in `a(Slot::value('label'))->class(Slot::value('classList'))` the
 text binds `label` and the class attribute binds `classList`, while `a` and
 `class` come from the tree.
 
@@ -124,7 +122,7 @@ Rendering a shape binds plain data:
 ```php
 <?php
 
-$list = Compile::shape(ul(Slot::each('items', li(Slot::text('title')))));
+$list = Compile::shape(ul(Slot::each('items', li(Slot::value('title')))));
 
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```
@@ -138,28 +136,26 @@ slot `title` resolves against the current item. Missing required keys throw
 ## Components
 
 A component is one `*.cmp.php` unit: a function with typed parameters returning
-`Raw`, plus the lazy factory registered next to it:
+`string`, plus the lazy factory registered next to it:
 
 ```php
 <?php
 
 // components/Card.cmp.php
 use Pure\Compile\Compile;
-use Pure\Compile\Shape;
-use Pure\Core\Raw;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn (): Shape => Compile::shape(
+register('Card', __FILE__, static fn () =>
     div(
-        h2(Slot::text('title')),
-        p(Slot::text('content'))
-    )->class(Slot::attr('class'))
-));
+        h2(Slot::value('title')),
+        p(Slot::value('content'))
+    )->class(Slot::value('class'))
+);
 
-function Card(string $title, string $content, string $class = 'card'): Raw
+function Card(string $title, string $content, string $class = 'card'): string
 {
     return render('Card', title: $title, content: $content, class: $class);
 }
@@ -178,12 +174,11 @@ State is plain PHP: values are passed into the shape as data.
 ```php
 <?php
 
-use Pure\Core\Raw;
 
 use function Pure\HTML\{button, div, p};
 use function Pure\Component\render;
 
-function Counter(int $count): Raw
+function Counter(int $count): string
 {
     return render('Counter', count: $count);
 }
@@ -216,6 +211,27 @@ class Store
 Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
+
+## Conditional and Heterogeneous Lists
+
+The main table above covers the everyday slots. For mixed lists — one data
+shape, several markup variants — `Slot::eachKind()` dispatches every item on a
+discriminator key to the matching shape:
+
+```php
+$blocks = Compile::shape(div(Slot::eachKind('blocks', [
+    'text' => p(Slot::value('value')),
+    'link' => a(Slot::value('value'))->href(Slot::value('href')),
+])));
+
+$blocks(['blocks' => [
+    ['kind' => 'text', 'value' => 'hello'],
+    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
+]]);
+```
+
+An unknown kind throws. See [Heterogeneous lists](/guide/compiled#heterogeneous-lists-eachkind)
+in the compiled guide for the full treatment.
 
 ## Next Steps
 

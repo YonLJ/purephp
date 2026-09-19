@@ -11,5 +11,5 @@ require_once __DIR__ . '/../../views/counter.cmp.php';
  */
 function indexController(): string
 {
-    return (string)counterPage(counterData());
+    return counterPage(counterData());
 }
