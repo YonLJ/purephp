@@ -88,4 +88,24 @@ class SVG extends XML
     {
         return new SVG($tag, $children);
     }
+
+    /**
+     * An SVG tree is a fragment: icons and illustrations are inlined into an
+     * HTML document. The XML declaration of a standalone `.svg` file stays
+     * available through `documentHeader()` and `save()`.
+     */
+    public function isDocumentRoot(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Warn once per attribute name when a setter carries a near-miss standard
+     * attribute. Development guard only, off by default; XML disables it, SVG
+     * turns it back on.
+     */
+    protected function guardAttributeName(string $key): void
+    {
+        $this->guardStandardAttribute($key);
+    }
 }

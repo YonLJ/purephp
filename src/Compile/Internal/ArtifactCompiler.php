@@ -16,10 +16,11 @@ use Throwable;
  * Builds precompiled artifacts: plain PHP files that return a Renderer, and
  * plain views that need no library at render time.
  *
- * An artifact carries the compiled closure, the shape fingerprint and the
- * document header of the root tag, so loading it needs neither the shape tree
- * nor the compile cache. A plain view carries the document header and the
- * markup itself, and reads its slots from locals, so production can serve it
+ * An artifact carries the compiled closure, the shape fingerprint and the root
+ * slot manifest, so loading it needs neither the shape tree nor the compile
+ * cache. A plain view carries the markup itself, reads its slots from locals,
+ * and is preceded by the document header only when its root is a document root
+ * (an `<html>` or XML tree, not a fragment), so production can serve it
  * without purephp installed.
  *
  * @internal
@@ -247,10 +248,30 @@ final class ArtifactCompiler
         $artifact .= "return new Renderer(\n";
         $artifact .= "    \$pureBody,\n";
         $artifact .= "    '',\n";
-        $artifact .= '    ' . var_export($id, true) . "\n";
+        $artifact .= '    ' . var_export($id, true) . ",\n";
+        $artifact .= '    ' . self::slotList(RootSlots::of($tree)) . "\n";
         $artifact .= ");\n";
 
         return $artifact;
+    }
+
+    /**
+     * The root slot manifest of an artifact: the development guard reads the
+     * data keys of the template from it without rebuilding the shape tree.
+     *
+     * @param list<string> $slots The root slot names.
+     * @return string The literal list, wrapped when it grows long.
+     */
+    private static function slotList(array $slots): string
+    {
+        $items = array_map(static fn (string $slot): string => var_export($slot, true), $slots);
+        $inline = '[' . implode(', ', $items) . ']';
+
+        if (strlen($inline) <= 100) {
+            return $inline;
+        }
+
+        return "[\n        " . implode(",\n        ", $items) . "\n    ]";
     }
 
     /**

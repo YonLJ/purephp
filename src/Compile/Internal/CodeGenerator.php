@@ -23,9 +23,15 @@ final class CodeGenerator extends RendererGenerator
     /** @var list<string> */
     private array $lines = [];
 
-    public static function compile(Tag $tree, ShapeIndex $index): Renderer
+    /**
+     * @param Tag $tree The shape tree to compile.
+     * @param ShapeIndex $index The structure fingerprint of the tree.
+     * @param list<string>|null $slots The root slot names, for the development guard.
+     * @return Renderer The compiled renderer.
+     */
+    public static function compile(Tag $tree, ShapeIndex $index, ?array $slots = null): Renderer
     {
-        return self::fromSource(self::generate($tree), $index->id());
+        return self::fromSource(self::generate($tree), $index->id(), $slots);
     }
 
     /**
@@ -64,16 +70,17 @@ final class CodeGenerator extends RendererGenerator
      *
      * @param string $source The generated PHP source.
      * @param string $id The shape fingerprint.
+     * @param list<string>|null $slots The root slot names, for the development guard.
      * @return Renderer The compiled renderer.
      */
-    public static function fromSource(string $source, string $id): Renderer
+    public static function fromSource(string $source, string $id, ?array $slots = null): Renderer
     {
         $closure = eval('return ' . $source . ';');
         if (!$closure instanceof Closure) {
             throw new LogicException('failed to compile shape renderer.');
         }
 
-        return new Renderer($closure, $source, $id);
+        return new Renderer($closure, $source, $id, $slots);
     }
 
     protected function emitLiteral(string $text): void

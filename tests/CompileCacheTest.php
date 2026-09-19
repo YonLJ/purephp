@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ShapeGuard;
+use Pure\Core\DevMode;
 use Pure\Core\Slot;
 
 use function Pure\HTML\div;
@@ -14,6 +15,35 @@ use function Pure\HTML\ul;
 
 class CompileCacheTest extends TestCase
 {
+    /**
+     * Run the callback with E_USER_WARNING collected instead of raised, and
+     * return the messages.
+     *
+     * @param callable(): void $run
+     * @return list<string>
+     */
+    private static function captureWarnings(callable $run): array
+    {
+        $warnings = [];
+
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            $run();
+        } finally {
+            restore_error_handler();
+        }
+
+        return $warnings;
+    }
     private string $dir = '';
 
     protected function setUp(): void
@@ -23,6 +53,7 @@ class CompileCacheTest extends TestCase
         $this->dir = sys_get_temp_dir() . '/purephp-cache-' . bin2hex(random_bytes(6));
         Compile::cachePath($this->dir);
         Compile::flush();
+        DevMode::reset();
     }
 
     protected function tearDown(): void
@@ -316,6 +347,46 @@ class CompileCacheTest extends TestCase
 
         $this->assertCount(1, $warnings);
         $this->assertStringContainsString('static', $warnings[0]);
+    }
+
+    public function testGuardWarnsAboutDataKeysTheTemplateDoesNotRead(): void
+    {
+        Compile::guard(true);
+
+        try {
+            $shape = Compile::shape(div(Slot::value('title')));
+
+            $warnings = self::captureWarnings(static function () use ($shape): void {
+                // The same key twice: the guard reports it once.
+                $shape(['title' => 't', 'titel' => 'typo']);
+                $shape(['title' => 't', 'titel' => 'typo']);
+            });
+        } finally {
+            Compile::guard(false);
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString("unknown data key 'titel' (did you mean 'title'?)", $warnings[0]);
+        $this->assertStringContainsString('the template reads: title', $warnings[0]);
+    }
+
+    public function testDataKeyGuardEnablesFromTheEnvironmentVariable(): void
+    {
+        (new ReflectionProperty(DevMode::class, 'enabled'))->setValue(null, null);
+        (new ReflectionProperty(DevMode::class, 'warned'))->setValue(null, []);
+        putenv('PURE_COMPILE_GUARD=1');
+
+        try {
+            $warnings = self::captureWarnings(static function (): void {
+                Compile::shape(div(Slot::value('title')))(['title' => 't', 'extra' => 1]);
+            });
+        } finally {
+            putenv('PURE_COMPILE_GUARD');
+            Compile::guard(false);
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString("unknown data key 'extra'", $warnings[0]);
     }
 
     public function testStaleCacheVersionIsRegenerated(): void

@@ -85,9 +85,11 @@ final class RendererCache
     /**
      * @param string $file The cache file path.
      * @param string $id The expected fingerprint.
+     * @param list<string>|null $slots The root slot names of the shape, for the
+     *     development guard; the cached file stores only the closure.
      * @return Renderer|null The cached renderer, or null if invalid or missing.
      */
-    public static function load(string $file, string $id): ?Renderer
+    public static function load(string $file, string $id, ?array $slots = null): ?Renderer
     {
         $contents = @file_get_contents($file);
         if ($contents === false) {
@@ -126,7 +128,7 @@ final class RendererCache
             $body = substr($body, 7, -1);
         }
 
-        return new Renderer($closure, $body, $id);
+        return new Renderer($closure, $body, $id, $slots);
     }
 
     /**

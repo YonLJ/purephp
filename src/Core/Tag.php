@@ -218,6 +218,23 @@ abstract class Tag implements ShapeContract
     }
 
     /**
+     * Whether this tag is a document root, whose header belongs to a complete
+     * document (`<!DOCTYPE html>`, the XML declaration).
+     *
+     * Fragments — a div, an inline SVG icon — have none, so a plain view of a
+     * fragment starts with its markup. The vocabulary classes override this:
+     * an HTML tree is a document when its root is `<html>`, and an XML tree
+     * always is; an SVG tree is a fragment, whose standalone-file header stays
+     * available through `documentHeader()` / `save()`.
+     *
+     * @return bool Whether the document header belongs before this tag.
+     */
+    public function isDocumentRoot(): bool
+    {
+        return false;
+    }
+
+    /**
      * Check whether this tag is marked as self-closing.
      *
      * @return bool Whether the tag is self-closing.
@@ -316,6 +333,7 @@ abstract class Tag implements ShapeContract
     public function setAttrByCb(string $key, callable $callback): self
     {
         $key = self::normalizeAttrKey($key);
+        $this->guardAttributeName($key);
         $value = $callback($this->attrs[$key] ?? null);
         if (is_null($value)) {
             unset($this->attrs[$key]);
@@ -342,6 +360,7 @@ abstract class Tag implements ShapeContract
         }
 
         $key = self::normalizeAttrKey((string)$key);
+        $this->guardAttributeName($key);
 
         if ($value instanceof Slot) {
             $this->attrs[$key] = $value;
@@ -359,6 +378,44 @@ abstract class Tag implements ShapeContract
         $this->attrs[$key] = self::stringifyAttrValue($this->tagName, $key, $value);
 
         return $this;
+    }
+
+    /**
+     * Development guard hook: a vocabulary class warns when a setter carries a
+     * near-miss standard attribute name (see AttributeNames). The base class
+     * accepts any attribute name, so this is a no-op; HTML and SVG override it
+     * with guardStandardAttribute().
+     *
+     * @param string $key The normalized attribute name.
+     */
+    protected function guardAttributeName(string $key): void
+    {
+    }
+
+    /**
+     * Warn once per attribute name when a setter carries a name one edit away
+     * from a standard attribute, so `->clas(...)` or `->hreff(...)` is not a
+     * silent custom attribute. Development guard only, off by default.
+     *
+     * @param string $key The normalized attribute name.
+     */
+    protected function guardStandardAttribute(string $key): void
+    {
+        if (!(DevMode::$enabled ?? DevMode::resolve())) {
+            return;
+        }
+
+        $nearest = AttributeNames::nearest($key);
+
+        if ($nearest === null) {
+            return;
+        }
+
+        DevMode::warn(
+            'attribute:' . $key,
+            "Element '{$this->getTagName()}' has no standard attribute '{$key}'; did you mean '{$nearest}'? "
+            . 'Ignore this warning for a custom attribute, or disable the guard with Compile::guard(false).'
+        );
     }
 
     /**

@@ -28,6 +28,23 @@ class XML extends Tag
         return new XML($tag, $children);
     }
 
+    /**
+     * Every XML tree the generic class builds is document-shaped, so its
+     * header (the XML declaration) belongs before it.
+     */
+    public function isDocumentRoot(): bool
+    {
+        return true;
+    }
+
+    /**
+     * An XML tree names its own elements and attributes, so no standard
+     * attribute list applies and the development guard stays quiet.
+     */
+    protected function guardAttributeName(string $key): void
+    {
+    }
+
     protected function defaultHeader(): string
     {
         return '<?xml version="1.0"?>';

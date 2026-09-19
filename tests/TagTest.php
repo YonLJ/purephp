@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Compile\Compile;
+use Pure\Core\DevMode;
 use Pure\Core\HTML;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
@@ -16,6 +18,41 @@ use function Pure\HTML\span;
 
 class TagTest extends TestCase
 {
+    public function testDevGuardWarnsAboutNearMissAttributeNames(): void
+    {
+        DevMode::reset();
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        Compile::guard(true);
+
+        try {
+            $this->assertSame('<div hreff="/a">x</div>', div('x')->hreff('/a')->render());
+            $this->assertSame('<div hreff="/b">y</div>', div('y')->hreff('/b')->render());
+            div('x')->clas('c');
+            // Exact standard names, custom data attributes and XML attributes
+            // stay silent.
+            div('x')->for('name')->rel('help')->data_id('7');
+            XML::item('x')->customFlag('y');
+        } finally {
+            Compile::guard(false);
+            restore_error_handler();
+        }
+
+        $this->assertCount(2, $warnings);
+        $this->assertStringContainsString("Element 'div' has no standard attribute 'hreff'; did you mean 'href'?", $warnings[0]);
+        $this->assertStringContainsString("Element 'div' has no standard attribute 'clas'; did you mean 'class'?", $warnings[1]);
+    }
+
     public function testToStringIsEquivalentToRender(): void
     {
         $tag = div(p('Hello'))->class('container');

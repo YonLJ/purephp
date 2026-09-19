@@ -6,8 +6,10 @@ namespace Pure\Compile;
 
 use Pure\Compile\Internal\CodeGenerator;
 use Pure\Compile\Internal\RendererCache;
+use Pure\Compile\Internal\RootSlots;
 use Pure\Compile\Internal\ShapeGuard;
 use Pure\Compile\Internal\ShapeIndex;
+use Pure\Core\DevMode;
 use Pure\Core\Tag;
 
 final class Compile
@@ -16,7 +18,7 @@ final class Compile
      * Bump when the generated-code format, the fingerprint composition or a
      * class name referenced by generated code changes.
      */
-    public const CACHE_VERSION = 12;
+    public const CACHE_VERSION = 13;
 
     private static int $generation = 0;
 
@@ -119,14 +121,18 @@ final class Compile
     }
 
     /**
-     * Warn once per call site when Compile::shape() is called repeatedly from
-     * the same place, which usually means the shape is rebuilt per request.
+     * Enable the development guard: repeated Compile::shape() calls from one
+     * call site warn once (usually a shape rebuilt per request), and renderer
+     * bindings whose keys the template does not read are reported once, as are
+     * near-miss attribute names. Off unless enabled here or by
+     * PURE_COMPILE_GUARD=1.
      *
-     * @param bool $enabled Whether to enable the warning (default true).
+     * @param bool $enabled Whether to enable the guard (default true).
      */
     public static function guard(bool $enabled = true): void
     {
         ShapeGuard::enable($enabled);
+        DevMode::enable($enabled);
     }
 
     /**
@@ -152,11 +158,12 @@ final class Compile
         // describe an older tree after a mutation and poison the cache file.
         $index = ShapeIndex::of($tree);
         $id = $index->id();
+        $slots = RootSlots::of($tree);
         $dir = self::$cachePath;
 
         if ($dir !== null) {
             $file = $dir . '/' . $id . '.php';
-            $cached = RendererCache::load($file, $id);
+            $cached = RendererCache::load($file, $id, $slots);
             if ($cached !== null) {
                 self::memoize($id, $cached->source);
 
@@ -166,9 +173,9 @@ final class Compile
 
         $source = self::$sources[$id] ?? null;
         if ($source !== null) {
-            $compiled = CodeGenerator::fromSource($source, $id);
+            $compiled = CodeGenerator::fromSource($source, $id, $slots);
         } else {
-            $compiled = CodeGenerator::compile($tree, $index);
+            $compiled = CodeGenerator::compile($tree, $index, $slots);
             self::memoize($id, $compiled->source);
         }
 

@@ -12,6 +12,7 @@ use Pure\Compile\Internal\ShapeIndex;
 use Pure\Compile\Renderer;
 use Pure\Compile\Shape;
 use Pure\Component\Registry;
+use Pure\Core\DevMode;
 use Pure\Core\Raw;
 
 class ArtifactTest extends TestCase
@@ -28,6 +29,7 @@ class ArtifactTest extends TestCase
         Compile::cachePath(null);
         Compile::flush();
         Registry::reset();
+        DevMode::reset();
     }
 
     protected function tearDown(): void
@@ -71,8 +73,43 @@ class ArtifactTest extends TestCase
         $this->assertInstanceOf(Renderer::class, $renderer);
         $this->assertSame($shape->id(), $renderer->id);
         $this->assertSame('', $renderer->source);
+        $this->assertSame(['title'], $renderer->slots);
         $this->assertSame('<div class="card"><h2>a &amp; b</h2></div>', $renderer->render(['title' => 'a & b']));
         $this->assertSame($shape(['title' => 'a & b']), $renderer->render(['title' => 'a & b']));
+    }
+
+    public function testArtifactRenderersReportDataKeysTheTemplateDoesNotRead(): void
+    {
+        $file = $this->shapeFile(
+            'manifest.shape.php',
+            "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('title')));\n"
+        );
+        $renderer = self::load(ArtifactCompiler::write($file));
+
+        $this->assertInstanceOf(Renderer::class, $renderer);
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        Compile::guard(true);
+
+        try {
+            $this->assertSame('<div>t</div>', $renderer->render(['title' => 't', 'titel' => 'typo']));
+        } finally {
+            Compile::guard(false);
+            restore_error_handler();
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString("unknown data key 'titel' (did you mean 'title'?)", $warnings[0]);
     }
 
     public function testCompilesAShapeFileReturningABareTagTree(): void

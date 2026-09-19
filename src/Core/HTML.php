@@ -52,6 +52,23 @@ class HTML extends Tag
         return new HTML($tag, $children);
     }
 
+    /**
+     * The document element: only an `<html>` root heads a complete document.
+     */
+    public function isDocumentRoot(): bool
+    {
+        return strtolower($this->getTagName()) === 'html';
+    }
+
+    /**
+     * Warn once per attribute name when a setter carries a near-miss standard
+     * attribute. Development guard only, off by default.
+     */
+    protected function guardAttributeName(string $key): void
+    {
+        $this->guardStandardAttribute($key);
+    }
+
     protected function defaultHeader(): string
     {
         return '<!DOCTYPE html>';
