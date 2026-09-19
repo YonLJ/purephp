@@ -35,7 +35,7 @@ function HangingIcon(array $item): Raw
 {
     return render(
         'HangingIcon',
-        icon: (string)Icon('#' . $item['icon']),
+        icon: Icon('#' . $item['icon']),
         title: $item['title'],
         content: $item['content'],
         link: $item['link'],

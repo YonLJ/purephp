@@ -32,7 +32,7 @@ function CellIcon(array $item): Raw
 {
     return render(
         'CellIcon',
-        icon: (string)Icon('#' . $item['icon'], 'bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'),
+        icon: Icon('#' . $item['icon'], 'bi text-muted flex-shrink-0 me-3', '1.75em', '1.75em'),
         title: $item['title'],
         content: $item['content'],
     );

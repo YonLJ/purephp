@@ -521,14 +521,23 @@ class CompileTest extends TestCase
         $this->assertSame('<div></div>', $shape(['body' => null]));
     }
 
-    public function testArrayRawSlotValueIsRejected(): void
+    public function testRawSlotJoinsAnIterableVerbatim(): void
+    {
+        $shape = Compile::shape(div(Slot::raw('body')));
+
+        $this->assertSame('<div>ab</div>', $shape(['body' => ['a', 'b']]));
+        $this->assertSame('<div><i>x</i><i>y</i></div>', $shape(['body' => [Raw::of('<i>x</i>'), Raw::of('<i>y</i>')]]));
+        $this->assertSame('<div>ab</div>', $shape(['body' => ['a', 'b', null]]));
+    }
+
+    public function testRawSlotElementMustBeStringable(): void
     {
         $shape = Compile::shape(div(Slot::raw('body')));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("slot 'body' must be stringable, array given.");
 
-        $shape(['body' => ['a']]);
+        $shape(['body' => ['a', ['nested']]]);
     }
 
     public function testMissingAttributeSlotThrows(): void

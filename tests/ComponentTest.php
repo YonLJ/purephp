@@ -52,6 +52,54 @@ class ComponentTest extends TestCase
         $this->assertSame('<div>a &amp; b</div>', (string)$raw);
     }
 
+    public function testRawAndStringableSlotValuesAreCoercedWithoutACast(): void
+    {
+        $render = component(div(Slot::raw('content')));
+
+        // A Raw (trusted markup) is emitted verbatim in a raw slot, no cast.
+        $this->assertSame(
+            '<div><b>x</b></div>',
+            (string)$render(['content' => Raw::of('<b>x</b>')])
+        );
+
+        // Any Stringable is coerced the same way.
+        $stringable = new class () {
+            public function __toString(): string
+            {
+                return '<i>y</i>';
+            }
+        };
+        $this->assertSame(
+            '<div><i>y</i></div>',
+            (string)$render(['content' => $stringable])
+        );
+    }
+
+    public function testRawSlotJoinsALocalListOfComponentMarkup(): void
+    {
+        // A raw slot accepts a list of Raw / Stringable markup, emitted verbatim
+        // and concatenated, so a rendered list needs no intermediate implode().
+        $render = component(div(Slot::raw('navs')));
+
+        $navs = [Raw::of('<a>a</a>'), Raw::of('<b>b</b>')];
+        $this->assertSame(
+            '<div><a>a</a><b>b</b></div>',
+            (string)$render(['navs' => $navs])
+        );
+    }
+
+    public function testRawValueInATextSlotIsEscaped(): void
+    {
+        // raw() is the verbatim path; a Raw handed to a text slot is still
+        // stringified and escaped, keeping the safe default.
+        $render = component(div(Slot::text('content')));
+
+        $this->assertSame(
+            '<div>&lt;b&gt;x&lt;/b&gt;</div>',
+            (string)$render(['content' => Raw::of('<b>x</b>')])
+        );
+    }
+
     public function testPagePrependsTheDocumentHeader(): void
     {
         $render = page(html(body(Slot::text('title'))));

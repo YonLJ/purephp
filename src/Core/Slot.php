@@ -37,6 +37,10 @@ final class Slot
     /**
      * Text content slot: the value is coerced to string and escaped.
      *
+     * The bound value may be a string or any Stringable (including a Raw); it
+     * is stringified before escaping, so a Raw is not emitted verbatim here —
+     * use raw() for that.
+     *
      * @param string $name The slot name.
      * @return self
      */
@@ -50,7 +54,9 @@ final class Slot
      *
      * The attribute name comes from the setter
      * (`->class(Slot::attr('classList'))` sets `class`); $name is the data key
-     * holding the value.
+     * holding the value. The bound value may be a string or any Stringable
+     * (including a Raw); it is stringified and escaped for the attribute
+     * context.
      *
      * @param string $name The data key holding the attribute value.
      * @return self
@@ -62,6 +68,11 @@ final class Slot
 
     /**
      * Raw content slot: the value is emitted verbatim, without escaping.
+     *
+     * The bound value may be a string, any Stringable (including a Raw returned
+     * by another component), or an iterable of such values: each is stringified
+     * and the results are concatenated in order. Pass a Raw or a rendered list
+     * of component markup directly, without casting to string or implode().
      *
      * @param string $name The slot name.
      * @return self

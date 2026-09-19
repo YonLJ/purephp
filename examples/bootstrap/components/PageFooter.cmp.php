@@ -35,12 +35,12 @@ function PageFooter(array $logo, array $columns): Raw
     $links = [];
 
     foreach ($columns as $column) {
-        $links[] = (string)ColLinks($column);
+        $links[] = ColLinks($column);
     }
 
     return render(
         'PageFooter',
-        logo: (string)ColLogo($logo),
-        columns: implode('', $links),
+        logo: ColLogo($logo),
+        columns: $links,
     );
 }

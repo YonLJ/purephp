@@ -102,10 +102,13 @@ function page(Tag|string $source): Closure
  *     }
  *
  * Slot values are passed as named arguments, or as an unpacked array with
- * string keys: `render($file, ...$bindings)`.
+ * string keys: `render($file, ...$bindings)`. A slot value may be a string or
+ * any Stringable (including a Raw returned by another component): it is
+ * coerced to a string at render time, so a Raw is passed as-is without a
+ * `(string)` cast.
  *
  * @param string $source A registered name or the path of a `*.shape.php` file.
- * @param mixed ...$data The slot values, by slot name.
+ * @param mixed ...$data The slot values, by slot name: strings, or Raw / Stringable markup.
  * @return Raw The rendered markup.
  */
 function render(string $source, mixed ...$data): Raw
@@ -124,7 +127,7 @@ function render(string $source, mixed ...$data): Raw
  * its root tag.
  *
  * @param string $source A registered page name or the path of a `*.shape.php` file.
- * @param array<string, mixed> $data The slot values, by slot name.
+ * @param array<string, mixed> $data The slot values, by slot name: strings, or Raw / Stringable markup.
  * @return Raw The rendered document.
  */
 function renderPage(string $source, array $data): Raw

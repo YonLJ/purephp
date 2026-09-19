@@ -62,13 +62,13 @@ registerPage('Features', __FILE__, static function (): Shape {
  * view controller uses the same bindings, so both flavors render one page.
  *
  * @param array<string, mixed> $data The page data from the controller.
- * @return array{title: string, content: string}
+ * @return array{title: string, content: Raw}
  */
 function featuresBindings(array $data): array
 {
     return [
         'title' => $data['title'],
-        'content' => (string)FeaturesBody($data['content']),
+        'content' => FeaturesBody($data['content']),
     ];
 }
 
@@ -117,7 +117,7 @@ function renderItems(array $items, callable $component): string
     $html = '';
 
     foreach ($items as $item) {
-        $html .= (string)$component($item);
+        $html .= $component($item);
     }
 
     return $html;

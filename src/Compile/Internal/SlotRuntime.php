@@ -41,7 +41,12 @@ final class SlotRuntime
     }
 
     /**
-     * Coerce a slot value to verbatim output.
+     * Coerce a raw slot value to verbatim output.
+     *
+     * A single value (string, Raw, Stringable, or null) is stringified as-is;
+     * an iterable of such values is stringified element by element and
+     * concatenated, so a rendered list of component markup can be passed
+     * directly without an intermediate implode().
      *
      * @param mixed $value The slot value.
      * @param string $path The slot path for error messages.
@@ -49,6 +54,15 @@ final class SlotRuntime
      */
     public static function raw(mixed $value, string $path): string
     {
+        if (is_iterable($value)) {
+            $out = '';
+            foreach ($value as $item) {
+                $out .= self::stringify($item, $path);
+            }
+
+            return $out;
+        }
+
         return self::stringify($value, $path);
     }
 

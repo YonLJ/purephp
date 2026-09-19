@@ -28,7 +28,7 @@ function CardDeck(array $cards): Raw
     $items = [];
 
     foreach ($cards as $card) {
-        $items[] = (string)Card(
+        $items[] = Card(
             $card['type'],
             $card['price'],
             array_map(static fn (array $feature): string => $feature['value'], $card['features']),
@@ -39,6 +39,6 @@ function CardDeck(array $cards): Raw
 
     return render(
         'CardDeck',
-        cards: implode('', $items),
+        cards: $items,
     );
 }

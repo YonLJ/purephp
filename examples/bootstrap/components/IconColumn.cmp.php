@@ -37,7 +37,7 @@ function IconColumn(array $item): Raw
 {
     return render(
         'IconColumn',
-        icon: (string)Icon('#' . $item['icon']),
+        icon: Icon('#' . $item['icon']),
         title: $item['title'],
         content: $item['content'],
         link: $item['link'],

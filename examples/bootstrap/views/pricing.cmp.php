@@ -49,15 +49,15 @@ registerPage('Pricing', __FILE__, static function (): Shape {
  * controller uses the same bindings, so both flavors render one page.
  *
  * @param array<string, mixed> $data The page data from the controller.
- * @return array{header: string, pricing: string, deck: string, footer: string}
+ * @return array{header: Raw, pricing: Raw, deck: Raw, footer: Raw}
  */
 function pricingBindings(array $data): array
 {
     return [
-        'header' => (string)PageHeader('Company name', $data['header']['navs'], $data['header']['signUp']),
-        'pricing' => (string)PricingHeader($data['pricing']['title'], $data['pricing']['desc']),
-        'deck' => (string)CardDeck($data['deck']['cards']),
-        'footer' => (string)PageFooter($data['footer']['logo'], $data['footer']['links']),
+        'header' => PageHeader('Company name', $data['header']['navs'], $data['header']['signUp']),
+        'pricing' => PricingHeader($data['pricing']['title'], $data['pricing']['desc']),
+        'deck' => CardDeck($data['deck']['cards']),
+        'footer' => PageFooter($data['footer']['logo'], $data['footer']['links']),
     ];
 }
 

@@ -33,13 +33,13 @@ function PageHeader(string $companyName, array $navs, array $signUp): Raw
     $links = [];
 
     foreach ($navs as $nav) {
-        $links[] = (string)NavLink($nav['text'], $nav['href'], $nav['class']);
+        $links[] = NavLink($nav['text'], $nav['href'], $nav['class']);
     }
 
     return render(
         'PageHeader',
         company: $companyName,
-        navs: implode('', $links),
-        signUp: (string)NavLink($signUp['text'], $signUp['href'], $signUp['class']),
+        navs: $links,
+        signUp: NavLink($signUp['text'], $signUp['href'], $signUp['class']),
     );
 }

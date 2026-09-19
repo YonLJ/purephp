@@ -32,7 +32,7 @@ function FeatureTitle(array $item): Raw
 {
     return render(
         'FeatureTitle',
-        icon: (string)Icon('#' . $item['icon']),
+        icon: Icon('#' . $item['icon']),
         title: $item['title'],
         content: $item['content'],
     );

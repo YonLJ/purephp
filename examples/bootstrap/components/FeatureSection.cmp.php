@@ -39,13 +39,13 @@ function FeatureSection(string $title, array $main, array $features): Raw
     $items = [];
 
     foreach ($features as $feature) {
-        $items[] = (string)FeatureTitle($feature);
+        $items[] = FeatureTitle($feature);
     }
 
     return render(
         'FeatureSection',
         title: $title,
-        main: (string)MainFeature($main),
-        features: implode('', $items),
+        main: MainFeature($main),
+        features: $items,
     );
 }
