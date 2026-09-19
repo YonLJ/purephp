@@ -141,6 +141,19 @@ class CallTest extends TestCase
         FluentCard()->type(Slot::value('x'));
     }
 
+    public function testPropsSetSeveralValuesAtOnce(): void
+    {
+        $this->assertSame(
+            '<div class="card"><h2 class="card-title">Free</h2><p>Sign up</p><ul class="list"></ul></div>',
+            FluentCard()->props(['type' => 'Free', 'features' => [], 'text' => 'Sign up'])->render()
+        );
+
+        $this->assertSame(
+            '<div class="card"><h2 class="card-title">Free</h2><p>Sign up</p><ul class="list"></ul></div>',
+            FluentCard()->props(['type' => 'Free', 'features' => [], 'text' => 'Sign up', 'unused' => null])->render()
+        );
+    }
+
     public function testClassAndStyleJoinLikeTagSetters(): void
     {
         $this->assertSame('<div class="text-muted">x</div>', FluentPlain('x')->class('text-muted')->render());

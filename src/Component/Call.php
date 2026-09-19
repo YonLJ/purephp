@@ -112,6 +112,24 @@ final class Call implements Markup
     }
 
     /**
+     * Set several props at once, for a record whose keys are prop names:
+     * `Card()->props($row)`. Values follow the setter rules (a `null` leaves a
+     * prop unset, a Slot is rejected); use `class()` or `style()` when a value
+     * needs the joining semantics of those setters.
+     *
+     * @param array<array-key, mixed> $props The prop values by prop name.
+     * @return self
+     */
+    public function props(array $props): self
+    {
+        foreach ($props as $prop => $value) {
+            $this->set((string)$prop, $value);
+        }
+
+        return $this;
+    }
+
+    /**
      * Render the component and return its markup.
      *
      * @return string The rendered markup.
@@ -252,7 +270,25 @@ final class Call implements Markup
 
         foreach ($parameters as $parameter) {
             if ($parameter->isVariadic()) {
-                return $prepare(...$props);
+                return self::invoke($prepare, $props, $name);
+            }
+        }
+
+        // Fast path: the props are exactly the parameters, in any order, so the
+        // closure can be unpacked by name without the missing/unknown checks.
+        if (count($props) === count($parameters)) {
+            $complete = true;
+
+            foreach ($props as $prop => $_) {
+                if (!isset($parameters[(string)$prop])) {
+                    $complete = false;
+
+                    break;
+                }
+            }
+
+            if ($complete) {
+                return self::invoke($prepare, $props, $name);
             }
         }
 
@@ -287,10 +323,23 @@ final class Call implements Markup
             );
         }
 
+        return self::invoke($prepare, $arguments, $name);
+    }
+
+    /**
+     * Invoke a prepare() closure, naming the unit in a type error: the closure
+     * itself reports as `{closure}()`.
+     *
+     * @param Closure $prepare The registered prepare closure.
+     * @param array<string, mixed> $arguments The props to unpack by name.
+     * @param string $name The component name or template path, for messages.
+     * @return array<string, mixed> The bindings the closure returns.
+     */
+    private static function invoke(Closure $prepare, array $arguments, string $name): array
+    {
         try {
             return $prepare(...$arguments);
         } catch (TypeError $error) {
-            // Name the unit: the closure itself reports as `{closure}()`.
             throw new TypeError("component '{$name}': " . $error->getMessage(), 0, $error);
         }
     }

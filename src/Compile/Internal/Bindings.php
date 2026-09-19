@@ -421,7 +421,10 @@ final class Bindings
         for ($index = $openIndex + 1; $index < $count; $index++) {
             $token = $tokens[$index];
 
-            if ($token === '[' || $token === '(' || $token === '{') {
+            if (
+                $token === '[' || $token === '(' || $token === '{'
+                || is_array($token) && in_array($token[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true)
+            ) {
                 $depth++;
 
                 continue;
@@ -432,7 +435,9 @@ final class Bindings
             }
 
             if ($token === ']' || $token === ')' || $token === '}') {
-                $depth--;
+                // An interpolation or heredoc body can close more than it
+                // opens: never let the depth go negative.
+                $depth = max(0, $depth - 1);
 
                 continue;
             }

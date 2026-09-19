@@ -593,6 +593,121 @@ class CheckTest extends TestCase
         $this->assertStringNotContainsString('titel(...$props)', $result['stdout']);
     }
 
+    public function testPrepareKeysAreReadFromAnInterpolatedLiteral(): void
+    {
+        $file = $this->unitFile('fluent-interpolated.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckFluentInterpolated', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))->style(Slot::value('style')->default(null))
+                ),
+                prepare: static function (string $title, string $bg): array {
+                    return [
+                        'title' => $title,
+                        'style' => "background-image: url('{$bg}');",
+                    ];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringNotContainsString('prepare() does not return one array literal', $result['stdout']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testFluentUnitWithoutPreparePointsAtTheCallSites(): void
+    {
+        $file = $this->unitFile('fluent-plain.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            register('CheckFluentPlain', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            function CheckFluentPlain(mixed ...$children): Call
+            {
+                return component('CheckFluentPlain', ...$children);
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('fluent unit: its props are the template slots', $result['stdout']);
+    }
+
+    public function testCallMethodsAreNotReportedAsUnknownProps(): void
+    {
+        $this->unitFile('target-methods.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            register('CheckTargetMethods', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            function CheckTargetMethods(mixed ...$children): Call
+            {
+                return component('CheckTargetMethods', ...$children);
+            }
+            PHP);
+
+        $page = $this->unitFile('page-methods.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\section;
+
+            register('CheckPageMethods', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                section(Slot::raw('body'))
+            ));
+
+            function checkPageMethodsBody(): string
+            {
+                return (string) CheckTargetMethods()->props(['title' => 'a'])->render();
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringNotContainsString("binds 'props'", $result['stdout']);
+        $this->assertStringNotContainsString("binds 'render'", $result['stdout']);
+    }
+
     public function testUsageErrors(): void
     {
         $missing = $this->runCheck(['pure', 'check']);

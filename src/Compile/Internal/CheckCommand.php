@@ -27,6 +27,12 @@ use Throwable;
  */
 final class CheckCommand
 {
+    /**
+     * The Call methods that are not props; a chain entry naming one is only
+     * reported when the target has a prop of that name.
+     */
+    private const CALL_METHODS = ['props', 'render'];
+
     private const USAGE = <<<'USAGE'
         Pure contract checker.
 
@@ -212,7 +218,7 @@ final class CheckCommand
             }
 
             foreach (array_keys($site['props']) as $prop) {
-                if (in_array($prop, $expected, true)) {
+                if (in_array($prop, $expected, true) || in_array($prop, self::CALL_METHODS, true)) {
                     continue;
                 }
 

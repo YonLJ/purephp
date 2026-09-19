@@ -60,6 +60,16 @@ final class ContractChecker
             return array_merge($findings, self::checkPrepare($file, $name, $contract, $prepare));
         }
 
+        if ($function !== null && self::returnsCall($function)) {
+            // A fluent call factory: the props are the slots, and the call
+            // sites are checked against the manifest.
+            $findings[] = Finding::info(
+                'fluent unit: its props are the template slots, so the call sites are checked instead'
+            );
+
+            return $findings;
+        }
+
         $parameters = [];
 
         if ($function === null) {
@@ -203,6 +213,24 @@ final class ContractChecker
         }
 
         return $findings;
+    }
+
+    /**
+     * Whether a component function is a fluent call factory, i.e. declares the
+     * `Pure\Component\Call` return type of the documented one-liner.
+     */
+    private static function returnsCall(ReflectionFunction $function): bool
+    {
+        $type = $function->getReturnType();
+
+        if (!$type instanceof ReflectionNamedType) {
+            return false;
+        }
+
+        $name = $type->getName();
+        $position = strrpos($name, '\\');
+
+        return ($position === false ? $name : substr($name, $position + 1)) === 'Call';
     }
 
     /**
