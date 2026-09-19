@@ -93,6 +93,26 @@ First public version. No tag has been cut yet.
   `scalar|null|\Stringable`, condition slots `mixed`, child and list scopes
   become array shapes and iterables of them, and odd slot names are declared on
   the loader's `$data` shape. The annotations add no output bytes.
+- Development guard coverage beyond the shape-rebuild warning: with
+  `Compile::guard(true)` / `PURE_COMPILE_GUARD=1`, a rendered template reports
+  data keys it never reads (suggesting the closest slot, so a misspelled binding
+  is visible instead of rendering as if the value were absent), and a `Tag`
+  setter whose name is one edit away from a standard HTML/SVG attribute
+  (`->clas(...)`, `->hreff(...)`) warns instead of silently creating a custom
+  attribute. Each warning fires once per subject per process, and every check
+  costs one property read when the guard is off.
+- `Renderer::$slots`: the root slot manifest of a compiled renderer, embedded in
+  artifacts too, so the unknown-key report needs neither the shape tree nor a
+  recompile. `RootSlots` collects it while the shape compiles.
+- `Tag::isDocumentRoot()`: whether a root tag heads a complete document (an
+  `<html>` root, any XML root) and therefore owns a document header. An SVG tree
+  is a fragment whose standalone declaration stays available through
+  `documentHeader()` / `save()`.
+- Missing-slot errors are actionable: `MissingSlotException` suggests the closest
+  provided key (`slot 'title' is required but was not provided; did you mean
+  'titel'?`) or lists the keys the scope did provide, and rendering through
+  `render()` prefixes the component name or template path
+  (`component 'Card': slot 'title' is required ...`).
 
 ### Changed
 
@@ -271,8 +291,19 @@ First public version. No tag has been cut yet.
   `"Pure\\": "src/"` rule. The `@internal` machinery moved to
   `Pure\Compile\Internal\*` so the frozen surface (`Compile`, `Shape`,
   `Renderer`, `CompileException`) is visible in the tree. Generated renderers
-  reference `Pure\Compile\Internal\SlotRuntime`, so caches written by earlier
+  reference   `Pure\Compile\Internal\SlotRuntime`, so caches written by earlier
   versions are discarded and rebuilt.
+- **Breaking** — a required `Slot::value()` / `Slot::raw()` slot rejects an
+  explicit `null` with `slot 'x' is required but was null.` instead of silently
+  rendering empty; attribute slots keep omitting themselves for `null`, and
+  `->required(false)` / `->default(null)` keep the empty rendering, so only
+  templates that passed a `null` where a value was required are affected.
+- A plain view takes the document header only from a document root: pages
+  (`<html>` and XML roots) keep their `<!DOCTYPE html>` / XML declaration, while
+  a fragment view (`Card.plain.php`, an SVG icon) starts with its markup, so
+  including one cannot inject a header into the middle of a document.
+  `Compile::CACHE_VERSION` is now 13 because artifacts embed the slot manifest;
+  regenerate local artifacts with `pure compile --plain`.
 
 ### Removed
 
@@ -354,5 +385,10 @@ First public version. No tag has been cut yet.
 - `->default()` rejects objects, closures and resources with an
   `InvalidArgumentException` instead of failing later with a bare
   `serialize()` error or broken generated code.
+- The plain view of a fragment root carried the document header of its
+  vocabulary class, so a compiled `Card.plain.php` started with
+  `<!DOCTYPE html>` (and an SVG icon view with the XML declaration) while its
+  artifact rendered bare markup, contradicting the byte-identity claim. Plain
+  views now follow `Tag::isDocumentRoot()`.
 
 [Unreleased]: https://github.com/YonLD/purephp/commits/main

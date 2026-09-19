@@ -111,18 +111,25 @@ Then visit `http://localhost:8000` to see your first PurePHP application!
 
 ### 4. Enable the Development Guard
 
-While developing, enable the guard so a shape that is rebuilt per request is
-reported instead of silently slowing the page down:
+While developing, enable the guard so problems that are invisible in the output
+are reported instead of silently slowing the page down or rendering as empty:
 
 ```php
 // index.php, before the first render
 Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
 ```
 
-It emits one `E_USER_WARNING` per call site when the same place calls
-`Compile::shape()` too many times in one process, for example an inline
-`Compile::shape(...)` rebuilt on every call. File-backed components go through
-`render()`, which caches the binder per template path.
+It emits one `E_USER_WARNING` per subject per process:
+
+- a shape rebuilt per request: the same call site calls `Compile::shape()` more
+  than 20 times in one process, for example an inline `Compile::shape(...)`
+  rebuilt on every call. File-backed components go through `render()`, which
+  caches the binder per template path;
+- a binding the template never reads, with a `did you mean` suggestion, so a
+  misspelled key (`titel`) is not silently ignored;
+- an attribute setter whose name is one edit away from a standard attribute
+  (`->clas(...)`, `->hreff(...)`), which would otherwise become a custom
+  attribute no one notices.
 
 ## Basic Examples
 

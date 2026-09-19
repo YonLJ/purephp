@@ -86,8 +86,8 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 
 | 槽位 | 值 | 行为 |
 | --- | --- | --- |
-| `Slot::value($name)` | 可字符串化或 `null` | 位置决定语义：子节点位转义为文本（`null` 渲染为空，`true` 为 "1"）；属性位遵循 `setAttr()`（`true` 渲染 `name="name"`，`false`/`null` 省略该属性） |
-| `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；集合按顺序拼接 |
+| `Slot::value($name)` | 可字符串化；`null` 仅在可选槽或属性槽中可用 | 位置决定语义：子节点位转义为文本（`true` 为 "1"；必填槽拒绝 `null`）；属性位遵循 `setAttr()`（`true` 渲染 `name="name"`，`false`/`null` 省略该属性） |
+| `Slot::raw($name)` | 可字符串化值，或这类值的可迭代集合 | 原样输出，绝不转义；集合按顺序拼接 |
 | `Slot::child($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 渲染分支；缺失的键为 false |
@@ -103,13 +103,14 @@ Slot::value('subtitle')->required(false);   // 键缺失时渲染为空
 Slot::value('subtitle')->default('—');       // 键缺失时的回退值
 ```
 
-- `required(false)` 使槽位可选；此时其值按 `??` 语义读取（缺失时为 `null`）。
+- `required(false)` 使槽位可选；键缺失与显式传入 `null` 都渲染为空（属性位则省略该属性）。
+- 必填的值槽位与 raw 槽位既不接受缺失的键，也不接受显式的 `null`。
 - `default($value)` 为缺失的键提供回退值，并使槽位可选。回退值会被内联进编译后的渲染器，因此必须是值类型：`null`、标量或由值类型组成的数组。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符：它的条件是真值判断，回退为 `false`。
 
 ## 值转换与转义
 
-值槽位与 raw 槽位接受 `null`、标量和 `Stringable` 对象——包括 `Raw`，它不需要强制转换。使用前会先转换为字符串；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。raw 槽位更进一步，还接受可字符串化值的可迭代集合，并按顺序拼接它们。
+值槽位与 raw 槽位接受标量和 `Stringable` 对象——包括 `Raw`，它不需要强制转换——可选槽位还接受 `null`。使用前会先转换为字符串；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。raw 槽位更进一步，还接受可字符串化值的可迭代集合，并按顺序拼接它们。
 
 - `Slot::value()` 在子节点位使用 `htmlspecialchars(..., double_encode: false)` 转义，因此你已经转义过的实体（`&copy;`）会保持不变。
 - `Slot::value()` 在属性位使用 `double_encode: true` 转义。
@@ -118,14 +119,21 @@ Slot::value('subtitle')->default('—');       // 键缺失时的回退值
 
 ## 缺失数据
 
-必填槽位会抛出带完整路径的 `Pure\Core\MissingSlotException`：
+必填槽位会抛出带完整路径的 `Pure\Core\MissingSlotException`。错误信息让拼写错误可见：
+它会建议最接近的已提供键名，或列出该作用域实际提供的键；必填的值槽位与 raw 槽位显式传入
+`null` 时也会失败（属性槽位仍然按 `null` 省略自身）：
 
 ```php
-try {
-    $shape([]);
-} catch (\Pure\Core\MissingSlotException $e) {
-    echo $e->getMessage(); // slot 'items[].title' is required but was not provided.
-}
+<?php
+
+$shape = Compile::shape(div(Slot::value('title'), Slot::value('body')));
+
+$shape(['titel' => 'x', 'body' => 'b']);
+// slot 'title' is required but was not provided; did you mean 'titel'?
+$shape(['title' => null, 'body' => 'b']);
+// slot 'title' is required but was null.
+$shape([]);
+// slot 'title' is required but was not provided.
 ```
 
 路径用于标识嵌套作用域：`card.title` 表示 `Slot::child()` 槽位，`items[].title` 表示列表项。

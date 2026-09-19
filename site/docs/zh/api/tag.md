@@ -275,6 +275,12 @@ use function Pure\HTML\{div, h1};
 div(h1('Report'))->save('report.html');
 ```
 
+### `isDocumentRoot(): bool`
+
+该标签是否作为完整文档的根，从而在编译出的无依赖视图中前置文档声明。HTML 树只有在根为
+`<html>` 时才是文档，XML 树始终是；SVG 树是片段（图标以内联方式使用），其独立文件的
+声明仍可通过 `documentHeader()` / `save()` 获得。
+
 ## 动态属性方法
 
 Tag 类通过 `__call` 魔术方法支持动态设置任何 HTML 属性：
@@ -299,3 +305,7 @@ input()->type('text')->name('username')->placeholder('Enter username');
 // 设置图片属性
 img()->src('image.jpg')->alt('Image description')->width('100')->height('100');
 ```
+
+开启开发守卫（`Compile::guard(true)` / `PURE_COMPILE_GUARD=1`）后，与标准属性名只差
+一个字符的方法会警告一次——`->clas(...)`、`->hreff(...)` 会建议 `class` 与 `href`，
+而不是静默变成自定义属性。确实要自定义属性时照常书写即可；该警告只是提示，默认关闭。

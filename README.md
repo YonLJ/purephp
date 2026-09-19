@@ -72,6 +72,9 @@ returns the fragment; a full document's header is the caller's to prepend
 Under standard PHP-FPM every request starts fresh, so enable
 `Compile::cachePath()` (or precompile with `pure compile`) to load generated
 renderers instead of rebuilding them; long-running workers keep them in memory.
+While developing, `Compile::guard(true)` (or `PURE_COMPILE_GUARD=1`) reports
+shapes rebuilt per request, bindings the template never reads (with a
+`did you mean`), and attribute names one edit away from a standard one.
 See the [compiled rendering guide](https://yonld.github.io/purephp/guide/compiled)
 for caching, conditionals and mixed lists.
 
@@ -180,7 +183,9 @@ unit plus a `public/index.php` router for `/`, `/pure` and `/plain` — and `xml
 adds `write.php`, the CLI entry that writes `example.xml`.
 
 Every artifact is byte-identical to its template, and every plain view to its
-artifact. See [the examples](examples).
+artifact, preceded by the document header only when the view's root heads a
+document (`<html>` or an XML tree; a fragment view starts with its markup). See
+[the examples](examples).
 
 ## License
 

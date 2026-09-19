@@ -104,7 +104,7 @@ $list = Compile::shape(ul(Slot::each('items', li(Slot::value('title')))));
 $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 ```
 
-`Slot::child()` 与 `Slot::each()` 会建立嵌套作用域，因此在 `li` 内部，槽位 `title` 针对当前项解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`（`slot 'items[].title' is required but was not provided.`）；可选数据请使用 `->default($value)` 或 `->required(false)`。
+`Slot::child()` 与 `Slot::each()` 会建立嵌套作用域，因此在 `li` 内部，槽位 `title` 针对当前项解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`（`slot 'items[].title' is required but was not provided.`），信息会建议最接近的已提供键名，或列出该作用域实际提供的键；必填的值槽与 raw 槽显式传入 `null` 时抛出 `slot 'items[].title' is required but was null.`；可选数据请使用 `->default($value)` 或 `->required(false)`。
 
 ## 组件
 

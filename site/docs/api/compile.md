@@ -38,7 +38,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | --- | --- |
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
-| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
+| `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` / `slots` properties (`slots` is the root slot manifest the compiled renderer was built with) |
 | `Pure\Core\Slot` | Placeholder constructors (`value`, `raw`, `child`, `each`, `if`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
@@ -238,19 +238,34 @@ deploys only if you want to force regeneration.
 ## Per-Request Guard
 
 Compiling a shape per request is slower than rendering a compiled one. Enable
-the development guard to detect it:
+the development guard to detect it, and to surface the other problems that do
+not show up in the output:
 
 ```php
 Compile::guard(true); // or PURE_COMPILE_GUARD=1
 ```
 
-When the same call site calls `Compile::shape()` more than 20 times in one
-process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
+- When the same call site calls `Compile::shape()` more than 20 times in one
+  process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
+- Data keys the rendered template never reads are reported with a `did you
+  mean` suggestion, so a misspelled binding fails visibly instead of rendering
+  as if the value were absent.
+- An attribute setter whose name is one edit away from a standard attribute
+  (`->clas(...)`, `->hreff(...)`) warns instead of silently creating a custom
+  attribute. Callers that build custom attributes on purpose can ignore it.
+
+Every warning fires once per subject per process. With the guard off (the
+default), the checks cost one property read per render.
 
 ## Errors
 
 - Missing required slot: `Pure\Core\MissingSlotException` with the full path,
-  for example `slot 'items[].title' is required but was not provided.`
+  for example `slot 'items[].title' is required but was not provided.` When the
+  scope holds other keys, the message suggests the closest one (a typo) or lists
+  them. A required value or raw slot bound to an explicit `null` fails with
+  `slot 'items[].title' is required but was null.`; rendering through
+  `render()` prefixes the component name or template path
+  (`component 'Card': slot 'title' is required ...`).
 - Wrong placement (raw slot as an attribute value)
   or a missing shape: `LogicException` at compile time.
 - Non-iterable list, non-array item or scope, non-stringable value:

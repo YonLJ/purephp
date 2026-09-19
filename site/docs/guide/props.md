@@ -98,8 +98,8 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 
 | Slot | Value | Behavior |
 | --- | --- | --- |
-| `Slot::value($name)` | stringable or `null` | position decides the semantics: child position escapes to text (`null` renders empty, `true` renders "1"); attribute position follows `setAttr()` (`true` renders `name="name"`, `false`/`null` omit the attribute) |
-| `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated in order |
+| `Slot::value($name)` | stringable; `null` only in an optional or attribute slot | position decides the semantics: child position escapes to text (`true` renders "1"; a required slot rejects `null`); attribute position follows `setAttr()` (`true` renders `name="name"`, `false`/`null` omit the attribute) |
+| `Slot::raw($name)` | stringable, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated in order |
 | `Slot::child($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders a branch; a missing key is false |
@@ -115,8 +115,10 @@ Slot::value('subtitle')->required(false);   // missing key renders as empty
 Slot::value('subtitle')->default('—');       // fallback for a missing key
 ```
 
-- `required(false)` makes a slot optional; its value is then read with `??`
-  semantics (`null` when missing).
+- `required(false)` makes a slot optional; a missing key and an explicit `null`
+  both render empty (an attribute is omitted instead).
+- A required value or raw slot accepts neither a missing key nor an explicit
+  `null`.
 - `default($value)` provides a fallback for a missing key and makes the slot
   optional. The default is inlined into the compiled renderer, so it must be a
   value type: `null`, a scalar or an array of value types.
@@ -125,8 +127,8 @@ Slot::value('subtitle')->default('—');       // fallback for a missing key
 
 ## Value Coercion and Escaping
 
-Value and raw slots accept `null`, scalars and `Stringable`
-objects — including a `Raw`, which needs no cast. They are
+Value and raw slots accept scalars and `Stringable` objects — including a `Raw`,
+which needs no cast — and an optional slot also accepts `null`. Values are
 converted to string before use; arrays and other objects raise an
 `InvalidArgumentException` naming the full slot path. A raw slot goes one step
 further and accepts an iterable of stringable values, concatenating them in
@@ -142,14 +144,22 @@ order.
 
 ## Missing Data
 
-Required slots throw `Pure\Core\MissingSlotException` with the full path:
+Required slots throw `Pure\Core\MissingSlotException` with the full path. The
+message makes a typo visible: it suggests the closest provided key, or lists the
+keys the scope did provide. An explicit `null` fails a required value or raw
+slot with its own message (attribute slots keep omitting themselves):
 
 ```php
-try {
-    $shape([]);
-} catch (\Pure\Core\MissingSlotException $e) {
-    echo $e->getMessage(); // slot 'items[].title' is required but was not provided.
-}
+<?php
+
+$shape = Compile::shape(div(Slot::value('title'), Slot::value('body')));
+
+$shape(['titel' => 'x', 'body' => 'b']);
+// slot 'title' is required but was not provided; did you mean 'titel'?
+$shape(['title' => null, 'body' => 'b']);
+// slot 'title' is required but was null.
+$shape([]);
+// slot 'title' is required but was not provided.
 ```
 
 Paths identify nested scopes: `card.title` for a child slot, `items[].title` for

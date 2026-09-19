@@ -130,8 +130,11 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 `Slot::child()` and `Slot::each()` establish a nested scope, so inside `li` the
 slot `title` resolves against the current item. Missing required keys throw
 `Pure\Core\MissingSlotException` with the full path
-(`slot 'items[].title' is required but was not provided.`); use
-`->default($value)` or `->required(false)` for optional data.
+(`slot 'items[].title' is required but was not provided.`), and the message
+suggests the closest provided key or lists the keys the scope did provide; a
+required value or raw slot bound to an explicit `null` fails with
+`slot 'items[].title' is required but was null.` Use `->default($value)` or
+`->required(false)` for optional data.
 
 ## Components
 

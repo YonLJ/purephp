@@ -284,6 +284,14 @@ use function Pure\HTML\{div, h1};
 div(h1('Report'))->save('report.html');
 ```
 
+### `isDocumentRoot(): bool`
+
+Whether this tag heads a complete document, so a compiled plain view is preceded
+by its document header. An HTML tree is a document only when its root is
+`<html>`, and an XML tree always is; an SVG tree is a fragment (icons are
+inlined), whose standalone-file header stays available through
+`documentHeader()` / `save()`.
+
 ## Dynamic Attribute Methods
 
 The Tag class supports dynamically setting any HTML attribute through the `__call` magic method:
@@ -308,3 +316,9 @@ input()->type('text')->name('username')->placeholder('Enter username');
 // Set image attributes
 img()->src('image.jpg')->alt('Image description')->width('100')->height('100');
 ```
+
+With the development guard on (`Compile::guard(true)` /
+`PURE_COMPILE_GUARD=1`), a setter whose name is one edit away from a standard
+attribute warns once — `->clas(...)` and `->hreff(...)` suggest `class` and
+`href` instead of silently becoming custom attributes. Set custom attributes on
+purpose with the same syntax; the warning is advisory and off by default.

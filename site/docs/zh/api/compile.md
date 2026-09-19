@@ -36,7 +36,7 @@ echo $shape([
 | --- | --- |
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
-| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
+| `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` / `slots`（`slots` 是编译时携带的根槽位清单） |
 | `Pure\Core\Slot` | 占位符构造器（`value`、`raw`、`child`、`each`、`if`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
@@ -209,19 +209,29 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 
 ## 每请求守卫
 
-每请求编译形状比渲染已编译的渲染器更慢。启用开发守卫来检测这种情况：
+每请求编译形状比渲染已编译的渲染器更慢。启用开发守卫来检测这种情况，同时暴露输出中
+看不出来的问题：
 
 ```php
 Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 ```
 
-当同一调用点在单个进程内调用 `Compile::shape()` 超过 20 次时，会触发
-`E_USER_WARNING`，建议改用 `static $shape ??=` 模式。
+- 当同一调用点在单个进程内调用 `Compile::shape()` 超过 20 次时，会触发
+  `E_USER_WARNING`，建议改用 `static $shape ??=` 模式。
+- 模板从未读取的数据键会被报告，并给出 `did you mean` 建议，因此拼错的 binding 会
+  显式失败，而不是像值不存在一样照常渲染。
+- 与标准属性名只差一个字符的属性方法（`->clas(...)`、`->hreff(...)`）会发出警告，
+  而不是静默变成自定义属性；确实需要自定义属性的调用可以忽略它。
+
+每条警告在单个进程内每个对象只触发一次。关闭守卫（默认）时，这些检查只花一次属性读取。
 
 ## 错误
 
 - 必填槽位缺失：`Pure\Core\MissingSlotException`，带完整路径，例如
-  `slot 'items[].title' is required but was not provided.`
+  `slot 'items[].title' is required but was not provided.`。当作用域中还有其他键时，
+  信息会建议最接近的键名（拼写错误）或把它们列出。必填的值槽与 raw 槽显式传入 `null`
+  时抛出 `slot 'items[].title' is required but was null.`；通过 `render()` 渲染时，
+  信息会加上组件名或模板路径前缀（`component 'Card': slot 'title' is required ...`）。
 - 位置错误（raw 槽用作属性值）或缺少形状：编译期抛 `LogicException`。
 - 列表不可迭代、item 或作用域不是数组、值不可字符串化：渲染期抛
   `InvalidArgumentException`（对 `Slot::if()` 使用 `required()` / `default()` 会抛

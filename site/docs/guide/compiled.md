@@ -44,30 +44,35 @@ paths share the same escaping implementation.
 | Object | Meaning |
 | --- | --- |
 | `Shape` | A data-free tree; `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
-| `Renderer` | The compiled renderer; `render($data)`, `save($path, $data)`, and the readonly `source` / `id` properties |
+| `Renderer` | The compiled renderer; `render($data)`, `save($path, $data)`, and the readonly `source` / `id` / `slots` properties |
 | `Slot` | A placeholder for data, bound at render time |
 
 ## Slot Types
 
 | Constructor | Value | Behavior |
 | --- | --- | --- |
-| `Slot::value($name)` | scalar / `null` / `Stringable` | coerced to string and escaped in child position (`true`→"1", `null`→empty); in attribute position follows `setAttr()` (`true`→`name="name"`, `false`/`null` omitted) |
-| `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is stringified element by element and concatenated |
+| `Slot::value($name)` | scalar / `Stringable`; `null` only in an optional or attribute slot | coerced to string and escaped in child position (`true`→"1", a required slot rejects `null`); in attribute position follows `setAttr()` (`true`→`name="name"`, `false`/`null` omitted) |
+| `Slot::raw($name)` | stringable, or an iterable of those | emitted verbatim, never escaped; an iterable is stringified element by element and concatenated |
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
 
 Modifiers:
 
-- `->required(false)` — the slot may be missing.
-- `->default($value)` — fallback used when the key is missing.
+- `->required(false)` — the slot may be missing; a missing key and an explicit
+  `null` both render empty (an attribute is omitted instead).
+- `->default($value)` — fallback used when the key is missing; also makes the
+  slot optional.
+- A required value or raw slot accepts neither a missing key nor an explicit
+  `null`.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
 
-Value coercion: `null`, scalars and `Stringable` are accepted for value/raw
-slots, so a component's string result needs no `(string)` cast. A raw slot also
-accepts an iterable of stringable values, which it concatenates — a list of
-rendered rows can go in as it is, without `implode()`. A nested array still
-raises an `InvalidArgumentException` naming the full slot path.
+Value coercion: scalars and `Stringable` are accepted for value/raw slots, so a
+component's string result needs no `(string)` cast; an optional slot also accepts
+`null`. A raw slot also accepts an iterable of stringable values, which it
+concatenates — a list of rendered rows can go in as it is, without `implode()`. A
+nested array still raises an `InvalidArgumentException` naming the full slot
+path.
 
 > **Trust boundary** — after `render()` returns a `string`, there is no type
 > distinction between "trusted rendered markup" passed into a raw slot and
@@ -80,7 +85,10 @@ raises an `InvalidArgumentException` naming the full slot path.
 `Slot::child()` and `Slot::each()` create a nested data scope; inside it, slots
 resolve against that scope. Missing required keys throw
 `Pure\Core\MissingSlotException` with the full path, for example
-`slot 'items[].title' is required but was not provided.` Use `default()` or
+`slot 'items[].title' is required but was not provided.`; the message suggests
+the closest provided key (a misspelled binding) or lists the keys the scope did
+provide, and an explicit `null` fails a required value or raw slot with
+`slot 'items[].title' is required but was null.` Use `default()` or
 `required(false)` for optional data.
 
 `Slot::if()` branches share the current scope, so this works naturally:
@@ -184,9 +192,13 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
   for artifacts — the file itself is the source.
 - Dynamic values read their slot through `TemplateRuntime`, which keeps the
   compiled semantics in one place: a required slot throws
-  `MissingSlotException`, `default:` supplies the compiled default of an
-  optional slot, and values are escaped or coerced exactly like the flat
-  renderer does. `path:` only appears where the slot path differs from the key.
+  `MissingSlotException` (an explicit `null` fails a required value or raw slot,
+  an attribute slot keeps omitting itself), `default:` supplies the compiled
+  default of an optional slot, and values are escaped or coerced exactly like the
+  flat renderer does. `path:` only appears where the slot path differs from the key.
+- An artifact also carries the root slot manifest (`Renderer::$slots`), so the
+  development guard can report bindings the template never reads without
+  rebuilding the shape tree.
 
 ```php
 $pureBody = static function (array $v): string {
@@ -318,9 +330,13 @@ $html = (string)ob_get_clean();
 
 Reach for `--plain` when views must run without the library — a deployment that
 ships only `public/` and `views/`, or a template directory handed to someone else.
-For ordinary data a plain view renders byte-identical output to its artifact.
+For ordinary data a plain view renders the artifact's bytes exactly, preceded by
+the document header only when its root is a document root (`<html>` or an XML
+tree): a page keeps its `<!DOCTYPE html>` / XML declaration, while a fragment
+(a `div`, an inline SVG icon) starts with its markup, so including it never
+injects a header into the middle of a document.
 It is a plain view, not a compiled component, so the strict slot semantics stay
-with the artifact. See [Plain View Caveats](#plain-view-caveats) for the four
+with the artifact. See [Plain View Caveats](#plain-view-caveats) for the
 semantic differences (undefined variable on missing slot, empty string on null
 attribute, no iterable check on lists, single-value raw slots only).
 
@@ -393,7 +409,11 @@ see [Basic Usage](/guide/basic-usage).
 - To catch shapes that are rebuilt per request, enable the development guard:
   `Compile::guard(true)` or set `PURE_COMPILE_GUARD=1`. When the same call site
   calls `Compile::shape()` too many times, PHP emits an `E_USER_WARNING`
-  suggesting the `static $shape ??=` pattern.
+  suggesting the `static $shape ??=` pattern. The same switch turns on the
+  render-time checks: data keys the rendered template never reads are reported
+  (with a `did you mean` suggestion) and a setter whose attribute name is one
+  edit away from a standard one warns instead of silently creating a custom
+  attribute. Each warning fires once per subject per process.
 - `Compile::CACHE_VERSION` is bumped when the generated-code format or
   fingerprint composition changes. An artifact written by another version
   throws `RuntimeException` on load with a message naming `pure compile`.
@@ -407,6 +427,10 @@ A plain view is markup and native PHP — it renders without purephp installed,
 but it does not carry the strict slot semantics of the compiled renderer:
 
 - a missing required slot is an undefined variable, not `MissingSlotException`;
+- a required slot bound to `null` renders empty instead of failing (the artifact
+  rejects it for value and raw slots);
+- the plain view of a document root starts with its `<!DOCTYPE html>` / XML
+  declaration, while a fragment view starts with its markup;
 - a `null` attribute prints an empty value instead of disappearing;
 - list slots are not checked for being iterable, and values are stringified by
   PHP rather than by `SlotRuntime`;

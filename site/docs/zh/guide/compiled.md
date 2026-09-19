@@ -38,31 +38,32 @@ echo $root([
 | 对象 | 含义 |
 | --- | --- |
 | `Shape` | 不含数据的树；`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
-| `Renderer` | 编译后的渲染器；`render($data)`、`save($path, $data)`，以及只读属性 `source` / `id` |
+| `Renderer` | 编译后的渲染器；`render($data)`、`save($path, $data)`，以及只读属性 `source` / `id` / `slots` |
 | `Slot` | 数据的占位符，在渲染时绑定 |
 
 ## 槽位类型
 
 | 构造器 | 值 | 行为 |
 | --- | --- | --- |
-| `Slot::value($name)` | 标量 / `null` / `Stringable` | 子节点位转成字符串并转义（`true`→"1"，`null`→空）；属性位遵循 `setAttr()`（`true`→`name="name"`，`false`/`null` 省略） |
-| `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；可迭代集合会逐元素转成字符串后拼接 |
+| `Slot::value($name)` | 标量 / `Stringable`；`null` 仅在可选槽或属性槽中可用 | 子节点位转成字符串并转义（`true`→"1"，必填槽拒绝 `null`）；属性位遵循 `setAttr()`（`true`→`name="name"`，`false`/`null` 省略） |
+| `Slot::raw($name)` | 可字符串化值，或这类值的可迭代集合 | 原样输出，绝不转义；可迭代集合会逐元素转成字符串后拼接 |
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 当 `$data[$name]` 为真时渲染 `$then`，否则渲染 `$else`；缺失的键为 false，且绝不抛出异常 |
 
 修饰符：
 
-- `->required(false)`——槽位可以缺失。
-- `->default($value)`——键缺失时使用的回退值。
+- `->required(false)`——槽位可以缺失；键缺失与显式 `null` 都渲染为空（属性位则省略）。
+- `->default($value)`——键缺失时使用的回退值，同时使槽位可选。
+- 必填的值槽位与 raw 槽位既不接受缺失的键，也不接受显式的 `null`。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - `Slot::child()` / `Slot::each()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
-值转换：值槽位与 raw 槽位接受 `null`、标量与 `Stringable`，因此子组件返回的字符串不需要 `(string)` 强制转换；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
+值转换：值槽位与 raw 槽位接受标量与 `Stringable`，因此子组件返回的字符串不需要 `(string)` 强制转换；可选槽位还接受 `null`；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
 
 ## 作用域与缺失数据
 
-`Slot::child()` 与 `Slot::each()` 会创建嵌套数据作用域；在其中，槽位针对该作用域解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`，例如 `slot 'items[].title' is required but was not provided.`。可选数据请使用 `default()` 或 `required(false)`。
+`Slot::child()` 与 `Slot::each()` 会创建嵌套数据作用域；在其中，槽位针对该作用域解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`，例如 `slot 'items[].title' is required but was not provided.`；错误信息会建议最接近的已提供键名（binding 拼写错误），或列出该作用域实际提供的键；必填的值槽位与 raw 槽位显式传入 `null` 时抛出 `slot 'items[].title' is required but was null.`。可选数据请使用 `default()` 或 `required(false)`。
 
 `Slot::if()` 的分支共享当前作用域，因此下面这样写可以自然工作：
 
@@ -201,8 +202,11 @@ $page->save(__DIR__ . '/out.html', ['title' => 'Users']);
   HTML 片段承载的是精确的渲染字节，因此不会被重新缩进。产物的 `Renderer::$source`
   为空——文件本身就是源码。
 - 动态值通过 `TemplateRuntime` 读取槽位，编译语义集中在一处：必填槽缺失时抛出
-  `MissingSlotException`，`default:` 提供可选槽的编译期默认值，转义与强制转换与平铺渲染器完全一致；
+  `MissingSlotException`（必填的值槽位与 raw 槽位显式传入 `null` 也会失败，属性槽位则保持
+  按 `null` 省略），`default:` 提供可选槽的编译期默认值，转义与强制转换与平铺渲染器完全一致；
   仅当槽位路径与键名不同时才出现 `path:`。
+- 产物还携带根作用域槽位清单（`Renderer::$slots`），因此开发守卫无需重建形状树就能报告
+  模板从未读取的 binding。
 
 ```php
 $pureBody = static function (array $v): string {
@@ -306,9 +310,11 @@ $html = (string)ob_get_clean();
 ```
 
 需要让视图脱离库运行时才用 `--plain`：例如部署只带 `public/` 与 `views/`，
-或把模板目录交给其他人。常规数据下无依赖视图与产物输出逐字节一致（测试有断言），
-而且它是最快的形态：值直接进入 `htmlspecialchars()`，没有运行时访问器调用。
-但它是普通视图而非编译组件，严格槽位语义仍由产物提供——四处语义差异与
+或把模板目录交给其他人。常规数据下无依赖视图逐字节等于产物，并且仅当其根是文档根
+（`<html>` 或 XML 树）时前面补上文档声明：页面保留自己的 `<!DOCTYPE html>` / XML 声明，
+而片段（`div`、内联 SVG 图标）视图直接以标记开头，因此被 include 时绝不会把文档声明
+插进文档中间。而且它是最快的形态：值直接进入 `htmlspecialchars()`，没有运行时访问器调用。
+但它是普通视图而非编译组件，严格槽位语义仍由产物提供——语义差异与
 `@var` 注解说明见[无依赖视图注意事项](#无依赖视图注意事项)。
 
 ## 性能
@@ -368,7 +374,9 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 - 要发现每个请求都重新构建（而不是被记忆化）的形状，请启用开发守卫：
   `Compile::guard(true)` 或设置 `PURE_COMPILE_GUARD=1`。当同一个调用点在一个进程中
   调用 `Compile::shape()` 次数过多时，PHP 会发出 `E_USER_WARNING`，建议采用
-  `static $shape ??=` 模式。
+  `static $shape ??=` 模式。同一个开关也会打开渲染期检查：模板从未读取的数据键会被报告
+  （并给出 `did you mean` 建议），与标准属性名只差一个字符的属性方法会发出警告，而不是
+  静默变成自定义属性；每条警告在单个进程内每个对象只触发一次。
 - `Compile::CACHE_VERSION` 在生成代码格式或指纹构成变化时递增。由其他版本写出的
   产物加载时抛出带 `pure compile` 提示的 `RuntimeException`；`*.plain.php` 视图只在
   注释中携带版本号、没有可执行守卫，升级后会静默输出过期内容，直到
@@ -380,6 +388,8 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 严格槽位语义：
 
 - 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
+- 必填槽显式传入 `null` 时渲染为空，而不是像产物那样（值槽与 raw 槽）失败；
+- 文档根的视图会带上 `<!DOCTYPE html>` / XML 声明，而片段视图以标记开头；
 - `null` 属性输出为空值，而不是整个属性消失；
 - 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`；
 - raw 槽只输出单个值：可字符串化值的可迭代集合不会被拼接。请由控制器传入
