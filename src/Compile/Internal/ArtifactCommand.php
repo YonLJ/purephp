@@ -130,58 +130,61 @@ final class ArtifactCommand
 
         $failed = 0;
         $stale = 0;
+        $files = [];
 
         foreach ($paths as $path) {
             try {
-                $files = self::unitFiles($path);
+                foreach (self::unitFiles($path) as $file) {
+                    $files[] = $file;
+                }
             } catch (Throwable $error) {
                 $failed++;
                 fwrite($stderr, "pure: {$error->getMessage()}\n");
-
-                continue;
             }
+        }
 
-            foreach ($files as $file) {
-                try {
-                    $units = $this->unitsOf($file);
+        $files = self::withoutCollisions($files, $stderr, $failed);
 
-                    if ($list) {
-                        self::printList($stdout, $file, $units);
+        foreach ($files as $file) {
+            try {
+                $units = $this->unitsOf($file);
 
-                        continue;
-                    }
+                if ($list) {
+                    self::printList($stdout, $file, $units);
 
-                    if ($units === null) {
-                        self::compile($file, null, $check, $plain, $stdout, $stale);
-
-                        continue;
-                    }
-
-                    if ($units === []) {
-                        throw new InvalidArgumentException(
-                            'no component unit is registered here; call Pure\Component\register() or registerPage() in the file.'
-                        );
-                    }
-
-                    if (count($units) > 1) {
-                        throw new InvalidArgumentException(
-                            count($units) . ' component units are registered here; a unit file registers one component.'
-                        );
-                    }
-
-                    $shape = (reset($units)['factory'])();
-
-                    if (!$shape instanceof Shape) {
-                        throw new InvalidArgumentException(
-                            'the unit factory must return a Pure\\Compile\\Shape, got ' . get_debug_type($shape) . '.'
-                        );
-                    }
-
-                    self::compile($file, $shape, $check, $plain, $stdout, $stale);
-                } catch (Throwable $error) {
-                    $failed++;
-                    fwrite($stderr, "pure: {$file}: {$error->getMessage()}\n");
+                    continue;
                 }
+
+                if ($units === null) {
+                    self::compile($file, null, $check, $plain, $stdout, $stale);
+
+                    continue;
+                }
+
+                if ($units === []) {
+                    throw new InvalidArgumentException(
+                        'no component unit is registered here; call Pure\Component\register() or registerPage() in the file.'
+                    );
+                }
+
+                if (count($units) > 1) {
+                    throw new InvalidArgumentException(
+                        count($units) . ' component units are registered here; a unit file registers one component.'
+                    );
+                }
+
+                $shape = (reset($units)['factory'])();
+
+                if (!$shape instanceof Shape) {
+                    throw new InvalidArgumentException(
+                        'the unit factory must return a Pure\\Compile\\Shape, got ' . get_debug_type($shape) . '.'
+                    );
+                }
+
+                self::compile($file, $shape, $check, $plain, $stdout, $stale);
+            } catch (Throwable $error) {
+                $failed++;
+                fwrite($stderr, "pure: {$file}: {$error->getMessage()}\n");
             }
         }
 
@@ -190,6 +193,49 @@ final class ArtifactCommand
         }
 
         return $failed > 0 || $stale > 0 ? 1 : 0;
+    }
+
+    /**
+     * Drop every file whose artifact target is claimed by another file.
+     *
+     * `Box.shape.php` and `Box.cmp.php` both compile to `Box.pure.php`, so the
+     * last write would win and `--check` would report the same target stale and
+     * up to date in one run, forever.
+     *
+     * @param list<string> $files The discovered files.
+     * @param resource $stderr The error stream.
+     * @param int $failed The failure counter to update.
+     * @return list<string> The files that own their target.
+     */
+    private static function withoutCollisions(array $files, $stderr, int &$failed): array
+    {
+        $claimed = [];
+        $dropped = [];
+
+        foreach ($files as $file) {
+            $target = ArtifactCompiler::artifactPath($file);
+            $owner = $claimed[$target] ?? false;
+
+            if ($owner === false) {
+                $claimed[$target] = $file;
+
+                continue;
+            }
+
+            if ($owner === $file) {
+                continue;
+            }
+
+            $dropped[$owner] = true;
+            $dropped[$file] = true;
+            $failed++;
+            fwrite(
+                $stderr,
+                "pure: '{$target}' is claimed by both '{$owner}' and '{$file}'; one file per artifact name.\n"
+            );
+        }
+
+        return array_values(array_filter($files, static fn (string $f): bool => !isset($dropped[$f])));
     }
 
     /**

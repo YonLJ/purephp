@@ -202,6 +202,12 @@ final class Registry
         }
 
         if (isset(self::$units[$key])) {
+            if (!$document && self::$units[$key]['document']) {
+                throw new RuntimeException(
+                    "'{$key}' is registered as a page unit; render it with renderPage(), which prepends its document header."
+                );
+            }
+
             [$renderer, $header] = self::unitRenderer($key);
         } else {
             [$renderer, $header] = self::templateRenderer(substr($key, strlen('path:')));
@@ -244,12 +250,19 @@ final class Registry
             return self::$keys[$nameOrPath] = self::$files[$path] ?? 'path:' . $path;
         }
 
+        throw new RuntimeException("unknown component '{$nameOrPath}'; " . self::hint() . '.');
+    }
+
+    /**
+     * The registration context appended to an unresolved name or path.
+     */
+    private static function hint(): string
+    {
         $known = self::names();
-        $hint = $known === []
+
+        return $known === []
             ? 'no components are registered'
             : 'known components: ' . implode(', ', $known);
-
-        throw new RuntimeException("unknown component '{$nameOrPath}'; {$hint}.");
     }
 
     private static function isPath(string $nameOrPath): bool
@@ -321,7 +334,7 @@ final class Registry
     private static function templateRenderer(string $shapeFile): array
     {
         if (!is_file($shapeFile)) {
-            throw new RuntimeException("component template '{$shapeFile}' does not exist.");
+            throw new RuntimeException("component template '{$shapeFile}' does not exist; " . self::hint() . '.');
         }
 
         $artifact = ArtifactCompiler::artifactPath($shapeFile);
@@ -338,6 +351,14 @@ final class Registry
             }
 
             return [$renderer, $renderer->header];
+        }
+
+        if (str_ends_with($shapeFile, '.cmp.php')) {
+            // Requiring a unit registers its component and returns no Shape, so the
+            // failure would read "must return a Shape" and pass on the next call.
+            throw new RuntimeException(
+                "'{$shapeFile}' is a component unit and has no fresh artifact; require the unit file to register it and render it by name, or run `pure compile`."
+            );
         }
 
         $shape = require $shapeFile;

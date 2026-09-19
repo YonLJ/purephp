@@ -11,6 +11,7 @@ use Pure\Compile\Internal\ShapeIndex;
 use Pure\Compile\Renderer;
 use Pure\Compile\Shape;
 use Pure\Component\Registry;
+use Pure\Core\Raw;
 
 class ArtifactTest extends TestCase
 {
@@ -178,6 +179,101 @@ class ArtifactTest extends TestCase
 
         foreach ($sets as $set) {
             $this->assertSame($flat->render($set), $template->render($set));
+        }
+    }
+
+    public function testArtifactSlotsFallBackToTheSlowPathsLikeTheFlatRenderer(): void
+    {
+        $file = $this->shapeFile('cold.shape.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\HTML\div;
+            use function Pure\HTML\em;
+            use function Pure\HTML\li;
+            use function Pure\HTML\p;
+            use function Pure\HTML\span;
+            use function Pure\HTML\ul;
+
+            return Compile::shape(
+                div(
+                    Slot::text('req'),
+                    Slot::raw('body')->default(''),
+                    p(Slot::text('opt')->default('d')),
+                    Slot::if('flag', em('on'), em('off')),
+                    ul(Slot::each('items', li(Slot::text('label')))->default([])),
+                    Slot::child('meta', span(Slot::text('label')))->default(['label' => 'm'])
+                )
+                ->class(Slot::attr('cls')->default('c'))
+                ->id(Slot::attr('ident')->default('i'))
+                ->title(Slot::attr('tip')->default(null))
+                ->hidden(Slot::attr('flagged')->default(false))
+            );
+            PHP);
+
+        $artifact = self::load(ArtifactCompiler::write($file));
+        $shape = self::load($file);
+        $this->assertInstanceOf(Shape::class, $shape);
+        $this->assertInstanceOf(Renderer::class, $artifact);
+
+        $flat = CodeGenerator::fromSource(
+            CodeGenerator::source($shape->tree()),
+            ShapeIndex::of($shape->tree())->id()
+        );
+
+        $stringable = new class () implements Stringable {
+            public function __toString(): string
+            {
+                return 'an<b>&';
+            }
+        };
+
+        // Every set leaves at least one accessor on its slow path: a missing
+        // required slot, a present null, a default, a non-scalar attribute or a
+        // value the artifact must validate before it can render it.
+        $sets = [
+            'all optional missing' => ['req' => 'R'],
+            'required present as null' => ['req' => null],
+            'attributes null, bool and int' => ['req' => 'R', 'cls' => null, 'tip' => false, 'flagged' => true, 'ident' => 7],
+            'float attribute' => ['req' => 'R', 'tip' => 3.25],
+            'stringable attribute' => ['req' => 'R', 'tip' => $stringable],
+            'defaults used for scopes' => ['req' => 'R', 'items' => null, 'meta' => null],
+            'nested scopes filled' => ['req' => 'R', 'items' => [['label' => 'a'], ['label' => 'b']], 'meta' => ['label' => 'M']],
+            'nested item missing its slot' => ['req' => 'R', 'items' => [['other' => 1]]],
+            'values are empty strings' => ['req' => '', 'opt' => '', 'cls' => ''],
+            'condition slot true' => ['req' => 'R', 'flag' => true],
+            'list is not iterable' => ['req' => 'R', 'items' => 'nope'],
+            'raw joins an iterable' => ['req' => 'R', 'body' => ['a', Raw::of('<i>b</i>'), null]],
+            'raw element must be stringable' => ['req' => 'R', 'body' => ['a', ['nested']]],
+            'child is not a scope' => ['req' => 'R', 'meta' => 'nope'],
+            'required slot missing' => [],
+        ];
+
+        foreach ($sets as $label => $set) {
+            $this->assertSame(
+                self::outcome(static fn (): string => $flat->render($set)),
+                self::outcome(static fn (): string => $artifact->render($set)),
+                $label
+            );
+        }
+    }
+
+    /**
+     * The rendered markup, or the exception a renderer raises: both paths of a
+     * slot accessor have to agree on failures as well as on bytes.
+     *
+     * @param callable(): string $render
+     */
+    private static function outcome(callable $render): string
+    {
+        try {
+            return 'rendered:' . $render();
+        } catch (Throwable $error) {
+            return get_class($error) . ':' . $error->getMessage();
         }
     }
 
@@ -569,6 +665,56 @@ class ArtifactTest extends TestCase
         $this->assertStringNotContainsString('compiled:', $second['stdout']);
     }
 
+    public function testTwoFilesClaimingOneArtifactAreBothRejected(): void
+    {
+        $shapeFile = $this->shapeFile(
+            'box.shape.php',
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
+        );
+        $unit = $this->unitFile('box.cmp.php', 'Box', 'component');
+
+        $run = $this->runCommand($this->registryCommand(), ['pure', 'compile', $this->dir]);
+
+        $this->assertSame(1, $run['code']);
+        $this->assertStringContainsString('is claimed by both', $run['stderr']);
+        $this->assertStringContainsString($shapeFile, $run['stderr']);
+        $this->assertStringContainsString($unit, $run['stderr']);
+
+        // Neither file wins by discovery order: the target is left unwritten.
+        $this->assertStringNotContainsString('compiled:', $run['stdout']);
+        $this->assertFileDoesNotExist($this->dir . '/box.pure.php');
+    }
+
+    public function testArtifactOfAnotherCacheVersionIsRejectedWhenLoaded(): void
+    {
+        $file = $this->shapeFile(
+            'guarded.shape.php',
+            "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('v')));\n"
+        );
+        $artifact = ArtifactCompiler::write($file);
+
+        $this->assertInstanceOf(Renderer::class, self::load($artifact));
+
+        // The guard line is what another version of the library would have left
+        // behind; loading it must say `pure compile`, not fail on the signature.
+        $contents = (string) file_get_contents($artifact);
+        $foreign = str_replace(
+            'if (' . Compile::CACHE_VERSION . ' !== ',
+            'if (' . (Compile::CACHE_VERSION + 1) . ' !== ',
+            $contents
+        );
+        $this->assertNotSame($contents, $foreign);
+        file_put_contents($artifact, $foreign);
+
+        try {
+            self::load($artifact);
+            $this->fail('Expected RuntimeException to be thrown.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('stale purephp artifact', $e->getMessage());
+            $this->assertStringContainsString('run `pure compile` to rebuild', $e->getMessage());
+        }
+    }
+
     public function testCompilesUnitFilesWithAnExplicitShape(): void
     {
         $unit = $this->dir . '/badge.cmp.php';
@@ -597,7 +743,9 @@ class ArtifactTest extends TestCase
             'same.shape.php',
             "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
         );
-        $unit = $this->dir . '/same.cmp.php';
+        // A distinct base name: `same.shape.php` and `same.cmp.php` would share
+        // one artifact and the comparison below would read the same file twice.
+        $unit = $this->dir . '/same-unit.cmp.php';
         file_put_contents($unit, "<?php\n\n// unit placeholder: the shape is passed explicitly.\n");
 
         $fromShapeFile = self::load(ArtifactCompiler::write($shapeFile));

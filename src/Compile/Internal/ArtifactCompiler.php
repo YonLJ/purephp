@@ -239,7 +239,13 @@ final class ArtifactCompiler
             $artifact .= $import . "\n";
         }
 
-        $artifact .= "\n\$pureBody = " . $source . ";\n\n";
+        // One line, static message: the guard is paid per artifact require and
+        // its cost is dominated by parsing, so a concatenated version and a
+        // multi-line message make every cold page load measurably slower.
+        $artifact .= "\nif (" . Compile::CACHE_VERSION . " !== \\Pure\\Compile\\Compile::CACHE_VERSION) { throw new \\RuntimeException("
+            . "'stale purephp artifact: generated for cache version " . Compile::CACHE_VERSION
+            . "; run `pure compile` to rebuild'); }\n\n";
+        $artifact .= "\$pureBody = " . $source . ";\n\n";
         $artifact .= "return new Renderer(\n";
         $artifact .= "    \$pureBody,\n";
         $artifact .= "    '',\n";

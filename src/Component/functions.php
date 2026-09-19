@@ -39,8 +39,8 @@ function register(string $name, string $file, Closure $factory, bool $override =
 
 /**
  * Register a page unit under a name: like register(), but the binder prepends
- * the document header of the root tag (the `<!DOCTYPE html>` of an `html()`
- * root).
+ * the document header of the root tag — `<!DOCTYPE html>` for any HTML tag,
+ * `<?xml version="1.0"?>` for an XML or SVG tag.
  *
  * @param string $name The page name used by renderPage().
  * @param string $file The unit file, normally `__FILE__`.
@@ -82,7 +82,8 @@ function component(Tag|string $source): Closure
 
 /**
  * Bind a page template to a data → Raw function, including the document
- * header of its root tag (the `<!DOCTYPE html>` of an `html()` root).
+ * header of its root tag (`<!DOCTYPE html>` for any HTML tag, the XML
+ * declaration for an XML or SVG root).
  *
  * @param Tag|string $source A shape tree, a registered name, or a template path.
  * @return Closure(array<int|string, mixed>): Raw The data → Raw binder.

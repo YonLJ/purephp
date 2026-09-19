@@ -93,4 +93,21 @@ final class ScopeTypesTest extends TestCase
             ScopeTypes::docblock($tree)
         );
     }
+
+    public function testAConditionKeyThatIsAlsoAValueDropsMixed(): void
+    {
+        // One key read two ways: `mixed` would swallow the union in an analyzer,
+        // so the value type is what survives.
+        $tree = Compile::shape(div(
+            Slot::if('mode', span('a'), span('b')),
+            Slot::text('mode')->default('m')
+        ))->tree();
+
+        $this->assertSame(
+            "/**\n"
+            . " * @var scalar|null|\\Stringable \$mode\n"
+            . ' */',
+            ScopeTypes::docblock($tree)
+        );
+    }
 }

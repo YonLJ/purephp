@@ -52,6 +52,30 @@ class CompileCacheTest extends TestCase
         $this->assertNotSame($a->id(), $c->id());
     }
 
+    public function testIdSeparatesTheAttributeNameOfASlotValue(): void
+    {
+        // Both shapes read one slot at one path; only the attribute the value
+        // lands in differs, and the cache is keyed by the id alone.
+        $asClass = Compile::shape(div('t')->class(Slot::attr('x')));
+        $asId = Compile::shape(div('t')->id(Slot::attr('x')));
+
+        $this->assertNotSame($asClass->id(), $asId->id());
+        $this->assertSame('<div class="v">t</div>', $asClass(['x' => 'v']));
+        $this->assertSame('<div id="v">t</div>', $asId(['x' => 'v']));
+
+        // A later generation loads both renderers back from the cache files.
+        Compile::flush();
+
+        $this->assertSame(
+            '<div class="v">t</div>',
+            Compile::shape(div('t')->class(Slot::attr('x')))(['x' => 'v'])
+        );
+        $this->assertSame(
+            '<div id="v">t</div>',
+            Compile::shape(div('t')->id(Slot::attr('x')))(['x' => 'v'])
+        );
+    }
+
     public function testCacheWritesAndReloadsByteIdentically(): void
     {
         $shape = Compile::shape(div(span(Slot::text('v')))->class('c'));
