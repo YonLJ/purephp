@@ -14,7 +14,7 @@
 
 ### `class(array|bool|int|float|string|Slot|null ...$args): self`
 
-设置元素的 CSS 类名，内置 `clx` 函数处理多个参数。布尔值会被忽略，因此条件写法 `->class('btn', $active && 'active')` 依然可用。空字符串、`null` 与空数组不会产生 `class` 属性。
+设置元素的 CSS 类名，内置 `clx` 函数处理多个参数。布尔值会被忽略，因此条件参数依然可用（`->class('btn', $isActive ? 'active' : null)`）。空字符串、`null` 与空数组不会产生 `class` 属性。
 
 ```php
 <?php
@@ -218,7 +218,7 @@ $json = $element->toJSON();
 ### `render(): string`
 
 直接用真实值把标签树及其子节点渲染为 HTML 字符串。渲染时属性值和文本子节点会被转义；
-Raw 子节点按原样输出。
+`Pure\Core\Markup` 子节点——`Raw` 与组件调用——按原样输出，并随树延迟渲染。
 
 `render()`（以及 `print()` / `__toString()`）是**片段与调试**出口。生产页面应改为
 编译形状，这样静态标记只在编译期转义一次——参见[编译渲染](./compile)。

@@ -57,6 +57,41 @@ function Card(string $title, string $content): string
 echo Card('Card Title', 'Card Content');
 ```
 
+A component can also be called like a tag — props as fluent setters, children
+passed to the call, and the result nests wherever a tag does:
+
+```php
+<?php
+
+use function Pure\Component\component;
+use function Pure\HTML\{button, div, h2, li, ul};
+
+// the same unit, with a children slot and a Call function
+register('Card', __FILE__, static fn () => div(
+    Slot::raw('children'),
+    h2(Slot::value('type'))->class('card-title'),
+    ul(Slot::each('features', li(Slot::value('value')))),
+    button(Slot::value('text'))->class(Slot::value('class'))
+)->class('card'));
+
+function Card(mixed ...$children): Pure\Component\Call
+{
+    return component('Card', ...$children);
+}
+
+echo div(
+    Card(h2('Pro'))
+        ->type('Free')
+        ->features([['value' => '10 users'], ['value' => '2 GB']])
+        ->text('Sign up for free')
+        ->class('btn btn-lg')
+);
+```
+
+`render('Card', ...)` stays the low-level entry; both forms resolve the same
+binder, artifacts, cache and errors, and `pure check` validates the fluent props
+against the template's slots.
+
 The above code will output:
 
 ```html

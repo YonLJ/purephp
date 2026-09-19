@@ -64,6 +64,94 @@ function Badge(string $label, string $class = 'badge'): string
 }
 ```
 
+[Fluent calls](#fluent-calls) carry the same props as setters instead
+(`Badge('Save')->label('Save')->class('badge')`), with a `prepare()` closure as
+the typed contract.
+
+## Fluent Calls
+
+A component call can read like a tag: props are set with the same fluent
+setters, children are passed to the call, and the result nests wherever a tag
+does.
+
+```php
+<?php
+
+// components/Card.cmp.php — the same unit, called fluently
+use Pure\Compile\Compile;
+use Pure\Component\Call;
+use Pure\Core\Slot;
+
+use function Pure\Component\{component, register};
+use function Pure\HTML\{button, div, h2, li, ul};
+
+register('Card', __FILE__, static fn () => div(
+    Slot::raw('children'),
+    h2(Slot::value('type'))->class('card-title'),
+    ul(Slot::each('features', li(Slot::value('value')))),
+    button(Slot::value('text'))->class(Slot::value('class'))
+)->class('card'));
+
+function Card(mixed ...$children): Call
+{
+    return component('Card', ...$children);
+}
+
+echo div(
+    Card(h2('Pro'))
+        ->type('Free')
+        ->features([['value' => '10 users'], ['value' => '2 GB']])
+        ->text('Sign up for free')
+        ->class('btn btn-lg btn-block btn-outline-primary')
+);
+```
+
+- `component($name, ...$children)` returns a `Pure\Component\Call`, which
+  implements `Pure\Core\Markup`: `div(Card(...))` emits it verbatim and renders
+  it lazily with the tree, exactly like a tag child.
+- Props bind slot names, so the template reads them with `Slot::value()`,
+  `Slot::each()` or `Slot::child()`. `class()` and `style()` join their
+  arguments exactly like the tag setters, and a `null` prop leaves the prop
+  unset (the slot then reports itself as not provided, or falls back to its
+  default).
+- Children bind the reserved `children` slot: read it with
+  `Slot::raw('children')`. A childless call renders it empty, and a call with
+  children on a template that has no `children` slot throws.
+- A prop the template does not read is reported by the development guard with a
+  `did you mean` suggestion, and by `pure check` statically.
+- `render('Card', ...)` stays the low-level entry point; both forms resolve the
+  same binder, artifacts, cache and errors.
+
+### Typed Props with prepare()
+
+The fluent form passes props as data, so their types live in a `prepare`
+closure instead of the call function. Its parameters are the prop contract —
+PHP enforces the types, and a missing or unknown prop fails before rendering —
+and the array it returns is what binds the template:
+
+```php
+<?php
+
+register('Section', __FILE__,
+    factory: static fn () => Compile::shape(...),
+    prepare: static function (string $section, string $class, callable $item): array {
+        $data = FeaturesService::section($section);
+
+        return [
+            'title' => $data['title'],
+            'contents' => array_map(static fn (array $record): string => $item(...$record), $data['items']),
+            'class' => $class,
+        ];
+    }
+);
+
+Section()->section('columns')->class('row g-4')->item(IconColumn(...));
+```
+
+Without a `prepare` closure the props are the bindings as they are, which fits
+pure templates. `pure check` compares the `prepare()` parameters and the keys it
+returns against the template's slots.
+
 ## Composing Components
 
 A parent component calls its children and injects their output through

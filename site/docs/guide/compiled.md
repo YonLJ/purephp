@@ -304,6 +304,14 @@ vendor/bin/pure check src
   a raw slot either. A nullable parameter for a required slot is a warning
   (binding `null` throws `MissingSlotException`), as is a parameter that is
   neither used in the function nor a slot of the template.
+- A fluent unit (one without a component function) is checked through its
+  **`prepare()` closure** instead: its parameters are the prop contract and must
+  match the slots by name and type, and the keys of the array literal it returns
+  must be the slots the template reads (a computed return is reported as `info`).
+- The **fluent calls** in every checked file: a `->prop(...)` the target does
+  not accept is an error with a `did you mean`, `->children(...)` points at the
+  call syntax instead, and a prop set unpacked from a variable is skipped. The
+  target must be among the checked files for its props to be known.
 - A slot name one template uses as both a scalar (value/raw) and a scope
   (child/each) is an error; `*.shape.php` templates are checked for that too.
 

@@ -69,8 +69,9 @@ function Card(string $title, string $content): string
 
 | Function | Behavior |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false): void` | Registers a component unit; the factory must be lazy and may return a tag tree or a `Shape` |
+| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | Registers a component unit; the factory must be lazy and may return a tag tree or a `Shape`, and `$prepare` is the optional typed props-to-bindings hook of a fluent call |
 | `render(string $source, mixed ...$data): string` | Renders a unit by name or a template by path; the binder is cached |
+| `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes and the result is `Markup`, so it nests like a tag |
 
 There is no page flavour: to emit a full document, prepend the header of the
 root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
@@ -80,6 +81,13 @@ root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
 or as an unpacked array with string keys; positional data is rejected with a
 `RuntimeException`. To hold or pass around the binder yourself, use
 `Registry::component($source)`, which returns a `Closure(array $data): string`.
+
+A fluent call binds the same way: `Card($children)->title($title)` sets a prop
+per slot, `null` leaves a prop unset, and children bind the reserved `children`
+slot (`Slot::raw('children')`). `Call` implements `Pure\Core\Markup`, and so
+does `Raw`; a `Markup` child is emitted verbatim and renders lazily with the
+tree, while every other child is frozen to text and escaped. A component call
+cannot be part of a data-free shape — render it into a raw slot instead.
 
 The source is a registered name, the path of a `*.cmp.php` unit or the path of
 a `*.shape.php` template. Registering the same name for another file, or another

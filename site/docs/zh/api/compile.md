@@ -65,8 +65,9 @@ function Card(string $title, string $content): string
 
 | 函数 | 行为 |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape` |
+| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的 props→bindings 类型钩子 |
 | `render(string $source, mixed ...$data): string` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
+| `component(string $name, mixed ...$children): Call` | 开始一次链式调用：props 像标签属性一样设置，返回值是 `Markup`，可像标签一样嵌套 |
 
 `render()` 按原样输出树，**不带文档头**；整份文档的文档头由调用方
 自己拼接（`$root->documentHeader()`，或字面量 `<!DOCTYPE html>` /
@@ -75,6 +76,12 @@ function Card(string $title, string $content): string
 `render()` 的槽位值按名字传入（`render('Card', title: $title)`），也可以传解包的字符串键
 数组；位置参数会被 `RuntimeException` 拒绝。需要自己持有或传递绑定器时，用
 `Registry::component($source)`，它返回 `Closure(array $data): string`。
+
+链式调用以同样方式绑定：`Card($children)->title($title)` 每个 prop 对应一个槽位，`null`
+表示不设置该 prop，children 绑定保留槽位 `children`（模板用 `Slot::raw('children')`）。
+`Call` 与 `Raw` 都实现 `Pure\Core\Markup`：Markup 子节点原样输出、随树延迟渲染，其他
+子节点则冻结为文本并转义。组件调用不能出现在数据无关的形状树里——请把它的 markup 放进
+raw 槽位。
 
 传入字符串时视为注册名、`*.cmp.php` 单元路径或 `*.shape.php` 模板
 路径。同名注册到另一个文件、或同一文件注册另一个名字都会抛异常，除非传 `override: true`；

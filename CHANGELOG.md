@@ -124,6 +124,27 @@ First public version. No tag has been cut yet.
   literal (`...featuresBindings()`), and a unit without a component function (a
   page) is checked through the `render()` calls in its file. `--strict` fails on
   warnings; `pure compile --check` remains the artifact freshness check.
+- Fluent component calls: `component('Card', ...$children)` returns a
+  `Pure\Component\Call` whose props are set like tag attributes
+  (`->type('Free')->class('btn btn-lg')`), whose children bind the reserved
+  `children` slot (`Slot::raw('children')`), and whose `null` prop leaves the
+  prop unset. `class()` and `style()` join their arguments exactly like the tag
+  setters, an unknown prop is reported by the development guard with a
+  `did you mean`, and children on a template without a `children` slot throw.
+  `render('Card', ...)` stays the low-level entry; both resolve the same binder,
+  artifacts and cache.
+- `Pure\Core\Markup`: trusted markup emitted verbatim in child position.
+  `Raw` implements it, and so does `Call`, so `div(Card(...))` nests like a tag
+  and renders lazily with the tree; every other child is still frozen to text
+  and escaped. A `Markup` child inside a data-free shape is a compile error
+  (`CompileException::markupInShape`), because baking a component call into an
+  artifact would freeze its runtime data.
+- `register(..., prepare: ...)` gives a fluent unit typed props: the closure's
+  parameters are the prop contract (PHP enforces the types, missing and unknown
+  props fail before rendering) and the array it returns binds the template.
+  `pure check` compares the `prepare()` parameters and returned keys against the
+  slots, and the fluent calls in every checked file against the props their
+  target accepts.
 
 ### Changed
 

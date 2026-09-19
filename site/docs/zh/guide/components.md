@@ -58,6 +58,84 @@ function Badge(string $label, string $class = 'badge'): string
 }
 ```
 
+[链式调用](#链式调用) 则把同样的 props 写成 setter
+（`Badge('Save')->label('Save')->class('badge')`），类型契约交给 `prepare()` 闭包。
+
+## 链式调用
+
+组件调用可以写得和标签一样：props 用同样的链式 setter 设置，children 直接传给调用，
+返回值可以像标签一样嵌套。
+
+```php
+<?php
+
+// components/Card.cmp.php —— 同一个单元，改用链式调用
+use Pure\Compile\Compile;
+use Pure\Component\Call;
+use Pure\Core\Slot;
+
+use function Pure\Component\{component, register};
+use function Pure\HTML\{button, div, h2, li, ul};
+
+register('Card', __FILE__, static fn () => div(
+    Slot::raw('children'),
+    h2(Slot::value('type'))->class('card-title'),
+    ul(Slot::each('features', li(Slot::value('value')))),
+    button(Slot::value('text'))->class(Slot::value('class'))
+)->class('card'));
+
+function Card(mixed ...$children): Call
+{
+    return component('Card', ...$children);
+}
+
+echo div(
+    Card(h2('Pro'))
+        ->type('Free')
+        ->features([['value' => '10 users'], ['value' => '2 GB']])
+        ->text('Sign up for free')
+        ->class('btn btn-lg btn-block btn-outline-primary')
+);
+```
+
+- `component($name, ...$children)` 返回 `Pure\Component\Call`，它实现了
+  `Pure\Core\Markup`：`div(Card(...))` 会原样输出并随父树延迟渲染，和标签子节点一致。
+- props 绑定槽位名，模板用 `Slot::value()`、`Slot::each()`、`Slot::child()` 读取。
+  `class()` 与 `style()` 的合并规则与标签 setter 完全相同；`null` 表示不设置该 prop
+  （槽位随后按“未提供”处理，或回退到默认值）。
+- children 绑定保留槽位 `children`，模板用 `Slot::raw('children')` 读取。不传 children
+  时渲染为空；模板没有 `children` 槽位却传了 children 会抛出异常。
+- 模板不读取的 prop 会由开发守卫给出 `did you mean` 提示，`pure check` 也能静态发现。
+- `render('Card', ...)` 仍是低层入口；两种写法共用同一个绑定器、产物、缓存与错误。
+
+### 用 prepare() 给 props 加类型
+
+链式调用把 props 当作数据传递，因此类型放在 `prepare` 闭包里而不是调用函数里。它的参数
+就是 prop 契约——PHP 会强制类型，缺失或未知的 prop 在渲染前就报错——返回的数组就是绑定
+模板的数据：
+
+```php
+<?php
+
+register('Section', __FILE__,
+    factory: static fn () => Compile::shape(...),
+    prepare: static function (string $section, string $class, callable $item): array {
+        $data = FeaturesService::section($section);
+
+        return [
+            'title' => $data['title'],
+            'contents' => array_map(static fn (array $record): string => $item(...$record), $data['items']),
+            'class' => $class,
+        ];
+    }
+);
+
+Section()->section('columns')->class('row g-4')->item(IconColumn(...));
+```
+
+没有 `prepare` 闭包时，props 直接就是 bindings，适合纯模板组件。`pure check` 会把
+`prepare()` 的参数与返回的键同模板槽位逐一比对。
+
 ## 组合组件
 
 父组件调用子组件，并通过 `Slot::raw` 注入它们的输出：

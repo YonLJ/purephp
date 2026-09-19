@@ -16,7 +16,7 @@ The attribute and traversal methods below are shared by both paths.
 
 ### `class(array|bool|int|float|string|Slot|null ...$args): self`
 
-Sets the CSS class names of the element, with built-in `clx` function to handle multiple arguments. Booleans are ignored, which keeps the conditional idiom `->class('btn', $active && 'active')` working. Empty strings, `null` and empty arrays produce no `class` attribute.
+Sets the CSS class names of the element, with built-in `clx` function to handle multiple arguments. Booleans are ignored, which keeps conditional arguments working (`->class('btn', $isActive ? 'active' : null)`). Empty strings, `null` and empty arrays produce no `class` attribute.
 
 ```php
 <?php
@@ -224,8 +224,9 @@ $json = $element->toJSON();
 ### `render(): string`
 
 Renders the tag tree and its children to an HTML string directly, with real
-values. Attribute values and text children are escaped while rendering; Raw
-children are emitted verbatim.
+values. Attribute values and text children are escaped while rendering;
+`Pure\Core\Markup` children — `Raw` and component calls — are emitted
+verbatim and rendered lazily with the tree.
 
 `render()` (and `print()` / `__toString()`) is the **snippet and debugging**
 outlet. Production pages should compile shapes instead, so static markup is
