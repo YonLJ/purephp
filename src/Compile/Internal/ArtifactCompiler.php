@@ -224,14 +224,12 @@ final class ArtifactCompiler
     private static function artifactFile(string $shapeFile, Tag $tree, string $id): string
     {
         $source = TemplateGenerator::source($tree);
-        $header = $tree->documentHeader();
 
         $artifact = "<?php\n";
         $artifact .= "/**\n * Compiled from " . basename($shapeFile) . ", do not edit.\n"
             . " * Run `pure compile` to rebuild after changing the shape.\n */\n";
         $artifact .= "// purephp-shape id={$id}"
-            . ' v=' . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION
-            . ' header=' . ($header === '' ? '-' : base64_encode($header)) . "\n\n";
+            . ' v=' . Compile::CACHE_VERSION . ' php=' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "\n\n";
         $artifact .= "declare(strict_types=1);\n\n";
         $artifact .= "use Pure\\Compile\\Renderer;\n";
 
@@ -249,8 +247,7 @@ final class ArtifactCompiler
         $artifact .= "return new Renderer(\n";
         $artifact .= "    \$pureBody,\n";
         $artifact .= "    '',\n";
-        $artifact .= '    ' . var_export($id, true) . ",\n";
-        $artifact .= '    ' . var_export($header, true) . "\n";
+        $artifact .= '    ' . var_export($id, true) . "\n";
         $artifact .= ");\n";
 
         return $artifact;

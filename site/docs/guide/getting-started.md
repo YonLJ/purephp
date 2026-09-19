@@ -56,8 +56,8 @@ composer require yonld/purephp
 
 ### 2. Create Entry File
 
-Create `index.php`, the entry file: a page unit (a registered template plus the
-page function) and its output:
+Create `index.php`, the entry file: a component unit (a registered template plus
+the view function) and its output:
 
 ```php
 <?php
@@ -67,10 +67,10 @@ use Pure\Compile\Shape;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h1, p};
 
-registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
+register('Page', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h1(Slot::text('heading')),
         p(Slot::text('lead')),
@@ -80,11 +80,13 @@ registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
 
 function pageView(array $data): Raw
 {
-    return renderPage('Page', [
-        'heading' => $data['heading'],
-        'lead' => $data['lead'],
-        'body' => $data['body'],
-    ]);
+    // The engine emits the tree as written; prepend the document header here.
+    return Raw::of('<!DOCTYPE html>' . (string)render(
+        'Page',
+        heading: $data['heading'],
+        lead: $data['lead'],
+        body: $data['body'],
+    ));
 }
 
 echo pageView([
@@ -94,10 +96,10 @@ echo pageView([
 ]);
 ```
 
-`renderPage()` loads the template once per process and appends the document
-header. Under standard PHP-FPM, enable `Compile::cachePath()` so requests load
-the compiled renderer instead of rebuilding it, or precompile the template with
-`vendor/bin/pure compile .` so the binder loads the artifact.
+`render()` loads the template once per process; the document header is the
+caller's to prepend. Under standard PHP-FPM, enable `Compile::cachePath()` so
+requests load the compiled renderer instead of rebuilding it, or precompile the
+template with `vendor/bin/pure compile .` so the binder loads the artifact.
 
 ### 3. Run the Application
 
@@ -121,7 +123,7 @@ Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
 
 It emits one `E_USER_WARNING` per call site when the same place calls
 `Compile::shape()` too many times in one process, for example an inline
-`component(...)` rebuilt on every call. File-backed components go through
+`bind(...)` rebuilt on every call. File-backed components go through
 `render()`, which caches the binder per template path.
 
 ## Basic Examples

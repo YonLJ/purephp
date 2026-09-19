@@ -12,15 +12,14 @@ First public version. No tag has been cut yet.
 ### Added
 
 - Component units: a `*.cmp.php` file registers a lazy template factory with
-  `Pure\Component\register()` / `registerPage()` and defines the component
-  function next to it. `component()`, `page()`, `render()` and `renderPage()`
-  accept the registered name next to a file path; a name and the path of its
-  unit file resolve to the same binder, the factory is only called when no fresh
-  artifact serves the unit (and then once per compile generation), and duplicate
-  registrations throw unless `override: true` is passed. The examples ship as
-  units now.
+  `Pure\Component\register()` and defines the component function next to it.
+  `render()` and `bind()` accept the registered name next to a file path; a name
+  and the path of its unit file resolve to the same binder, the factory is only
+  called when no fresh artifact serves the unit (and then once per compile
+  generation), and duplicate registrations throw unless `override: true` is
+  passed. The examples ship as units now.
 - `pure compile` discovers `*.cmp.php` units next to `*.shape.php` templates
-  and gained `--list` (`name -> file (component|page)`), so one command
+  and gained `--list` (`name -> file (component)`), so one command
   compiles a unit file through its registered factory.
 - `ArtifactCompiler::buildUnit()` / `writeUnit()` compile a unit file
   (`*.shape.php` or `*.cmp.php`) whose shape is already known, so a `*.cmp.php`
@@ -37,19 +36,16 @@ First public version. No tag has been cut yet.
   is written, and the command fails, so discovery order cannot decide which
   template owns `a.pure.php`.
 
-- `Pure\Component\render()` and `Pure\Component\renderPage()` render a
-  `*.shape.php` template in one expression (`render($file, title: $title)`),
-  caching the binder per path; `renderPage()` prepends the document header.
-  They are the one-liner form of `component()` / `page()`, which remain the
-  lower-level binders for inline trees.
-- `Pure\Component\component()` and `Pure\Component\page()` bind a shape tree
-  or a `*.shape.php` template to a `data → Raw` function, which is what
-  component and page functions are built on. When the sibling `*.pure.php`
-  artifact exists and is at least as new as the shape file, the binder loads it
-  instead of compiling, so production skips building the shape tree and
-  computing the fingerprint; otherwise it compiles the shape file (the disk
-  cache still applies). `page()` prepends the document header, `component()`
-  returns the fragment.
+- `Pure\Component\render()` renders a `*.shape.php` template in one expression
+  (`render($file, title: $title)`), caching the binder per path; it returns the
+  fragment only, and the document header of a full document is the caller's to
+  prepend.
+- `Pure\Component\bind()` binds a shape tree or a `*.shape.php` template to a
+  `data → Raw` function, which is what component functions are built on. When
+  the sibling `*.pure.php` artifact exists and is at least as new as the shape
+  file, the binder loads it instead of compiling, so production skips building
+  the shape tree and computing the fingerprint; otherwise it compiles the shape
+  file (the disk cache still applies).
 - Compiled rendering: `Pure\Compile\Compile::shape()` compiles a data-free shape
   tree with `Pure\Core\Slot` placeholders into a flat PHP renderer
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
@@ -305,10 +301,6 @@ First public version. No tag has been cut yet.
   with `Compile::cachePath()` enabled the second shape was served the first
   one's cached renderer and printed the wrong attribute. The attribute name is
   now part of the fingerprint and `Compile::CACHE_VERSION` is 8.
-- `Pure\Component\render()` of a name registered with `registerPage()` returned
-  the page body without its document header; it now throws and names
-  `renderPage()`, since a silently truncated document is the one failure an
-  application notices last. The page form still accepts a component unit.
 - `Pure\Component\render()` with the path of a `*.cmp.php` unit that has no
   artifact required the unit and then reported that the file "must return a
   Shape", which is what a `*.shape.php` template must do. It now says the file is

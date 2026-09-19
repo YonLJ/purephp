@@ -38,7 +38,7 @@ use RuntimeException;
  */
 final class Registry
 {
-    /** @var array<string, array{file: string, factory: Closure(): mixed, document: bool}> */
+    /** @var array<string, array{file: string, factory: Closure(): mixed}> */
     private static array $units = [];
 
     /** @var array<string, string> realpath(file) => name */
@@ -49,9 +49,6 @@ final class Registry
 
     /** @var array<string, array{binder: Closure(array<int|string, mixed>): Raw, generation: int}> */
     private static array $binders = [];
-
-    /** @var array<string, array{binder: Closure(array<int|string, mixed>): Raw, generation: int}> */
-    private static array $pageBinders = [];
 
     /** @var array<string, array{shape: Shape, generation: int}> */
     private static array $shapes = [];
@@ -71,17 +68,11 @@ final class Registry
      * @param string $name The component name used by render().
      * @param string $file The unit file, normally `__FILE__`.
      * @param Closure(): mixed $factory Builds the template; called lazily, must return a Shape.
-     * @param bool $document Whether the binder prepends the document header.
      * @param bool $override Replace an existing registration.
      * @return void
      */
-    public static function register(
-        string $name,
-        string $file,
-        Closure $factory,
-        bool $document = false,
-        bool $override = false
-    ): void {
+    public static function register(string $name, string $file, Closure $factory, bool $override = false): void
+    {
         if ($name === '') {
             throw new InvalidArgumentException('component name must not be empty.');
         }
@@ -120,7 +111,7 @@ final class Registry
             self::forget($owner);
         }
 
-        self::$units[$name] = ['file' => $path, 'factory' => $factory, 'document' => $document];
+        self::$units[$name] = ['file' => $path, 'factory' => $factory];
         self::$files[$path] = $name;
         self::$keys = [];
     }
@@ -133,19 +124,7 @@ final class Registry
      */
     public static function component(string $nameOrPath): Closure
     {
-        return self::binder($nameOrPath, false);
-    }
-
-    /**
-     * The binder of a registered page unit or of a template path, including
-     * the document header of the root tag.
-     *
-     * @param string $nameOrPath A page name or a unit/shape file path.
-     * @return Closure(array<int|string, mixed>): Raw
-     */
-    public static function page(string $nameOrPath): Closure
-    {
-        return self::binder($nameOrPath, true);
+        return self::binder($nameOrPath);
     }
 
     /**
@@ -162,7 +141,7 @@ final class Registry
      * The units registered by one file, for `pure compile`.
      *
      * @param string $file The unit file path.
-     * @return array<string, array{factory: Closure(): mixed, document: bool}>
+     * @return array<string, array{factory: Closure(): mixed}>
      */
     public static function unitsFor(string $file): array
     {
@@ -171,7 +150,7 @@ final class Registry
 
         foreach (self::$units as $name => $unit) {
             if ($unit['file'] === $path) {
-                $units[$name] = ['factory' => $unit['factory'], 'document' => $unit['document']];
+                $units[$name] = ['factory' => $unit['factory']];
             }
         }
 
@@ -187,45 +166,28 @@ final class Registry
         self::$files = [];
         self::$keys = [];
         self::$binders = [];
-        self::$pageBinders = [];
         self::$shapes = [];
     }
 
-    private static function binder(string $nameOrPath, bool $document): Closure
+    private static function binder(string $nameOrPath): Closure
     {
         $key = self::key($nameOrPath);
         $generation = Compile::generation();
-        $cached = $document ? (self::$pageBinders[$key] ?? null) : (self::$binders[$key] ?? null);
+        $cached = self::$binders[$key] ?? null;
 
         if ($cached !== null && $cached['generation'] === $generation) {
             return $cached['binder'];
         }
 
-        if (isset(self::$units[$key])) {
-            if (!$document && self::$units[$key]['document']) {
-                throw new RuntimeException(
-                    "'{$key}' is registered as a page unit; render it with renderPage(), which prepends its document header."
-                );
-            }
-
-            [$renderer, $header] = self::unitRenderer($key);
-        } else {
-            [$renderer, $header] = self::templateRenderer(substr($key, strlen('path:')));
-        }
+        $renderer = isset(self::$units[$key])
+            ? self::unitRenderer($key)
+            : self::templateRenderer(substr($key, strlen('path:')));
 
         $binder =
             /** @param array<string, mixed> $data */
-            static fn (array $data): Raw => Raw::of(
-                ($document ? $header : '') . $renderer->render($data)
-            );
+            static fn (array $data): Raw => Raw::of($renderer->render($data));
 
-        $entry = ['binder' => $binder, 'generation' => $generation];
-
-        if ($document) {
-            self::$pageBinders[$key] = $entry;
-        } else {
-            self::$binders[$key] = $entry;
-        }
+        self::$binders[$key] = ['binder' => $binder, 'generation' => $generation];
 
         return $binder;
     }
@@ -273,9 +235,10 @@ final class Registry
     }
 
     /**
-     * @return array{0: Renderer, 1: string} The renderer and the document header.
+     * The compiled renderer of a unit: the precompiled artifact when fresh,
+     * the compiled shape otherwise.
      */
-    private static function unitRenderer(string $name): array
+    private static function unitRenderer(string $name): Renderer
     {
         $unit = self::$units[$name];
         $artifact = ArtifactCompiler::artifactPath($unit['file']);
@@ -291,12 +254,10 @@ final class Registry
                 );
             }
 
-            return [$renderer, $renderer->header];
+            return $renderer;
         }
 
-        $shape = self::shape($name);
-
-        return [$shape->compile(), $shape->tree()->documentHeader()];
+        return self::shape($name)->compile();
     }
 
     /**
@@ -326,12 +287,10 @@ final class Registry
     }
 
     /**
-     * The renderer of a bare `*.shape.php` path: the precompiled artifact when
-     * it is fresh, the compiled shape file otherwise.
-     *
-     * @return array{0: Renderer, 1: string} The renderer and the document header.
+     * The compiled renderer of a bare `*.shape.php` path: the precompiled
+     * artifact when fresh, the compiled shape file otherwise.
      */
-    private static function templateRenderer(string $shapeFile): array
+    private static function templateRenderer(string $shapeFile): Renderer
     {
         if (!is_file($shapeFile)) {
             throw new RuntimeException("component template '{$shapeFile}' does not exist; " . self::hint() . '.');
@@ -350,7 +309,7 @@ final class Registry
                 );
             }
 
-            return [$renderer, $renderer->header];
+            return $renderer;
         }
 
         if (str_ends_with($shapeFile, '.cmp.php')) {
@@ -367,14 +326,13 @@ final class Registry
             throw new RuntimeException("component template '{$shapeFile}' must return a Shape.");
         }
 
-        return [$shape->compile(), $shape->tree()->documentHeader()];
+        return $shape->compile();
     }
 
     private static function forget(string $name): void
     {
         unset(
             self::$binders[$name],
-            self::$pageBinders[$name],
             self::$shapes[$name],
         );
     }

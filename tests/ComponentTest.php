@@ -6,10 +6,8 @@ use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 
-use function Pure\Component\component;
-use function Pure\Component\page;
+use function Pure\Component\bind;
 use function Pure\Component\render;
-use function Pure\Component\renderPage;
 
 use Pure\Core\Raw;
 use Pure\Core\Slot;
@@ -44,7 +42,7 @@ class ComponentTest extends TestCase
 
     public function testInlineTreeBindsDataToRaw(): void
     {
-        $render = component(div(Slot::text('title')));
+        $render = bind(div(Slot::text('title')));
 
         $raw = $render(['title' => 'a & b']);
 
@@ -54,7 +52,7 @@ class ComponentTest extends TestCase
 
     public function testRawAndStringableSlotValuesAreCoercedWithoutACast(): void
     {
-        $render = component(div(Slot::raw('content')));
+        $render = bind(div(Slot::raw('content')));
 
         // A Raw (trusted markup) is emitted verbatim in a raw slot, no cast.
         $this->assertSame(
@@ -79,7 +77,7 @@ class ComponentTest extends TestCase
     {
         // A raw slot accepts a list of Raw / Stringable markup, emitted verbatim
         // and concatenated, so a rendered list needs no intermediate implode().
-        $render = component(div(Slot::raw('navs')));
+        $render = bind(div(Slot::raw('navs')));
 
         $navs = [Raw::of('<a>a</a>'), Raw::of('<b>b</b>')];
         $this->assertSame(
@@ -92,7 +90,7 @@ class ComponentTest extends TestCase
     {
         // raw() is the verbatim path; a Raw handed to a text slot is still
         // stringified and escaped, keeping the safe default.
-        $render = component(div(Slot::text('content')));
+        $render = bind(div(Slot::text('content')));
 
         $this->assertSame(
             '<div>&lt;b&gt;x&lt;/b&gt;</div>',
@@ -100,16 +98,21 @@ class ComponentTest extends TestCase
         );
     }
 
-    public function testPagePrependsTheDocumentHeader(): void
+    public function testBindDoesNotPrependTheDocumentHeader(): void
     {
-        $render = page(html(body(Slot::text('title'))));
+        $render = bind(html(body(Slot::text('title'))));
 
-        $this->assertSame('<!DOCTYPE html><html><body>a</body></html>', (string)$render(['title' => 'a']));
+        // The tree renders as written; the document header is the caller's job.
+        $this->assertSame('<html><body>a</body></html>', (string)$render(['title' => 'a']));
+        $this->assertSame(
+            '<!DOCTYPE html><html><body>a</body></html>',
+            (string)Raw::of('<!DOCTYPE html>' . (string)$render(['title' => 'a']))
+        );
     }
 
     public function testShapeFileCompilesWhenThereIsNoArtifact(): void
     {
-        $render = component($this->shapeFile('badge.shape.php', 'div'));
+        $render = bind($this->shapeFile('badge.shape.php', 'div'));
 
         $this->assertSame('<div>b</div>', (string)$render(['title' => 'b']));
     }
@@ -129,7 +132,7 @@ class ComponentTest extends TestCase
         touch($file, time() - 60);
         clearstatcache();
 
-        $this->assertSame('<div>b</div>', (string)component($file)(['title' => 'b']));
+        $this->assertSame('<div>b</div>', (string)bind($file)(['title' => 'b']));
 
         // Touching the shape file makes it newer, so it compiles again once
         // the binder cache is dropped: binders are cached per compile
@@ -139,7 +142,7 @@ class ComponentTest extends TestCase
         clearstatcache();
         Compile::flush();
 
-        $this->assertSame('<span>b</span>', (string)component($file)(['title' => 'b']));
+        $this->assertSame('<span>b</span>', (string)bind($file)(['title' => 'b']));
     }
 
     public function testRenderPassesNamedArgumentsAsSlots(): void
@@ -166,7 +169,7 @@ class ComponentTest extends TestCase
         render($file, ['title' => 'b']);
     }
 
-    public function testRenderPagePrependsTheDocumentHeader(): void
+    public function testRenderDoesNotPrependTheDocumentHeader(): void
     {
         $file = $this->dir . '/page.shape.php';
         file_put_contents($file, <<<PHP
@@ -182,9 +185,11 @@ class ComponentTest extends TestCase
             return Compile::shape(html(body(Slot::text('title'))));
             PHP);
 
+        // render() emits the tree as written; the document header is the
+        // caller's to prepend.
         $this->assertSame(
-            '<!DOCTYPE html><html><body>a</body></html>',
-            (string)renderPage($file, ['title' => 'a'])
+            '<html><body>a</body></html>',
+            (string)render($file, title: 'a')
         );
     }
 
@@ -193,7 +198,7 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('does not exist');
 
-        component($this->dir . '/missing.shape.php');
+        bind($this->dir . '/missing.shape.php');
     }
 
     public function testTemplateThatDoesNotReturnAShapeThrows(): void
@@ -204,7 +209,7 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('must return a Shape');
 
-        component($file);
+        bind($file);
     }
 
     public function testArtifactThatDoesNotReturnARendererThrows(): void
@@ -219,7 +224,7 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('must return a Renderer');
 
-        component($file);
+        bind($file);
     }
 
     private function shapeFile(string $name, string $tag): string

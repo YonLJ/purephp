@@ -24,7 +24,7 @@ use function Pure\HTML\{div, h1, li, ul};
 // A shape is a normal tag tree with Slot placeholders instead of data.
 $item = Compile::shape(li(Slot::text('title')));
 
-$page = Compile::shape(
+$root = Compile::shape(
     div(
         h1(Slot::text('heading')),
         ul(Slot::each('items', $item))
@@ -32,7 +32,7 @@ $page = Compile::shape(
 );
 
 // Rendering binds plain data.
-echo $page([
+echo $root([
     'heading' => 'Users',
     'items' => [['title' => 'Ada'], ['title' => 'Grace']],
 ]);
@@ -250,9 +250,10 @@ $pureBody = static function (array $v): string {
 };
 ```
 
-`Renderer::$header` holds the document header captured at build time
-(`<!DOCTYPE html>` for any HTML root, the XML declaration for an XML or SVG
-one). Components and pages in `examples/bootstrap` are units built on that:
+There is no automatic document header: the tree renders as written, and a full
+document's header (`<!DOCTYPE html>` for an HTML root, the XML declaration for an
+XML or SVG one) is the caller's to prepend, via the root tag's `documentHeader()`.
+Components in `examples/bootstrap` are units built on that:
 
 ```php
 // components/Icon.cmp.php: typed props, backed by its precompiled template
@@ -266,28 +267,27 @@ function Icon(string $href, string $class = 'bi'): Raw
 }
 
 // views/features.cmp.php: the page skeleton plus the rendered body
-registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+register('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
 
 function featuresPage(array $data): Raw
 {
-    return renderPage('Features', [
-        'title' => $data['title'],
-        'content' => FeaturesBody($data['content']),
-    ]);
+    // Prepend the document header; the tree itself renders without one.
+    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+        title: $data['title'],
+        content: FeaturesBody($data['content']),
+    ));
 }
 ```
 
 A child component's `Raw` goes straight into a raw slot — no `(string)` cast —
 and an array of them is concatenated in order.
 
-`Pure\Component\render()` and `renderPage()` load the artifact of a unit or
-shape file when one exists next to it and is at least as new as the file;
-otherwise they call the registered factory (once per compile generation) or
-compile the shape file (the disk cache still applies). `renderPage()` prepends
-the document header, `render()` returns the fragment — and refuses a name
-registered with `registerPage()`, because a page body without its header is a
-silent truncation. The binder underneath is `component()` / `page()`, which you
-can hold yourself for inline trees.
+`Pure\Component\render()` loads the artifact of a unit or shape file when one
+exists next to it and is at least as new as the file; otherwise it calls the
+registered factory (once per compile generation) or compiles the shape file (the
+disk cache still applies). It returns the fragment only — the document header,
+if you want one, is the caller's to prepend. The binder underneath is `bind()`,
+which you can hold yourself for inline trees.
 
 Its `PlainFeaturesController` passes the same bindings through the example's
 `plain()` helper (an app function: it requires the view file and extracts the

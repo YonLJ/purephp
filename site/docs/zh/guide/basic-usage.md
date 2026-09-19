@@ -302,13 +302,13 @@ div(
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, p};
 
 function Message(bool $isLoggedIn): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         div(
             Slot::if(
                 'isLoggedIn',
@@ -350,13 +350,13 @@ ul(
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{ul, li};
 
 function Fruits(array $items): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         ul(Slot::each('items', li(Slot::text('name'))))->class('fruits')
     );
 

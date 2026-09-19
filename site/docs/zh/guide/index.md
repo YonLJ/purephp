@@ -28,23 +28,24 @@ PurePHP 有两条渲染路径：
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\page;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, h1, p};
 
 function pageView(array $data): Raw
 {
     static $render;
-    $render ??= page(
+    $render ??= bind(
         div(
             h1(Slot::text('heading')),
             p(Slot::text('lead'))
         )->class('container')
     );
 
-    return $render([
+    // 引擎不附加文档声明，在这里手动拼接。
+    return Raw::of('<!DOCTYPE html>' . (string)$render([
         'heading' => $data['heading'],
         'lead' => $data['lead'],
-    ]);
+    ]));
 }
 
 echo pageView(['heading' => 'Welcome to PurePHP', 'lead' => 'A PHP template engine']);

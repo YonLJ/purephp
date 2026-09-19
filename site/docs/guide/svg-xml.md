@@ -125,12 +125,12 @@ use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 
 function Address(array $address): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         XML::address(
             XML::street(Slot::text('street')),
             Slot::if('city', XML::city(Slot::text('city'))),
@@ -145,7 +145,7 @@ function Address(array $address): Raw
 function Customers(array $addresses): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         XML::customers(
             XML::customer(
                 XML::name('Charter Group'),
@@ -171,10 +171,9 @@ echo Customers([
 ```
 
 `Slot::if()` skips the `city` element for records without it — a missing key is
-false and never throws. To write the document to a file, pass the rendered
-string to `file_put_contents()`; `Renderer::save()` on the underlying template
-prepends the document header of the root tag and takes a custom header as its
-third argument.
+false and never throws. To write the document to a file, use `Shape::save()`,
+which prepends the document header of the root tag by default (a custom header
+is its third argument).
 
 ### Data-driven Elements
 

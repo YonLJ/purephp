@@ -43,7 +43,7 @@ echo $shape([
 ## 函数组件
 
 组件单元把惰性模板工厂注册到一个名字下，紧挨着的组件函数渲染这个名字。
-`Pure\Component\render()` 与 `renderPage()` 在一个表达式里把注册的模板变成 `Raw` 标记：
+`Pure\Component\render()` 在一个表达式里把注册的模板变成 `Raw` 标记：
 
 ```php
 <?php
@@ -69,14 +69,15 @@ function Card(string $title, string $content): Raw
 | 函数 | 行为 |
 | --- | --- |
 | `register(string $name, string $file, Closure $factory, bool $override = false): void` | 注册组件单元；工厂必须惰性且返回 `Shape` |
-| `registerPage(string $name, string $file, Closure $factory, bool $override = false): void` | 同上，并附加根标签的文档声明 |
 | `render(string $source, mixed ...$data): Raw` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
-| `renderPage(string $source, array $data): Raw` | 同上，并附加根标签的文档声明 |
-| `component(Tag\|string $source): Closure` | 返回片段的 `fn (array $data): Raw` 绑定器 |
-| `page(Tag\|string $source): Closure` | 同上，并附加根标签的文档声明 |
+| `bind(Tag\|string $source): Closure` | 返回片段可复用的 `fn (array $data): Raw` 绑定器 |
+
+`render()` 与 `bind()` 按原样输出树，**不带文档头**；整份文档的文档头由调用方
+自己拼接（`$root->documentHeader()`，或字面量 `<!DOCTYPE html>` /
+`<?xml version="1.0"?>`）。
 
 `render()` 的槽位值按名字传入（`render('Card', title: $title)`），也可以传解包的字符串键
-数组；位置参数会被 `RuntimeException` 拒绝。`component()` 与 `page()` 是更底层的助手，
+数组；位置参数会被 `RuntimeException` 拒绝。`bind()` 是更底层的助手，
 用于内联树，或需要自己把绑定器存进 `static` 变量的场合。
 
 传入 `Tag` 时就地编译；传入字符串时视为注册名、`*.cmp.php` 单元路径或 `*.shape.php` 模板

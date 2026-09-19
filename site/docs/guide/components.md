@@ -95,15 +95,17 @@ logic.
 
 ## Pages
 
-A page is a unit too: register it with `registerPage()` and the binder prepends
-the document header of the root tag (`<!DOCTYPE html>` for any HTML root, the
-XML declaration for an XML or SVG one):
+A page is a component unit whose root tag is a document root (`html`, `svg`,
+`xml`, …). There is no separate page API: register it with `register()` and
+render it with `render()`, then prepend the document header of the root tag
+yourself — `<!DOCTYPE html>` for an HTML root, the XML declaration for an XML
+or SVG one:
 
 ```php
 <?php
 
 // views/features.cmp.php
-registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(
+register('Features', __FILE__, static fn (): Shape => Compile::shape(
     html(
         head(title(Slot::text('title'))),
         body(Slot::raw('content'))
@@ -112,16 +114,16 @@ registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(
 
 function featuresPage(array $data): Raw
 {
-    return renderPage('Features', [
-        'title' => $data['title'],
-        'content' => FeaturesBody($data['content']),
-    ]);
+    // The engine emits the tree as written; prepend the document header here.
+    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+        title: $data['title'],
+        content: FeaturesBody($data['content']),
+    ));
 }
 ```
 
-`renderPage()` takes the bindings as one array, and a name registered with
-`registerPage()` renders only through it: `render()` refuses such a name rather
-than returning a document without its header.
+`render()` emits the tree as written, without a header, so a full page is the
+document header of its root tag plus the rendered fragment.
 
 `pure compile --plain` writes the same page as a dependency-free view file, so a
 deployment without purephp can serve it; the controller prints the same
@@ -129,14 +131,13 @@ bindings either way.
 
 ## The Binder API
 
-`render()` is a convenience over lower-level helpers:
+`render()` is a convenience over the lower-level helpers:
 
-- `component($source)` returns the `data → Raw` binder of a unit or template.
-- `page($source)` does the same and prepends the document header.
-- `register()` / `registerPage()` register a unit under a name.
+- `register($name, $file, $factory)` registers a unit under a name.
+- `bind($source)` returns the `data → Raw` binder of a unit or template.
 
-Use `component()` when the template is an inline tree
-(`component(div(Slot::text('title')))`) or when you want to hold the binder in a
+Use `bind()` when the template is an inline tree
+(`bind(div(Slot::text('title')))`), or when you want to hold the binder in a
 variable yourself:
 
 ```php
@@ -145,20 +146,20 @@ variable yourself:
 function Tag(string $label): Raw
 {
     static $render;
-    $render ??= component(div(Slot::text('label'))->class('tag'));
+    $render ??= bind(div(Slot::text('label'))->class('tag'));
 
     return $render(['label' => $label]);
 }
 ```
 
-`render()` / `renderPage()` cache the binder per name or path, so you never need
-a `static` variable for a registered unit.
+`render()` caches the binder per name or path, so you never need a `static`
+variable for a registered unit.
 
 ## Caching
 
 - A unit is served by its `*.pure.php` artifact when it is at least as new as
   the unit file; the factory and the shape tree are then never touched.
-- `render()` / `renderPage()` cache the binder per name or path for the compile
+- `render()` caches the binder per name or path for the compile
   generation.
 - `Compile::cachePath($dir)` — requests load generated renderers instead of
   regenerating them.

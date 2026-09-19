@@ -171,7 +171,7 @@ are slots:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\button;
 use function Pure\Utils\sty;
 
@@ -184,7 +184,7 @@ function ActionButton(
 ): Raw {
     static $renders = [];
 
-    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= component(
+    $render = $renders["{$variant}|{$size}|" . (int) $loading] ??= bind(
         button(Slot::text('text'))
             ->class('btn', "btn-{$variant}", "btn-{$size}", $loading ? 'loading' : null)
             ->style(Slot::attr('style'))
@@ -212,14 +212,14 @@ The card accepts an HTML child, so its content is bound with `Slot::raw()`:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, h3, p};
 
 function Card(string $title, Raw $content, string $theme = 'light', bool $featured = false): Raw
 {
     static $renders = [];
 
-    $render = $renders["{$theme}|" . (int) $featured] ??= component(
+    $render = $renders["{$theme}|" . (int) $featured] ??= bind(
         div(
             h3(Slot::text('title'))->class('card-title'),
             p(Slot::raw('content'))->class('card-content')

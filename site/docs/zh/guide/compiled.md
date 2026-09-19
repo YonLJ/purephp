@@ -19,7 +19,7 @@ use function Pure\HTML\{div, h1, li, ul};
 // 形状就是普通标签树，只是把数据换成 Slot 占位符。
 $item = Compile::shape(li(Slot::text('title')));
 
-$page = Compile::shape(
+$root = Compile::shape(
     div(
         h1(Slot::text('heading')),
         ul(Slot::each('items', $item))
@@ -27,7 +27,7 @@ $page = Compile::shape(
 );
 
 // 渲染只负责绑定普通数据。
-echo $page([
+echo $root([
     'heading' => 'Users',
     'items' => [['title' => 'Ada'], ['title' => 'Grace']],
 ]);
@@ -216,9 +216,9 @@ $pureBody = static function (array $v): string {
 };
 ```
 
-`Renderer::$header` 保存构建时捕获的文档声明（任何 HTML 根标签都是 `<!DOCTYPE html>`，
-XML 或 SVG 根标签则是 XML 声明）。
-`examples/bootstrap` 的组件与页面都是建立在其上的单元：
+没有自动的文档声明：树按原样渲染，整份文档的文档声明（HTML 根是
+`<!DOCTYPE html>`，XML/SVG 根是 XML 声明）由调用方通过根标签的 `documentHeader()` 自己拼接。
+`examples/bootstrap` 的组件都是建立在其上的单元：
 
 ```php
 // components/Icon.cmp.php：类型化 props，背后是预编译模板
@@ -230,24 +230,23 @@ function Icon(string $href, string $class = 'bi'): Raw
 }
 
 // views/features.cmp.php：页面骨架加已渲染的正文
-registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
+register('Features', __FILE__, static fn (): Shape => Compile::shape(/* ... */));
 
 function featuresPage(array $data): Raw
 {
-    return renderPage('Features', [
-        'title' => $data['title'],
-        'content' => FeaturesBody($data['content']),
-    ]);
+    // 手动补上文档声明；树本身不带文档声明。
+    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+        title: $data['title'],
+        content: FeaturesBody($data['content']),
+    ));
 }
 ```
 
 子组件的 `Raw` 直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的数组按顺序拼接。
 
-`Pure\Component\render()` 与 `renderPage()` 会在 shape 文件旁边存在产物、且产物不早于
-shape 文件时直接加载产物，否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件
-（磁盘缓存仍然生效）。`renderPage()` 会附加文档声明，`render()` 只返回片段——并且会拒绝
-用 `registerPage()` 注册的名字，因为没有文档声明的页面正文就是一次静默截断。底层绑定器是
-`component()` / `page()`，内联树可以直接持有它们。
+`Pure\Component\render()` 会在 shape 文件旁边存在产物、且产物不早于 shape 文件时直接加载产物，
+否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件（磁盘缓存仍然生效）。它只
+返回片段——要文档声明就由调用方自己拼接。底层绑定器是 `bind()`，内联树可以直接持有它。
 
 它的 `PlainFeaturesController` 把同一份 bindings 交给示例自带的 `plain()` 助手（一个应用
 函数：它 require 视图文件并展开数据）；单一入口

@@ -671,7 +671,7 @@ class ArtifactTest extends TestCase
             'box.shape.php',
             "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::text('title')));\n"
         );
-        $unit = $this->unitFile('box.cmp.php', 'Box', 'component');
+        $unit = $this->unitFile('box.cmp.php', 'Box');
 
         $run = $this->runCommand($this->registryCommand(), ['pure', 'compile', $this->dir]);
 
@@ -761,7 +761,7 @@ class ArtifactTest extends TestCase
 
     public function testCompilesUnitFilesThroughTheCommand(): void
     {
-        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+        $file = $this->unitFile('badge.cmp.php', 'Badge');
         $command = $this->registryCommand();
 
         $compiled = $this->runCommand($command, ['pure', 'compile', '--plain', $file]);
@@ -787,7 +787,7 @@ class ArtifactTest extends TestCase
 
     public function testUnitFilesNeedTheRegistry(): void
     {
-        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+        $file = $this->unitFile('badge.cmp.php', 'Badge');
 
         $result = $this->runCommand(new ArtifactCommand(), ['pure', 'compile', $file]);
 
@@ -799,7 +799,7 @@ class ArtifactTest extends TestCase
     {
         $command = $this->registryCommand();
 
-        $empty = $this->unitFile('empty.cmp.php', null, 'component');
+        $empty = $this->unitFile('empty.cmp.php', null);
         $none = $this->runCommand($command, ['pure', 'compile', $empty]);
         $this->assertSame(1, $none['code']);
         $this->assertStringContainsString('no component unit is registered', $none['stderr']);
@@ -827,7 +827,7 @@ class ArtifactTest extends TestCase
 
     public function testCommandRejectsResolversThatReturnSeveralUnits(): void
     {
-        $file = $this->unitFile('badge.cmp.php', 'Badge', 'component');
+        $file = $this->unitFile('badge.cmp.php', 'Badge');
         $shape = Compile::shape(\Pure\HTML\span(\Pure\Core\Slot::text('label')));
         $command = new ArtifactCommand(static fn (string $path): array => [
             'One' => ['factory' => static fn (): Shape => $shape, 'document' => false],
@@ -887,7 +887,7 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString("unknown option '--nope'", $usage['stderr']);
     }
 
-    public function testArtifactsCaptureTheDocumentHeader(): void
+    public function testRendererSaveWritesAFragmentAndShapeSavePrependsTheRootsHeader(): void
     {
         $file = $this->shapeFile('document.shape.php', <<<'PHP'
             <?php
@@ -908,15 +908,30 @@ class ArtifactTest extends TestCase
         $this->assertInstanceOf(Shape::class, $shape);
 
         $renderer = self::load(ArtifactCompiler::write($file));
-
         $this->assertInstanceOf(Renderer::class, $renderer);
-        $this->assertNotFalse($renderer->save($this->dir . '/artifact.html', ['content' => 'hi']));
-        $shape->save($this->dir . '/shape.html', ['content' => 'hi']);
 
-        $rendered = (string)file_get_contents($this->dir . '/artifact.html');
+        // A bare Renderer::save() writes the fragment only: the engine no longer
+        // captures a document header, so pass one to prepend it.
+        $this->assertNotFalse($renderer->save($this->dir . '/fragment.html', ['content' => 'hi']));
+        $this->assertSame(
+            '<html><head></head><body>hi</body></html>',
+            (string)file_get_contents($this->dir . '/fragment.html')
+        );
 
-        $this->assertSame('<!DOCTYPE html><html><head></head><body>hi</body></html>', $rendered);
-        $this->assertSame((string)file_get_contents($this->dir . '/shape.html'), $rendered);
+        $this->assertNotFalse(
+            $renderer->save($this->dir . '/explicit.html', ['content' => 'hi'], '<!DOCTYPE html>')
+        );
+        $this->assertSame(
+            '<!DOCTYPE html><html><head></head><body>hi</body></html>',
+            (string)file_get_contents($this->dir . '/explicit.html')
+        );
+
+        // Shape::save() prepends the root tag's own document header by default.
+        $this->assertNotFalse($shape->save($this->dir . '/shape.html', ['content' => 'hi']));
+        $this->assertSame(
+            '<!DOCTYPE html><html><head></head><body>hi</body></html>',
+            (string)file_get_contents($this->dir . '/shape.html')
+        );
     }
 
     public function testDiscardsOutputEmittedWhileTheShapeFileLoads(): void
@@ -1002,14 +1017,17 @@ class ArtifactTest extends TestCase
     /**
      * Write a `*.cmp.php` file that registers one unit.
      */
-    private function unitFile(string $name, ?string $component, string $kind): string
+    private function unitFile(string $name, ?string $component): string
     {
         $file = $this->dir . '/' . $name;
-        $registerFunction = $kind === 'page' ? 'registerPage' : 'register';
+        $fn = 'register';
         $register = $component === null
             ? ''
-            : $registerFunction . "('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::text('label'))));";
+            : "{$fn}('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::text('label'))));";
 
+        // `{$fn}` (not a literal) keeps the import line safe: a literal
+        // `Pure\Component\register` in this heredoc would turn its `\r` into a
+        // carriage-return escape.
         file_put_contents($file, <<<PHP
             <?php
 
@@ -1018,7 +1036,7 @@ class ArtifactTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{$registerFunction};
+            use function Pure\Component\{$fn};
             use function Pure\HTML\span;
 
             {$register}

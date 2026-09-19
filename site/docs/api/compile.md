@@ -45,9 +45,8 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 ## Function Components
 
 A component unit registers a lazy template factory under a name; the component
-function next to it renders that name. `Pure\Component\render()` and
-`renderPage()` turn the registered template into `Raw` markup in one
-expression:
+function next to it renders that name. `Pure\Component\render()` turns the
+registered template into `Raw` markup in one expression:
 
 ```php
 <?php
@@ -73,16 +72,18 @@ function Card(string $title, string $content): Raw
 | Function | Behavior |
 | --- | --- |
 | `register(string $name, string $file, Closure $factory, bool $override = false): void` | Registers a component unit; the factory must be lazy and return a `Shape` |
-| `registerPage(string $name, string $file, Closure $factory, bool $override = false): void` | Same, with the document header of the root tag |
 | `render(string $source, mixed ...$data): Raw` | Renders a unit by name or a template by path; the binder is cached |
-| `renderPage(string $source, array $data): Raw` | Same, prepending the document header of the root tag |
-| `component(Tag\|string $source): Closure` | Returns the `fn (array $data): Raw` binder of a fragment |
-| `page(Tag\|string $source): Closure` | Same, prepending the document header of the root tag |
+| `bind(Tag\|string $source): Closure` | Returns the reusable `fn (array $data): Raw` binder of a fragment |
+
+`render()` and `bind()` emit the tree as written, with **no document header**.
+There is no page flavour: to emit a full document, prepend the header of the
+root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
+`<?xml version="1.0"?>`).
 
 `render()` takes slot values as named arguments (`render('Card', title: $title)`)
 or as an unpacked array with string keys; positional data is rejected with a
-`RuntimeException`. `component()` and `page()` are the lower-level helpers for
-inline trees or when you want to hold the binder in a `static` variable.
+`RuntimeException`. `bind()` is the lower-level helper for inline trees or when
+you want to hold the binder in a `static` variable.
 
 A `Tag` source is compiled in place; a string is a registered name, the path of
 a `*.cmp.php` unit or the path of a `*.shape.php` template. Registering the same

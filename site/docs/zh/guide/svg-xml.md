@@ -121,12 +121,12 @@ use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 
 function Address(array $address): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         XML::address(
             XML::street(Slot::text('street')),
             Slot::if('city', XML::city(Slot::text('city'))),
@@ -141,7 +141,7 @@ function Address(array $address): Raw
 function Customers(array $addresses): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         XML::customers(
             XML::customer(
                 XML::name('Charter Group'),
@@ -166,7 +166,7 @@ echo Customers([
 ]);
 ```
 
-`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。要把文档写入文件，把渲染后的字符串交给 `file_put_contents()` 即可；底层模板上的 `Renderer::save()` 会补上根标签的文档声明，也可以把自定义声明作为第三个参数传入。
+`Slot::if()` 对没有 `city` 的记录跳过该元素——缺失的键为 false，且绝不抛出异常。要把文档写入文件，用 `Shape::save()` 即可：它默认补上根标签的文档声明，也可把自定义声明作为第三个参数传入。
 
 ### 数据驱动的元素
 

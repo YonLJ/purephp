@@ -6,7 +6,7 @@ use Pure\Core\Raw;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 
 /**
  * Address shape: fields follow the data key order; `city` is optional and
@@ -45,15 +45,16 @@ function XmlPageShape(): Shape
     );
 }
 
-registerPage('Xml', __FILE__, static fn (): Shape => XmlPageShape());
+register('Xml', __FILE__, static fn (): Shape => XmlPageShape());
 
 /**
  * The xml page: the document comes from views/xml.shape.php (precompiled with
- * `pure compile`).
+ * `pure compile`). The XML declaration is not part of the tree, so it is
+ * prepended manually.
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
 function xmlPage(array $data): Raw
 {
-    return renderPage('Xml', ['addresses' => $data['addresses']]);
+    return Raw::of('<?xml version="1.0"?>' . (string)render('Xml', addresses: $data['addresses']));
 }

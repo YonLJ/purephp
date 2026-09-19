@@ -86,14 +86,15 @@ Button(Icon('#plus'), 'Add');
 
 ## 页面
 
-页面同样是单元：用 `registerPage()` 注册，绑定器会补上根标签的文档声明（任何 HTML 根标签
-都是 `<!DOCTYPE html>`，XML 或 SVG 根标签则是 XML 声明）：
+页面就是根标签为文档根（`html`、`svg`、`xml`…）的组件单元。没有单独的页面 API：
+用 `register()` 注册、用 `render()` 渲染，然后自己补上根标签的文档声明（HTML 根是
+`<!DOCTYPE html>`，XML/SVG 根是 XML 声明）：
 
 ```php
 <?php
 
 // views/features.cmp.php
-registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(
+register('Features', __FILE__, static fn (): Shape => Compile::shape(
     html(
         head(title(Slot::text('title'))),
         body(Slot::raw('content'))
@@ -102,29 +103,28 @@ registerPage('Features', __FILE__, static fn (): Shape => Compile::shape(
 
 function featuresPage(array $data): Raw
 {
-    return renderPage('Features', [
-        'title' => $data['title'],
-        'content' => FeaturesBody($data['content']),
-    ]);
+    // 引擎按原样输出树，文档声明在这里手动拼接。
+    return Raw::of('<!DOCTYPE html>' . (string)render('Features',
+        title: $data['title'],
+        content: FeaturesBody($data['content']),
+    ));
 }
 ```
 
-`renderPage()` 把 bindings 作为一个数组接收，而用 `registerPage()` 注册的名字只能经由它渲染：
-`render()` 会拒绝这样的名字，而不是返回一份没有文档声明的文档。
+`render()` 按原样输出（不带文档声明），所以完整页面 = 根标签的文档声明 + 渲染出的片段。
 
 `pure compile --plain` 会把同一个页面写成无依赖视图文件，因此没有安装 purephp 的部署也能
 渲染；两种形态下控制器传入同一份 bindings。
 
 ## 绑定器 API
 
-`render()` 是几个底层助手的便捷形式：
+`render()` 是底层助手的便捷形式：
 
-- `component($source)` 返回单元或模板的 `数据 → Raw` 绑定器。
-- `page($source)` 同上，并补上文档声明。
-- `register()` / `registerPage()` 把单元注册到一个名字下。
+- `register($name, $file, $factory)` 把单元注册到一个名字下。
+- `bind($source)` 返回单元或模板的 `数据 → Raw` 绑定器。
 
-模板是内联树（`component(div(Slot::text('title')))`）时，或者你想自己持有绑定器变量时，
-用 `component()`：
+模板是内联树（`bind(div(Slot::text('title')))`）时，或者你想自己持有绑定器变量时，
+用 `bind()`：
 
 ```php
 <?php
@@ -132,20 +132,20 @@ function featuresPage(array $data): Raw
 function Tag(string $label): Raw
 {
     static $render;
-    $render ??= component(div(Slot::text('label'))->class('tag'));
+    $render ??= bind(div(Slot::text('label'))->class('tag'));
 
     return $render(['label' => $label]);
 }
 ```
 
-`render()` / `renderPage()` 按名字或路径缓存绑定器，因此注册过的单元永远不需要自己写
+`render()` 按名字或路径缓存绑定器，因此注册过的单元永远不需要自己写
 `static` 变量。
 
 ## 缓存
 
 - 单元文件旁存在不早于它的 `*.pure.php` 产物时，直接由产物提供服务；工厂与形状树完全不
   会被触碰。
-- `render()` / `renderPage()` 在同一个编译 generation 内按名字或路径缓存绑定器。
+- `render()` 在同一个编译 generation 内按名字或路径缓存绑定器。
 - `Compile::cachePath($dir)`——请求加载已生成的 renderer，而不是重新生成。
 - `pure compile --check` 让 CI 把过期产物拦下来；长驻 worker 会把已加载的 renderer 留在
   内存里，产物在那里是可选项。

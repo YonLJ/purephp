@@ -5,7 +5,7 @@ use Pure\Compile\Shape;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 use function Pure\HTML\{body, div, head, html, link, meta, title};
 
 require_once __DIR__ . '/../components/PageHeader.cmp.php';
@@ -13,7 +13,7 @@ require_once __DIR__ . '/../components/PricingHeader.cmp.php';
 require_once __DIR__ . '/../components/CardDeck.cmp.php';
 require_once __DIR__ . '/../components/PageFooter.cmp.php';
 
-registerPage('Pricing', __FILE__, static function (): Shape {
+register('Pricing', __FILE__, static function (): Shape {
     /**
      * The pricing page skeleton: everything but the four component blocks is
      * static. `pure compile` precompiles it into views/pricing.pure.php.
@@ -64,11 +64,12 @@ function pricingBindings(array $data): array
 /**
  * The pricing page: the document skeleton comes from views/pricing.shape.php
  * (precompiled with `pure compile`), the four blocks are composed from the
- * component functions.
+ * component functions. The document header is not part of the tree, so it is
+ * prepended manually.
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
 function pricingPage(array $data): Raw
 {
-    return renderPage('Pricing', pricingBindings($data));
+    return Raw::of('<!DOCTYPE html>' . (string)render('Pricing', ...pricingBindings($data)));
 }

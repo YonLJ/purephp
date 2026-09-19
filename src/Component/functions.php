@@ -34,63 +34,35 @@ use RuntimeException;
  */
 function register(string $name, string $file, Closure $factory, bool $override = false): void
 {
-    Registry::register($name, $file, $factory, false, $override);
+    Registry::register($name, $file, $factory, $override);
 }
 
 /**
- * Register a page unit under a name: like register(), but the binder prepends
- * the document header of the root tag — `<!DOCTYPE html>` for any HTML tag,
- * `<?xml version="1.0"?>` for an XML or SVG tag.
- *
- * @param string $name The page name used by renderPage().
- * @param string $file The unit file, normally `__FILE__`.
- * @param Closure(): mixed $factory Builds the template lazily; must return a Shape.
- * @param bool $override Replace an existing registration of the name or file.
- * @return void
- */
-function registerPage(string $name, string $file, Closure $factory, bool $override = false): void
-{
-    Registry::register($name, $file, $factory, true, $override);
-}
-
-/**
- * Bind a component template to a data → Raw function.
+ * Bind a template to a data → Raw function: the reusable form of render().
  *
  * A component is an ordinary function with typed parameters that returns Raw
- * markup; this helper turns its template into the renderer behind it. The
- * template is a shape tree built inline, the name of a registered unit, or the
- * path of a `*.shape.php` file:
+ * markup; this helper turns its template into the renderer behind it, to be
+ * stored and called (or passed around) instead of inlined. The template is a
+ * shape tree built inline, the name of a registered unit, or the path of a
+ * `*.shape.php` file:
  *
- *     function Badge(string $label): Raw
- *     {
- *         return render('Badge', label: $label);
- *     }
- *
- * A registered unit is served by its precompiled artifact when one exists next
- * to it and is at least as new as the unit file; only otherwise is its factory
- * called and the shape compiled (the disk cache still applies). Run
- * `pure compile` to build artifacts and `pure compile --check` to keep them
- * fresh in CI.
+ *     $card = bind('Card');
+ *     $html = $card(['title' => 'x']);
  *
  * @param Tag|string $source A shape tree, a registered name, or a template path.
  * @return Closure(array<int|string, mixed>): Raw The data → Raw binder.
  */
-function component(Tag|string $source): Closure
+function bind(Tag|string $source): Closure
 {
-    return binder($source, false);
-}
+    if ($source instanceof Tag) {
+        $renderer = Compile::shape($source)->compile();
 
-/**
- * Bind a page template to a data → Raw function, including the document
- * header of its root tag (`<!DOCTYPE html>` for any HTML tag, the XML
- * declaration for an XML or SVG root).
- *
- * @param Tag|string $source A shape tree, a registered name, or a template path.
- * @return Closure(array<int|string, mixed>): Raw The data → Raw binder.
- */
-function page(Tag|string $source): Closure
-{
-    return binder($source, true);
+        return
+            /** @param array<string, mixed> $data */
+            static fn (array $data): Raw => Raw::of($renderer->render($data));
+    }
+
+    return Registry::component($source);
 }
 
 /**
@@ -108,6 +80,10 @@ function page(Tag|string $source): Closure
  * coerced to a string at render time, so a Raw is passed as-is without a
  * `(string)` cast.
  *
+ * The rendered markup is the tree as written, with no document header. To
+ * emit a full document, prepend the header of the root tag yourself, e.g.
+ * `Raw::of($html->documentHeader() . (string)render('Page', ...$data))`.
+ *
  * @param string $source A registered name or the path of a `*.shape.php` file.
  * @param mixed ...$data The slot values, by slot name: strings, or Raw / Stringable markup.
  * @return Raw The rendered markup.
@@ -121,40 +97,4 @@ function render(string $source, mixed ...$data): Raw
     }
 
     return Registry::component($source)($data);
-}
-
-/**
- * Render a page template in one expression, including the document header of
- * its root tag.
- *
- * @param string $source A registered page name or the path of a `*.shape.php` file.
- * @param array<string, mixed> $data The slot values, by slot name: strings, or Raw / Stringable markup.
- * @return Raw The rendered document.
- */
-function renderPage(string $source, array $data): Raw
-{
-    return Registry::page($source)($data);
-}
-
-/**
- * @param Tag|string $source A shape tree, a registered name, or a template path.
- * @param bool $document Whether the binder prepends the document header.
- * @return Closure(array<int|string, mixed>): Raw
- */
-function binder(Tag|string $source, bool $document): Closure
-{
-    if ($source instanceof Tag) {
-        $renderer = Compile::shape($source)->compile();
-        $header = $source->documentHeader();
-
-        $binder =
-            /** @param array<string, mixed> $data */
-            static fn (array $data): Raw => Raw::of(
-                ($document ? $header : '') . $renderer->render($data)
-            );
-
-        return $binder;
-    }
-
-    return $document ? Registry::page($source) : Registry::component($source);
 }

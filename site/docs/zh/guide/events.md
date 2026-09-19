@@ -208,13 +208,13 @@ function handleDelegatedClick(event) {
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, button, p};
 
 function Child(string $message): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         div(
             p('Child Component'),
             button(Slot::text('message'))
@@ -231,7 +231,7 @@ function Child(string $message): Raw
 function ParentComponent(Raw $child): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         div(
             p('Parent Component'),
             Slot::raw('child'),

@@ -5,7 +5,7 @@ use Pure\Compile\Shape;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 use function Pure\HTML\{button, div, h1, span};
 
 /**
@@ -31,15 +31,16 @@ function CounterPageShape(): \Pure\Compile\Shape
     );
 }
 
-registerPage('Counter', __FILE__, static fn (): Shape => CounterPageShape());
+register('Counter', __FILE__, static fn (): Shape => CounterPageShape());
 
 /**
  * The counter page: the document skeleton comes from views/counter.shape.php
- * (precompiled with `pure compile`).
+ * (precompiled with `pure compile`). The document header is not part of the
+ * tree, so it is prepended manually.
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
 function counterPage(array $data): Raw
 {
-    return renderPage('Counter', ['initial' => $data['initial']]);
+    return Raw::of('<!DOCTYPE html>' . (string)render('Counter', initial: $data['initial']));
 }

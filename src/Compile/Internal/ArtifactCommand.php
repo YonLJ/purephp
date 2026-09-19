@@ -37,13 +37,13 @@ final class ArtifactCommand
           -h, --help   show this help
 
         A *.cmp.php unit registers exactly one component with
-        Pure\Component\register() / registerPage(); compiling it requires the
+        Pure\Component\register(); compiling it requires the
         file, so run the compiler through bin/pure, which wires the registry.
 
         USAGE;
 
     /**
-     * @param (Closure(string): array<string, array{factory: Closure(): mixed, document: bool}>)|null $units
+     * @param (Closure(string): array<string, array{factory: Closure(): mixed}>)|null $units
      *     Resolves the units registered by a `*.cmp.php` file; null disables
      *     unit support (plain ArtifactCompiler use).
      */
@@ -163,7 +163,7 @@ final class ArtifactCommand
 
                 if ($units === []) {
                     throw new InvalidArgumentException(
-                        'no component unit is registered here; call Pure\Component\register() or registerPage() in the file.'
+                        'no component unit is registered here; call Pure\Component\register() in the file.'
                     );
                 }
 
@@ -297,7 +297,7 @@ final class ArtifactCommand
      * `*.cmp.php` file.
      *
      * @param string $file The discovered file.
-     * @return array<string, array{factory: Closure(): mixed, document: bool}>|null
+     * @return array<string, array{factory: Closure(): mixed}>|null
      */
     private function unitsOf(string $file): ?array
     {
@@ -325,7 +325,7 @@ final class ArtifactCommand
 
     /**
      * @param resource $stdout The output stream.
-     * @param array<string, array{factory: Closure(): mixed, document: bool}>|null $units
+     * @param array<string, array{factory: Closure(): mixed}>|null $units
      */
     private static function printList($stdout, string $file, ?array $units): void
     {
@@ -335,9 +335,8 @@ final class ArtifactCommand
             return;
         }
 
-        foreach ($units as $name => $unit) {
-            $kind = $unit['document'] ? 'page' : 'component';
-            fwrite($stdout, "{$name} -> {$file} ({$kind})\n");
+        foreach (array_keys($units) as $name) {
+            fwrite($stdout, "{$name} -> {$file} (component)\n");
         }
     }
 

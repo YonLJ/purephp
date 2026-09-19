@@ -7,14 +7,12 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Shape;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\Component\register;
-use function Pure\Component\registerPage;
 
 use Pure\Component\Registry;
 
 use function Pure\Component\render;
-use function Pure\Component\renderPage;
 
 use Pure\Core\Slot;
 
@@ -55,7 +53,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
         $this->assertSame('<span>x</span>', (string)render('Badge', label: 'x'));
-        $this->assertSame('<span>y</span>', (string)component('Badge')(['label' => 'y']));
+        $this->assertSame('<span>y</span>', (string)bind('Badge')(['label' => 'y']));
     }
 
     public function testNameAndPathResolveToTheSameBinder(): void
@@ -63,7 +61,7 @@ class RegistryTest extends TestCase
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
-        $this->assertSame(component('Badge'), component($file));
+        $this->assertSame(bind('Badge'), bind($file));
         $this->assertSame('<span>x</span>', (string)render($file, label: 'x'));
     }
 
@@ -177,27 +175,28 @@ class RegistryTest extends TestCase
         render('Nope');
     }
 
-    public function testPageUnitPrependsTheDocumentHeader(): void
+    public function testRenderDoesNotPrependTheDocumentHeader(): void
     {
         $file = $this->unitFile('Page.cmp.php');
-        registerPage('Page', $file, fn (): Shape => Compile::shape(html(body(Slot::text('title')))));
+        register('Page', $file, fn (): Shape => Compile::shape(html(body(Slot::text('title')))));
 
-        $this->assertSame(
-            '<!DOCTYPE html><html><body>a</body></html>',
-            (string)renderPage('Page', ['title' => 'a'])
-        );
+        // No page concept: the tree renders as written, the header is the
+        // caller's to prepend.
+        $body = (string)render('Page', title: 'a');
+        $this->assertSame('<html><body>a</body></html>', $body);
+        $this->assertSame('<!DOCTYPE html><html><body>a</body></html>', '<!DOCTYPE html>' . $body);
     }
 
     public function testUnitsForReportsTheUnitsOfAFile(): void
     {
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
-        registerPage('Page', $this->unitFile('Page.cmp.php'), fn (): Shape => Compile::shape(html(body())));
+        register('Page', $this->unitFile('Page.cmp.php'), fn (): Shape => Compile::shape(html(body())));
 
         $units = Registry::unitsFor($file);
 
         $this->assertSame(['Badge'], array_keys($units));
-        $this->assertFalse($units['Badge']['document']);
+        $this->assertArrayHasKey('factory', $units['Badge']);
         $this->assertSame(['Badge', 'Page'], Registry::names());
     }
 
@@ -223,27 +222,6 @@ class RegistryTest extends TestCase
         );
 
         $this->assertSame('<div>x</div>', (string)render($file, title: 'x'));
-    }
-
-    public function testAPageUnitRejectsTheComponentForm(): void
-    {
-        $file = $this->unitFile('Page.cmp.php');
-        registerPage('Page', $file, fn (): Shape => Compile::shape(html(body())));
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('is registered as a page unit; render it with renderPage()');
-
-        render('Page');
-    }
-
-    public function testAComponentUnitAcceptsThePageForm(): void
-    {
-        // The page form asks for the document header of the root tag, which every
-        // HTML tag carries; only dropping a header a unit registered is refused.
-        $file = $this->unitFile();
-        register('Badge', $file, fn (): Shape => $this->badgeShape());
-
-        $this->assertSame('<!DOCTYPE html><span>x</span>', (string)renderPage('Badge', ['label' => 'x']));
     }
 
     public function testAnUnregisteredUnitPathIsNotLoadedAsATemplate(): void

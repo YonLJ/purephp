@@ -76,7 +76,7 @@ own renderer; the title and content are dynamic and become slots:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, h1, p};
 
 function Card(string $title, string $content, string $variant = 'default'): Raw
@@ -92,7 +92,7 @@ function Card(string $title, string $content, string $variant = 'default'): Raw
         default => 'border border-gray-200'
     };
 
-    $render = $renders[$variant] ??= component(
+    $render = $renders[$variant] ??= bind(
         div(
             h1(Slot::text('title'))->class('text-xl font-bold text-gray-900 mb-2'),
             p(Slot::text('content'))->class('text-gray-600 leading-relaxed')
@@ -120,13 +120,13 @@ injects the joined markup through `Slot::raw()`:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, h2, p, img};
 
 function ProjectCard(string $title, string $description, string $image): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         div(
             img()->src(Slot::attr('image'))->alt(Slot::attr('title'))
                 ->class('w-full h-48 object-cover rounded-t-lg'),
@@ -143,7 +143,7 @@ function ProjectCard(string $title, string $description, string $image): Raw
 function ResponsiveGrid(array $items): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         div(Slot::raw('items'))
             ->class('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6')
     );
@@ -177,7 +177,7 @@ line only when data provides it):
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{form, div, label, input, button, span};
 
 const INPUT_CLASS = 'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300';
@@ -195,7 +195,7 @@ function FormField(
 
     $key = "{$labelText}|{$name}|{$type}|{$placeholder}|" . (int)$required;
 
-    $render = $renders[$key] ??= component(
+    $render = $renders[$key] ??= bind(
         div(
             label($labelText)
                 ->for($name)
@@ -217,7 +217,7 @@ function FormField(
 function ContactForm(array $fields): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         form(
             Slot::raw('fields'),
             button('Submit')
@@ -272,7 +272,7 @@ memoized as its own renderer. Only the label is dynamic:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\button;
 
 function ActionButton(
@@ -309,7 +309,7 @@ function ActionButton(
 
     $key = "{$variant}|{$size}|" . (int)$disabled . (int)$fullWidth;
 
-    $render = $renders[$key] ??= component(
+    $render = $renders[$key] ??= bind(
         button(Slot::text('text'))
             ->class($allClasses)
             ->disabled($disabled)
@@ -334,13 +334,13 @@ injected through `Slot::raw()`:
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\component;
+use function Pure\Component\bind;
 use function Pure\HTML\{div, main, h1, button};
 
 function Page(string $title): Raw
 {
     static $render;
-    $render ??= component(
+    $render ??= bind(
         main(h1(Slot::text('title')))->class('container mx-auto p-6')
     );
 
@@ -354,7 +354,7 @@ function ThemeToggle(string $currentTheme = 'light'): Raw
     $newTheme = $currentTheme === 'light' ? 'dark' : 'light';
     $icon = $currentTheme === 'light' ? '🌙' : '☀️';
 
-    $render = $renders[$currentTheme] ??= component(
+    $render = $renders[$currentTheme] ??= bind(
         button("{$icon} Toggle Theme")
             ->onclick("toggleTheme('{$newTheme}')")
             ->class('fixed top-4 right-4 px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600')
@@ -373,7 +373,7 @@ function ThemeProvider(string $theme, Raw $toggle, Raw $page): Raw
         default => 'bg-white text-gray-900'
     };
 
-    $render = $renders[$theme] ??= component(
+    $render = $renders[$theme] ??= bind(
         div(
             Slot::raw('toggle'),
             Slot::raw('page')

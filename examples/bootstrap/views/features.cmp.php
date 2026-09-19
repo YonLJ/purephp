@@ -5,7 +5,7 @@ use Pure\Compile\Shape;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 use function Pure\HTML\{body, h1, head, html, link, main, meta, title};
 
 require_once __DIR__ . '/features-svgs.php';
@@ -19,7 +19,7 @@ require_once __DIR__ . '/../components/Section.cmp.php';
 require_once __DIR__ . '/../components/Divider.cmp.php';
 require_once __DIR__ . '/../components/FeatureSection.cmp.php';
 
-registerPage('Features', __FILE__, static function (): Shape {
+register('Features', __FILE__, static function (): Shape {
     /**
      * The features page skeleton: the head and the SVG symbol sheet are static, the
      * title and the rendered body come from the page function. `pure compile`
@@ -75,13 +75,14 @@ function featuresBindings(array $data): array
 /**
  * The features page: the document skeleton is the registered template
  * (precompiled with `pure compile`), the body is composed from the component
- * functions.
+ * functions. The document header is not part of the tree, so it is prepended
+ * manually.
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
 function featuresPage(array $data): Raw
 {
-    return renderPage('Features', featuresBindings($data));
+    return Raw::of('<!DOCTYPE html>' . (string)render('Features', ...featuresBindings($data)));
 }
 
 /**

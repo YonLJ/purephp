@@ -54,7 +54,7 @@ composer require yonld/purephp
 
 ### 2. 创建入口文件
 
-创建 `index.php` 入口文件：一个页面单元（注册的模板加页面函数）及其输出：
+创建 `index.php` 入口文件：一个组件单元（注册的模板加视图函数）及其输出：
 
 ```php
 <?php
@@ -64,10 +64,10 @@ use Pure\Compile\Shape;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{registerPage, renderPage};
+use function Pure\Component\{register, render};
 use function Pure\HTML\{div, h1, p};
 
-registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
+register('Page', __FILE__, static fn (): Shape => Compile::shape(
     div(
         h1(Slot::text('heading')),
         p(Slot::text('lead')),
@@ -77,11 +77,13 @@ registerPage('Page', __FILE__, static fn (): Shape => Compile::shape(
 
 function pageView(array $data): Raw
 {
-    return renderPage('Page', [
-        'heading' => $data['heading'],
-        'lead' => $data['lead'],
-        'body' => $data['body'],
-    ]);
+    // 引擎按原样输出树，文档声明在这里手动拼接。
+    return Raw::of('<!DOCTYPE html>' . (string)render(
+        'Page',
+        heading: $data['heading'],
+        lead: $data['lead'],
+        body: $data['body'],
+    ));
 }
 
 echo pageView([
@@ -91,7 +93,7 @@ echo pageView([
 ]);
 ```
 
-`renderPage()` 每进程只加载一次模板并附加文档声明。标准 PHP-FPM 下请启用
+`render()` 每进程只加载一次模板；文档声明由调用方拼接。标准 PHP-FPM 下请启用
 `Compile::cachePath()`，让请求加载已编译的渲染器而不是重新构建；或者用
 `vendor/bin/pure compile .` 预编译，让绑定器直接加载产物。
 
@@ -115,7 +117,7 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 ```
 
 当同一调用点在单个进程内过多地调用 `Compile::shape()` 时，它会按调用点发出一次
-`E_USER_WARNING`；例如每次调用都重建的内联 `component(...)`。文件形式的组件走
+`E_USER_WARNING`；例如每次调用都重建的内联 `bind(...)`。文件形式的组件走
 `render()`，绑定器按模板路径缓存，不会反复编译。
 
 ## 基础示例

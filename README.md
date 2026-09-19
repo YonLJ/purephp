@@ -68,9 +68,9 @@ The above code will output:
 
 `register()` only stores the factory; a request that finds a fresh artifact
 never builds the template. Run `vendor/bin/pure compile components` to
-precompile, and `pure compile --list` to see the units found. Pages register
-with `registerPage()` and render with `renderPage()`, which prepends the
-document header of the root tag.
+precompile, and `pure compile --list` to see the units found. `render()`
+returns the fragment; a full document's header is the caller's to prepend
+(`$root->documentHeader()`, or a literal `<!DOCTYPE html>` / `<?xml version="1.0"?>`).
 
 Under standard PHP-FPM every request starts fresh, so enable
 `Compile::cachePath()` (or precompile with `pure compile`) to load generated
@@ -150,8 +150,9 @@ for the artifact contract, the freshness rules and the plain-view caveats.
 ## Examples
 
 `examples/bootstrap` is a small MVC setup with three pages behind one router.
-`views/features.cmp.php` and `views/pricing.cmp.php` are page units that compile
-into a strict artifact (`*.pure.php`, loaded by `renderPage()`) and a
+`views/features.cmp.php` and `views/pricing.cmp.php` are component units that
+compile
+into a strict artifact (`*.pure.php`, loaded by `render()`) and a
 dependency-free view (`*.plain.php`, required by the example's `plain()`
 helper); the two controllers of a page share its view data through
 `featuresData()` / `pricingData()`. The cover page is static markup through the
