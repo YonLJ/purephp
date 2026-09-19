@@ -6,6 +6,8 @@ namespace Pure\Component;
 
 use Closure;
 use InvalidArgumentException;
+use Pure\Compile\Compile;
+use Pure\Core\DevMode;
 use Pure\Core\Escaper;
 use Pure\Core\Markup;
 use Pure\Core\Slot;
@@ -47,6 +49,9 @@ final class Call implements Markup
 
     /** @var array<int, array<string, ReflectionParameter>> */
     private static array $parameters = [];
+
+    /** @var array<string, array{generation: int, deprecated: array<string, string>, trusted: array<string, true>}> */
+    private static array $declarations = [];
 
     /**
      * @internal Component calls are created by Pure\Component\component().
@@ -249,9 +254,120 @@ final class Call implements Markup
             );
         }
 
+        $this->guard($prop, $value);
         $this->props[$prop] = $value;
 
         return $this;
+    }
+
+    /**
+     * The development guard of one prop: warn when a deprecated prop is set,
+     * and when a prop declared as markup receives a value that is not.
+     *
+     * The declarations are read once per component and compile generation, and
+     * only while the guard is on, so a production call pays one boolean.
+     */
+    private function guard(string $prop, mixed $value): void
+    {
+        if (!(DevMode::$enabled ?? DevMode::resolve())) {
+            return;
+        }
+
+        $declarations = self::declarations($this->name);
+
+        if (isset($declarations['deprecated'][$prop])) {
+            DevMode::warn(
+                "call:{$this->name}:{$prop}:deprecated",
+                "component '{$this->name}': prop '{$prop}' is deprecated: {$declarations['deprecated'][$prop]}"
+            );
+        }
+
+        if (!isset($declarations['trusted'][$prop])) {
+            return;
+        }
+
+        $untrusted = self::untrusted($value);
+
+        if ($untrusted === []) {
+            return;
+        }
+
+        DevMode::warn(
+            "call:{$this->name}:{$prop}:trusted",
+            "component '{$this->name}': prop '{$prop}' is declared as markup (#[Trusted]) but received "
+            . get_debug_type($untrusted[0])
+            . '; a raw slot emits its value verbatim, so pass Raw::of() for trusted markup and escape everything else.'
+        );
+    }
+
+    /**
+     * The `#[Prop]` and `#[Trusted]` declarations of a unit, read from its
+     * prepare() closure once per compile generation.
+     *
+     * @return array{generation: int, deprecated: array<string, string>, trusted: array<string, true>}
+     */
+    private static function declarations(string $name): array
+    {
+        $generation = Compile::generation();
+        $cached = self::$declarations[$name] ?? null;
+
+        if ($cached !== null && $cached['generation'] === $generation) {
+            return $cached;
+        }
+
+        $deprecated = [];
+        $trusted = [];
+        $prepare = Registry::prepare($name);
+
+        if ($prepare !== null) {
+            foreach ((new ReflectionFunction($prepare))->getParameters() as $parameter) {
+                foreach ($parameter->getAttributes(Prop::class) as $attribute) {
+                    $declaration = $attribute->newInstance();
+
+                    if ($declaration->deprecated !== null) {
+                        $deprecated[$parameter->getName()] = $declaration->deprecated;
+                    }
+                }
+
+                if ($parameter->getAttributes(Trusted::class) !== []) {
+                    $trusted[$parameter->getName()] = true;
+                }
+            }
+        }
+
+        return self::$declarations[$name] = [
+            'generation' => $generation,
+            'deprecated' => $deprecated,
+            'trusted' => $trusted,
+        ];
+    }
+
+    /**
+     * The values of a markup prop that are not `Pure\Core\Markup`. Arrays are
+     * inspected one level deep, the way a raw slot joins an iterable; a
+     * Traversable is left alone because it may be a one-shot generator.
+     *
+     * @return list<mixed>
+     */
+    private static function untrusted(mixed $value): array
+    {
+        if ($value instanceof Markup) {
+            return [];
+        }
+
+        if (!is_array($value)) {
+            return [$value];
+        }
+
+        $untrusted = [];
+
+        foreach ($value as $item) {
+            if (!$item instanceof Markup) {
+                $untrusted[] = $item;
+            }
+        }
+
+        return $untrusted;
     }
 
     /**

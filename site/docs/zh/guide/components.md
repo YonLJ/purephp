@@ -166,9 +166,35 @@ register('Card', __FILE__,
 - `item` 指定列表 prop 的每一项在 `Slot::each` 的 item 形状里填哪个槽位，检查器会把两者
   对比。
 - `required` 声明调用方的义务；与签名矛盾的声明会被报告。
-- `deprecated` 携带迁移提示，`pure check` 会在每个绑定该 prop 的调用点打印。
+- `deprecated` 携带迁移提示：`pure check` 会在每个绑定该 prop 的调用点打印，开发守卫也会
+  在调用处告警。
 
-注解只被 `pure check` 读取，渲染时完全不会查询；没有注解的单元行为与之前完全一致。
+`#[Trusted]` 标记携带"已渲染好的 markup"的 prop：`pure check` 会校验它绑定的是 raw 槽
+（markup 绑到文本槽会被转义），开发守卫则会在调用方传入的不是 `Pure\Core\Markup`
+时告警——这正是不可信输入流向输出的位置：
+
+```php
+prepare: static function (#[Trusted] Markup $icon): array
+{
+    return ['icon' => $icon];
+}
+```
+
+`#[Binds]` 声明 `prepare()` 返回的键，用于分步构建、或从服务合并 bindings 的场景，让返回
+数组读不出来时必填槽位依然被校验：
+
+```php
+prepare: #[Binds('title', 'desc')] static function (): array
+{
+    return PricingService::pricing();
+}
+```
+
+它同样可以用在页面单元的 `...bindings()` 辅助函数上。当列表 prop 在调用点被绑定为一个数组
+字面量时，每一项的键会与槽位的 item 形状比对——`->links([['txet' => '...']])` 会在写下的
+地方被报出来。读取多个槽位的 item 形状不需要额外声明：嵌套形状本身就是契约。
+
+注解由 `pure check` 与开发守卫读取，渲染时完全不会查询；没有注解的单元行为与之前完全一致。
 
 每次链式调用比 `render()` 多花约 2 微秒：调用对象、prop setter 与 `prepare()` 调用各占
 一部分。产物与无依赖视图路径不受影响，`examples/bootstrap/bench.php` 会分别报告两条路径。

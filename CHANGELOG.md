@@ -173,6 +173,30 @@ First public version. No tag has been cut yet.
   `prepare()` no longer goes unchecked; `Card` and `CustomCard` in the
   bootstrap example declare their list items and their renamed `style` prop.
   The attribute is read by `pure check` only and never takes part in rendering.
+- `Pure\Component\Trusted` marks a prepare() prop that carries markup:
+  `pure check` verifies it binds a raw slot (markup bound to a text slot would
+  be escaped, and a slot read as both raw and text is reported), and the
+  development guard warns when a call passes a value that is not
+  `Pure\Core\Markup` — the place where untrusted input reaches the output. A
+  `#[Trusted]` parameter typed as a scalar is reported too, because it can never
+  receive markup.
+- `Pure\Component\Binds` declares the keys a prepare() hook or a
+  `...bindings()` helper returns, so a hook that builds its bindings in steps or
+  merges them from a service is still compared with the template: the declared
+  keys cover the required slots, a declared key the template does not read is an
+  error, and a declared key a readable literal does not return is one too. The
+  bootstrap example's `PricingHeader` declares `#[Binds('title', 'desc')]` and
+  no longer reports its bindings as uncompared.
+- A `#[Prop(deprecated: ...)]` prop now warns in the development guard as well
+  (once per component and prop, only while the guard is on), so the hint reaches
+  a developer who never runs `pure check`. The guard reads the declarations once
+  per component and compile generation, so a production call pays one boolean.
+- `pure check` compares the item keys of a list prop bound to an array literal
+  at the call site with the item shape of its slot, so
+  `->links([['txet' => 'Team']])` is reported where it is written, with a
+  `did you mean` suggestion and a missing-required-key error. Multi-slot item
+  shapes therefore need no declaration of their own: the nested shape is the
+  contract.
 
 ### Changed
 

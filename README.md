@@ -90,9 +90,12 @@ echo div(
 
 `render('Card', ...)` stays the low-level entry; both forms resolve the same
 binder, artifacts, cache and errors, and `pure check` validates the fluent props
-against the template's slots, and a `#[Prop]` declaration on a `prepare()`
-parameter (`slot`, `item`, `required`, `deprecated`) is verified against the
-signature and the template.
+against the template's slots: a `#[Prop]` declaration on a `prepare()` parameter
+(`slot`, `item`, `required`, `deprecated`) is verified against the signature and
+the template, `#[Trusted]` marks a prop that carries markup (it must bind a raw
+slot, and the development guard warns when a call passes a value that is not
+`Markup`), and `#[Binds]` declares the keys of a hook whose returned array
+cannot be read.
 
 The above code will output:
 

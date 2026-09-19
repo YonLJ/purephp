@@ -308,17 +308,23 @@ vendor/bin/pure check src
   **`prepare()` closure** instead: its parameters are the prop contract and must
   match the slots by name and type, and the keys of the array literal it returns
   must be the slots the template reads (a computed return is reported as `info`).
-- A **`#[Prop]` declaration** on a `prepare()` parameter states what a
-  signature cannot: `slot` names the binding the prop fills, `item` the single
-  slot each item of a list prop fills in a `Slot::each` item shape, `required`
-  the caller obligation and `deprecated` a migration hint. Declarations are
-  compared with the signature and the template, and when `prepare()` does not
-  return one readable array literal they are what the required slots are
-  checked against; a call site binding a deprecated prop is a warning.
+- **Declarations** state what a signature cannot. `#[Prop]` carries `slot`
+  (the binding the prop fills), `item` (the single slot each item of a list prop
+  fills in a `Slot::each` item shape), `required` (the caller obligation) and
+  `deprecated` (a migration hint); `#[Trusted]` marks a prop that carries
+  markup, so it must bind a raw slot and the development guard warns when a call
+  passes a value that is not `Pure\Core\Markup`; `#[Binds]` on a hook or a
+  `...bindings()` helper declares the returned keys when its array literal
+  cannot be read. Declarations are compared with the signature and the template,
+  and when `prepare()` does not return one readable array literal they are what
+  the required slots are checked against. A call site binding a deprecated prop
+  is a warning.
 - The **fluent calls** in every checked file: a `->prop(...)` the target does
   not accept is an error with a `did you mean`, `->children(...)` points at the
-  call syntax instead, and a prop set unpacked from a variable is skipped. The
-  target must be among the checked files for its props to be known.
+  call syntax instead, and a prop set unpacked from a variable is skipped. A
+  list prop bound to an array literal is compared item by item with the item
+  shape of its slot (a missing required key and an unread key are both errors).
+  The target must be among the checked files for its props to be known.
 - A slot name one template uses as both a scalar (value/raw) and a scope
   (child/each) is an error; `*.shape.php` templates are checked for that too.
 

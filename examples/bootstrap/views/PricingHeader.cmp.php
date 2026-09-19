@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+use Pure\Component\Binds;
 use Pure\Component\Call;
 use Pure\Core\Slot;
 
@@ -15,7 +16,7 @@ register('PricingHeader', __FILE__,
         h1(Slot::value('title'))->class('display-4'),
         p(Slot::value('desc'))->class('lead')
     )->class('pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center'),
-    prepare: static function (): array {
+    prepare: #[Binds('title', 'desc')] static function (): array {
         return PricingService::pricing();
     }
 );

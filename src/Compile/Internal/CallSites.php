@@ -24,7 +24,9 @@ final class CallSites
     /**
      * @param string $file The file to scan.
      * @param list<string> $names The registered component names.
-     * @return list<array{name: string, props: array<string, true>, dynamic: bool}>
+     * @return list<array{name: string, props: array<string, true>, items: array<string, list<array<string, true>>>, dynamic: bool}>
+     *     `items` holds, per prop bound to an array literal of array literals,
+     *     the literal keys of every item.
      */
     public static function of(string $file, array $names): array
     {
@@ -70,9 +72,9 @@ final class CallSites
                 continue;
             }
 
-            [$props, $dynamic] = self::chain($tokens, $end);
+            [$props, $items, $dynamic] = self::chain($tokens, $end);
 
-            $sites[] = ['name' => $token[1], 'props' => $props, 'dynamic' => $dynamic];
+            $sites[] = ['name' => $token[1], 'props' => $props, 'items' => $items, 'dynamic' => $dynamic];
         }
 
         return $sites;
@@ -82,11 +84,12 @@ final class CallSites
      * The `->prop(...)` chain after a call, plus whether it is dynamic.
      *
      * @param list<array{0: int, 1: string, 2: int}|string> $tokens
-     * @return array{0: array<string, true>, 1: bool}
+     * @return array{0: array<string, true>, 1: array<string, list<array<string, true>>>, 2: bool}
      */
     private static function chain(array $tokens, int $end): array
     {
         $props = [];
+        $items = [];
         $dynamic = false;
         $cursor = $end;
 
@@ -121,12 +124,155 @@ final class CallSites
                 $dynamic = true;
             } else {
                 $props[$name[1]] = true;
+                $literal = self::items($tokens, $openIndex, $close);
+
+                if ($literal !== null) {
+                    $items[$name[1]] = $literal;
+                }
             }
 
             $cursor = $close;
         }
 
-        return [$props, $dynamic];
+        return [$props, $items, $dynamic];
+    }
+
+    /**
+     * The item keys of an argument that is one array literal of array
+     * literals: `->links([['text' => 'Team', 'href' => '#']])`. Null when the
+     * argument is anything else — a list of scalars, a variable, a spread — so
+     * the item keys are compared only when they are written out.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     * @return list<array<string, true>>|null
+     */
+    private static function items(array $tokens, int $open, int $close): ?array
+    {
+        $first = self::significantIndex($tokens, $open, 1);
+        $last = self::significantIndex($tokens, $close, -1);
+
+        if ($first < 0 || $last < 0 || $first >= $last) {
+            return null;
+        }
+
+        if ($tokens[$first] !== '[' || self::closing($tokens, $first) !== $last) {
+            return null;
+        }
+
+        $items = [];
+
+        foreach (self::elements($tokens, $first, $last) as [$elementStart, $elementEnd]) {
+            $keys = self::itemKeys($tokens, $elementStart, $elementEnd);
+
+            if ($keys === null) {
+                return null;
+            }
+
+            $items[] = $keys;
+        }
+
+        return $items;
+    }
+
+    /**
+     * The literal string keys of one item array: `['text' => $x, 'href' => $y]`.
+     * Null when an element is not a plain `'key' => value` pair, so an item
+     * with a spread or a computed key is left to the runtime.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     * @return array<string, true>|null
+     */
+    private static function itemKeys(array $tokens, int $start, int $end): ?array
+    {
+        if ($tokens[$start] !== '[' || self::closing($tokens, $start) !== $end) {
+            return null;
+        }
+
+        $keys = [];
+
+        foreach (self::elements($tokens, $start, $end) as [$elementStart, $elementEnd]) {
+            $key = $tokens[$elementStart];
+
+            if (!is_array($key) || $key[0] !== T_CONSTANT_ENCAPSED_STRING || str_contains($key[1], '\\')) {
+                return null;
+            }
+
+            $arrow = self::significantIndex($tokens, $elementStart, 1);
+            $arrowToken = $tokens[$arrow] ?? null;
+
+            if ($arrow > $elementEnd || !is_array($arrowToken) || $arrowToken[0] !== T_DOUBLE_ARROW) {
+                return null;
+            }
+
+            $keys[substr($key[1], 1, -1)] = true;
+        }
+
+        return $keys;
+    }
+
+    /**
+     * The top-level elements of an array literal, as [start, end] index pairs
+     * of significant tokens. A trailing comma adds no element.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     * @return list<array{0: int, 1: int}>
+     */
+    private static function elements(array $tokens, int $open, int $close): array
+    {
+        $elements = [];
+        $current = [];
+        $depth = 0;
+
+        for ($cursor = $open + 1; $cursor < $close; $cursor++) {
+            $token = $tokens[$cursor];
+
+            if (is_array($token) && in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            if ($token === '(' || $token === '[' || $token === '{') {
+                $depth++;
+            } elseif ($token === ')' || $token === ']' || $token === '}') {
+                $depth--;
+            } elseif ($token === ',' && $depth === 0) {
+                if ($current !== []) {
+                    $elements[] = [$current[0], $current[count($current) - 1]];
+                    $current = [];
+                }
+
+                continue;
+            }
+
+            $current[] = $cursor;
+        }
+
+        if ($current !== []) {
+            $elements[] = [$current[0], $current[count($current) - 1]];
+        }
+
+        return $elements;
+    }
+
+    /**
+     * The index of the next significant token from $index, or -1.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     */
+    private static function significantIndex(array $tokens, int $index, int $step): int
+    {
+        $count = count($tokens);
+
+        for ($cursor = $index + $step; $cursor >= 0 && $cursor < $count; $cursor += $step) {
+            $token = $tokens[$cursor];
+
+            if (is_array($token) && in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            return $cursor;
+        }
+
+        return -1;
     }
 
     /**

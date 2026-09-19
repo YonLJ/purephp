@@ -185,11 +185,41 @@ register('Card', __FILE__,
   of a `Slot::each` slot, so the checker compares the two.
 - `required` states the caller obligation; a declaration that contradicts the
   signature is reported.
-- `deprecated` carries a migration hint that `pure check` prints for every call
-  site binding the prop.
+- `deprecated` carries a migration hint: `pure check` prints it for every call
+  site binding the prop, and the development guard warns at the call itself.
 
-Declarations are read by `pure check` only; they are never consulted while
-rendering, and a unit without them behaves exactly as before.
+`#[Trusted]` marks a prop that carries already-rendered markup, so `pure check`
+verifies it binds a raw slot — markup bound to a text slot would be escaped —
+and the development guard warns when a call passes a value that is not
+`Pure\Core\Markup`, which is where untrusted input reaches the output:
+
+```php
+prepare: static function (#[Trusted] Markup $icon): array
+{
+    return ['icon' => $icon];
+}
+```
+
+`#[Binds]` declares the keys of a `prepare()` that builds its bindings in steps
+or merges them from a service, so the required slots stay checked when the
+returned array cannot be read:
+
+```php
+prepare: #[Binds('title', 'desc')] static function (): array
+{
+    return PricingService::pricing();
+}
+```
+
+The same attribute works on a `...bindings()` helper function of a page unit.
+When a list prop is bound to an array literal at the call site, its item keys
+are compared with the item shape of the slot — `->links([['txet' => '...']])` is
+reported where it is written. An item shape that reads several slots needs no
+declaration of its own: the nested shape is the contract.
+
+Declarations are read by `pure check` and by the development guard; they are
+never consulted while rendering, and a unit without them behaves exactly as
+before.
 
 A fluent call costs about two microseconds more than `render()` per component:
 the call object, the prop setters and the `prepare()` invocation. The compiled

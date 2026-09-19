@@ -599,7 +599,7 @@ class CheckTest extends TestCase
 
         $this->assertSame(1, $result['code']);
         $this->assertStringContainsString(
-            "required slot 'contents' is not declared by any #[Prop] and prepare() does not return a readable array literal",
+            "required slot 'contents' is not covered by any declaration and prepare() does not return a readable array literal",
             $result['stdout']
         );
     }
@@ -943,6 +943,334 @@ class CheckTest extends TestCase
             $result['stdout']
         );
         $this->assertStringContainsString('0 error(s), 1 warning(s).', $result['stdout']);
+    }
+
+    public function testTrustedPropMustBindARawSlot(): void
+    {
+        $this->unitFile('trusted-text.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Trusted;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckTrustedText', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (#[Trusted] string $title): array {
+                    return ['title' => $title];
+                }
+            );
+            PHP);
+
+        $this->unitFile('trusted-raw.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Trusted;
+            use Pure\Core\Markup;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckTrustedRaw', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::raw('icon'))
+                ),
+                prepare: static function (#[Trusted] Markup $icon): array {
+                    return ['icon' => $icon];
+                }
+            );
+            PHP);
+
+        $this->unitFile('trusted-mixed.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Trusted;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckTrustedMixed', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::raw('body'), Slot::value('body'))
+                ),
+                prepare: static function (#[Trusted] mixed $body): array {
+                    return ['body' => $body];
+                }
+            );
+            PHP);
+
+        $this->unitFile('trusted-unread.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Trusted;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckTrustedUnread', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div()
+                ),
+                prepare: static function (#[Trusted] mixed $extra): array {
+                    return ['extra' => $extra];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString("ok: component 'CheckTrustedRaw'", $result['stdout']);
+        $this->assertStringContainsString(
+            "prop \$title is declared as markup (#[Trusted]) but slot 'title' is a text slot",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            'prop $title is declared as markup (#[Trusted]) but typed string; type it Markup|Stringable (or mixed) to accept markup, or drop the attribute and wrap the value in Raw::of() at the call site',
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "prop \$body is declared as markup (#[Trusted]) but slot 'body' is also read as a text slot",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "prop \$extra is declared as markup (#[Trusted]) but slot 'extra' is not read by the template",
+            $result['stdout']
+        );
+    }
+
+    public function testBindsDeclaresTheKeysOfAComputedPrepare(): void
+    {
+        $this->unitFile('binds-covered.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Binds;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckBindsCovered', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), div(Slot::raw('desc')))
+                ),
+                prepare: #[Binds('title', 'desc')] static function (): array {
+                    $data = ['title' => 'Pricing', 'desc' => 'Plans'];
+
+                    return $data;
+                }
+            );
+            PHP);
+
+        $this->unitFile('binds-uncovered.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Binds;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckBindsUncovered', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), div(Slot::raw('desc')))
+                ),
+                prepare: #[Binds('title')] static function (): array {
+                    $data = ['title' => 'Pricing'];
+
+                    return $data;
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            'its bindings are read from the #[Binds] declarations',
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "required slot 'desc' is not covered by any declaration and prepare() does not return a readable array literal",
+            $result['stdout']
+        );
+    }
+
+    public function testBindsMustMatchAReadableLiteral(): void
+    {
+        $file = $this->unitFile('binds-literal.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Binds;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('CheckBindsLiteral', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), div(Slot::raw('desc')))
+                ),
+                prepare: #[Binds('title', 'titel')] static function (): array {
+                    return ['title' => 'Pricing', 'desc' => 'Plans'];
+                }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString("#[Binds] declares 'titel', which prepare() does not return", $result['stdout']);
+    }
+
+    public function testBindsOnABindingsHelperIsRead(): void
+    {
+        $file = $this->unitFile('binds-helper.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Binds;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{register, render};
+            use function Pure\HTML\div;
+
+            register('CheckBindsPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'), Slot::value('desc'))
+            ));
+
+            #[Binds('title', 'desc')]
+            function checkBindsPageBindings(): array
+            {
+                $data = ['title' => 'Pricing', 'desc' => 'Plans'];
+
+                return $data;
+            }
+
+            function checkBindsPage(): string
+            {
+                return render('CheckBindsPage', ...checkBindsPageBindings());
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringNotContainsString('slots are not compared', $result['stdout']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testCallSiteItemKeysAreCheckedAgainstTheItemShape(): void
+    {
+        $this->unitFile('items-target.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{a, li, ul};
+
+            register('CheckItems', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                ul(Slot::each('links', li(a(Slot::value('text'))->href(Slot::value('href')))))
+            ));
+            PHP);
+
+        $this->unitFile('items-declared.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Prop;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\{a, li, ul};
+
+            register('CheckItemsDeclared', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    ul(Slot::each('links', li(a(Slot::value('text'))->href(Slot::value('href')))))
+                ),
+                prepare: static function (#[Prop(slot: 'links')] array $rows): array {
+                    return ['links' => $rows];
+                }
+            );
+            PHP);
+
+        $this->unitFile('items-calls.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+
+            use function Pure\Component\register;
+
+            register('CheckItemsPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                \Pure\HTML\div()
+            ));
+
+            function checkItemsBody(): string
+            {
+                return (string) CheckItems('x')->links([['text' => 'Team', 'href' => '#']])
+                    . (string) CheckItems('x')->links([['text' => 'A', 'href' => '#'], ['txet' => 'B', 'href' => '#']])
+                    . (string) CheckItems('x')->links([['text' => 'Team']])
+                    . (string) CheckItemsDeclared('x')->rows([['text' => 'Team', 'href' => '#']])
+                    . (string) CheckItems('x')->links(['a', 'b']);
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $this->dir]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "item 2 of 'links' binds 'txet', which the item shape of slot 'links' does not read (did you mean 'text'?)",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "item 2 of 'links' does not provide 'text', which the item shape of slot 'links' requires",
+            $result['stdout']
+        );
+        $this->assertStringContainsString(
+            "item 1 of 'links' does not provide 'href', which the item shape of slot 'links' requires",
+            $result['stdout']
+        );
+        $this->assertStringNotContainsString("of 'rows'", $result['stdout']);
+        $this->assertStringNotContainsString("binds 'a'", $result['stdout']);
+        $this->assertStringContainsString('3 error(s)', $result['stdout']);
     }
 
     public function testFluentCallSitePropsAreCheckedAgainstTheTarget(): void

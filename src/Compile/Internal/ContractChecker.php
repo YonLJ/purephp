@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Pure\Component\Binds;
 use Pure\Component\Prop;
+use Pure\Component\Trusted;
 use Pure\Core\SlotKind;
 use Pure\Core\Suggestion;
 use Pure\Core\Tag;
@@ -167,17 +169,26 @@ final class ContractChecker
         $parameters = [];
         $declared = [];
         $slots = [];
+        $trusted = [];
 
         foreach ($prepare->getParameters() as $parameter) {
             $parameterName = $parameter->getName();
             $parameters[$parameterName] = $parameter;
             $declaration = self::declaration($parameter);
+            $markup = $parameter->getAttributes(Trusted::class) !== [];
 
-            if ($declaration === null) {
+            if ($declaration === null && !$markup) {
                 continue;
             }
 
-            $declared[$parameterName] = $declaration;
+            if ($declaration !== null) {
+                $declared[$parameterName] = $declaration;
+            }
+
+            if ($markup) {
+                $trusted[$parameterName] = true;
+            }
+
             $slots[$parameterName] = $declaration->slot ?? $parameterName;
         }
 
@@ -215,20 +226,34 @@ final class ContractChecker
             }
         }
 
+        foreach (array_keys($trusted) as $parameterName) {
+            foreach (self::trustedFindings($parameterName, $parameters[$parameterName], $slots[$parameterName], $contract) as $finding) {
+                $findings[] = $finding;
+            }
+        }
+
+        $binds = self::bindings($prepare);
         $keys = Bindings::literalKeys($prepare);
+        $covered = array_flip($slots);
+
+        if ($binds !== null) {
+            foreach ($binds->keys as $key) {
+                $covered[$key] = $key;
+            }
+        }
 
         if ($keys === null) {
-            if ($slots === []) {
+            if ($covered === []) {
                 $findings[] = Finding::info('prepare() does not return one array literal; its bindings are not compared');
             } else {
-                $findings[] = Finding::info('prepare() does not return one array literal; its bindings are read from the #[Prop] declarations');
+                $findings[] = Finding::info('prepare() does not return one array literal; its bindings are read from the ' . self::declarationNames($binds, $slots !== []) . ' declarations');
 
                 foreach ($contract as $slot => $info) {
-                    if (!$info['required'] || $slot === 'children' || in_array($slot, $slots, true)) {
+                    if (!$info['required'] || $slot === 'children' || isset($covered[$slot])) {
                         continue;
                     }
 
-                    $findings[] = Finding::error("required slot '{$slot}' is not declared by any #[Prop] and prepare() does not return a readable array literal");
+                    $findings[] = Finding::error("required slot '{$slot}' is not covered by any declaration and prepare() does not return a readable array literal");
                 }
             }
         } else {
@@ -256,6 +281,16 @@ final class ContractChecker
 
                 $findings[] = Finding::error("prop \${$parameterName} declares slot '{$slot}', which prepare() does not return");
             }
+
+            if ($binds !== null) {
+                foreach ($binds->keys as $key) {
+                    if (isset($keys[$key])) {
+                        continue;
+                    }
+
+                    $findings[] = Finding::error("#[Binds] declares '{$key}', which prepare() does not return");
+                }
+            }
         }
 
         $bindings = Bindings::of($prepare, $name, $file);
@@ -271,6 +306,108 @@ final class ContractChecker
         }
 
         return $findings;
+    }
+
+    /**
+     * The `#[Binds]` declaration of a bindings hook, if it has one.
+     */
+    private static function bindings(ReflectionFunction $prepare): ?Binds
+    {
+        foreach ($prepare->getAttributes(Binds::class) as $attribute) {
+            return $attribute->newInstance();
+        }
+
+        return null;
+    }
+
+    /**
+     * The declaration attributes named in the info line, in reading order.
+     */
+    private static function declarationNames(?Binds $binds, bool $props): string
+    {
+        $names = [];
+
+        if ($binds !== null) {
+            $names[] = '#[Binds]';
+        }
+
+        if ($props) {
+            $names[] = '#[Prop]';
+        }
+
+        return implode(' and ', $names);
+    }
+
+    /**
+     * Check a `#[Trusted]` declaration: the prop must bind a raw slot, so the
+     * markup is emitted verbatim, and the slot must not also be read as a text
+     * slot, which would escape the same value elsewhere.
+     *
+     * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
+     * @return list<Finding>
+     */
+    private static function trustedFindings(string $parameterName, ReflectionParameter $parameter, string $slot, array $contract): array
+    {
+        $findings = [];
+        $type = $parameter->getType();
+
+        if ($type !== null) {
+            [$names, , $mixed] = self::typeInfo($type);
+
+            if (!$mixed && self::scalarOnly($names)) {
+                $findings[] = Finding::warning(
+                    "prop \${$parameterName} is declared as markup (#[Trusted]) but typed " . (string)$type
+                    . '; type it Markup|Stringable (or mixed) to accept markup, or drop the attribute and wrap the value in Raw::of() at the call site'
+                );
+            }
+        }
+
+        $kinds = $contract[$slot]['kinds'] ?? [];
+
+        if ($kinds === []) {
+            $findings[] = Finding::error("prop \${$parameterName} is declared as markup (#[Trusted]) but slot '{$slot}' is not read by the template");
+
+            return $findings;
+        }
+
+        if (!isset($kinds[SlotKind::Raw->name])) {
+            $kind = self::kindOf($kinds);
+
+            $findings[] = Finding::error(
+                "prop \${$parameterName} is declared as markup (#[Trusted]) but slot '{$slot}' is a "
+                . ($kind === null ? 'scope' : self::label($kind))
+                . '; markup bound to it would be escaped or interpreted as data'
+            );
+
+            return $findings;
+        }
+
+        if (isset($kinds[SlotKind::Value->name])) {
+            $findings[] = Finding::error("prop \${$parameterName} is declared as markup (#[Trusted]) but slot '{$slot}' is also read as a text slot, which would escape the same value");
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Whether every type name is a scalar, so the parameter cannot receive a
+     * `Pure\Core\Markup` value.
+     *
+     * @param list<string> $names
+     */
+    private static function scalarOnly(array $names): bool
+    {
+        if ($names === []) {
+            return false;
+        }
+
+        foreach ($names as $name) {
+            if (!in_array($name, ['string', 'int', 'float', 'bool', 'true', 'false'], true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

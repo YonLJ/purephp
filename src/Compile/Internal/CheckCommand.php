@@ -10,6 +10,7 @@ use Pure\Compile\Shape;
 use Pure\Component\Prop;
 use Pure\Component\Registry;
 use Pure\Core\Suggestion;
+use Pure\Core\Tag;
 use ReflectionFunction;
 use ReflectionParameter;
 use RuntimeException;
@@ -44,10 +45,12 @@ final class CheckCommand
         named bindings of its component function's render() call (a binding the
         template does not read, a required slot the call does not bind), or
         against the prepare() parameters and returned keys of a fluent unit,
-        where a #[Prop] declaration on a parameter (slot, item, required,
-        deprecated) is verified against the signature and the template; the
-        function's parameter types against the slot kinds (a list slot needs an
-        iterable, a child scope an array, a text slot a stringable).
+        where the declarations on a parameter (#[Prop]: slot, item, required,
+        deprecated; #[Trusted]: markup) and on a hook or bindings helper
+        (#[Binds]: the returned keys) are verified against the signature and the
+        template; the function's parameter types against the slot kinds (a list
+        slot needs an iterable, a child scope an array, a text slot a
+        stringable).
         Also checks the fluent calls in every file: a `->prop(...)` the target
         does not accept is an error. Reports a slot that one template uses as
         both a scalar and a scope, and checks *.shape.php templates for the
@@ -135,12 +138,25 @@ final class CheckCommand
         $warnings = 0;
 
         // Load every unit first: a fluent call in one file may target a
-        // component registered by another one.
+        // component registered by another one. The shape tree is built here
+        // once per unit, for the unit check and for the item shapes a call
+        // site is compared against.
         $loaded = [];
+        $trees = [];
 
         foreach (array_keys($files) as $file) {
             try {
                 $loaded[$file] = $this->loader->unitsOf($file);
+
+                foreach ($loaded[$file] ?? [] as $name => $unit) {
+                    $shape = Compile::toShape(($unit['factory'])());
+
+                    if (!$shape instanceof Shape) {
+                        throw new RuntimeException("component '{$name}': the factory must return a tag tree or Pure\\Compile\\Shape.");
+                    }
+
+                    $trees[$name] = $shape->tree();
+                }
             } catch (Throwable $error) {
                 $failed++;
                 unset($files[$file]);
@@ -163,17 +179,11 @@ final class CheckCommand
 
                     foreach ($units as $name => $unit) {
                         $checked++;
-                        $shape = Compile::toShape(($unit['factory'])());
-
-                        if (!$shape instanceof Shape) {
-                            throw new RuntimeException("component '{$name}': the factory must return a tag tree or Pure\\Compile\\Shape.");
-                        }
-
                         $prepare = Registry::prepare($name);
                         $findings = $this->checker->check(
                             $file,
                             $name,
-                            $shape->tree(),
+                            $trees[$name],
                             $prepare === null ? FunctionFinder::of($name, $file) : null,
                             $prepare === null ? null : new ReflectionFunction($prepare)
                         );
@@ -181,7 +191,7 @@ final class CheckCommand
                     }
                 }
 
-                self::reportCallSites($stdout, $file, $errors, $warnings);
+                self::reportCallSites($stdout, $file, $errors, $warnings, $trees);
             } catch (Throwable $error) {
                 $failed++;
                 fwrite($stderr, "pure: {$file}: {$error->getMessage()}\n");
@@ -206,8 +216,9 @@ final class CheckCommand
      * list when the unit has one and its slot list otherwise.
      *
      * @param resource $stdout The output stream.
+     * @param array<string, Tag> $trees The data-free tree per registered unit.
      */
-    private static function reportCallSites($stdout, string $file, int &$errors, int &$warnings): void
+    private static function reportCallSites($stdout, string $file, int &$errors, int &$warnings, array $trees): void
     {
         foreach (CallSites::of($file, Registry::names()) as $site) {
             if ($site['dynamic']) {
@@ -245,7 +256,92 @@ final class CheckCommand
                 fwrite($stdout, "error: {$file}: component '{$site['name']}': the call binds '{$prop}', which the target does not accept{$hint}\n");
                 $errors++;
             }
+
+            $tree = $trees[$site['name']] ?? null;
+
+            if ($tree === null) {
+                continue;
+            }
+
+            $slots = self::propSlots($site['name']);
+
+            foreach ($site['items'] as $prop => $items) {
+                self::reportItems($stdout, $file, $site['name'], $prop, $items, $tree, $slots[$prop] ?? $prop, $errors);
+            }
         }
+    }
+
+    /**
+     * Compare the item keys of a list prop bound to an array literal with the
+     * item shape of its slot: a required item slot the literal omits is an
+     * error, as is an item key the shape does not read. A prop whose slot has
+     * no item shape (a scalar list, a raw list) is skipped.
+     *
+     * @param resource $stdout The output stream.
+     * @param list<array<string, true>> $items The literal keys per item.
+     */
+    private static function reportItems($stdout, string $file, string $name, string $prop, array $items, Tag $tree, string $slot, int &$errors): void
+    {
+        $contract = RootSlots::itemSlots($tree, $slot);
+
+        if ($contract === []) {
+            return;
+        }
+
+        $read = array_keys($contract);
+
+        foreach ($items as $index => $keys) {
+            foreach (array_keys($keys) as $key) {
+                if (isset($contract[$key])) {
+                    continue;
+                }
+
+                $nearest = Suggestion::nearest($key, $read);
+                $hint = $nearest === null ? '' : " (did you mean '{$nearest}'?)";
+
+                fwrite($stdout, "error: {$file}: component '{$name}': item " . ($index + 1) . " of '{$prop}' binds '{$key}', which the item shape of slot '{$slot}' does not read{$hint}\n");
+                $errors++;
+            }
+
+            foreach ($contract as $key => $info) {
+                if (!$info['required'] || isset($keys[$key])) {
+                    continue;
+                }
+
+                fwrite($stdout, "error: {$file}: component '{$name}': item " . ($index + 1) . " of '{$prop}' does not provide '{$key}', which the item shape of slot '{$slot}' requires\n");
+                $errors++;
+            }
+        }
+    }
+
+    /**
+     * The slot each prop of a fluent unit binds: the `#[Prop]` declaration of
+     * its prepare() parameter, or the parameter name. A unit without prepare()
+     * binds its props to the slots of the same name.
+     *
+     * @return array<string, string>
+     */
+    private static function propSlots(string $name): array
+    {
+        $prepare = Registry::prepare($name);
+
+        if ($prepare === null) {
+            return [];
+        }
+
+        $slots = [];
+
+        foreach ((new ReflectionFunction($prepare))->getParameters() as $parameter) {
+            $declared = null;
+
+            foreach ($parameter->getAttributes(Prop::class) as $attribute) {
+                $declared = $attribute->newInstance()->slot;
+            }
+
+            $slots[$parameter->getName()] = $declared ?? $parameter->getName();
+        }
+
+        return $slots;
     }
 
     /**

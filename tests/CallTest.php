@@ -9,7 +9,9 @@ use Pure\Component\Call;
 
 use function Pure\Component\component;
 
+use Pure\Component\Prop;
 use Pure\Component\Registry;
+use Pure\Component\Trusted;
 use Pure\Core\DevMode;
 use Pure\Core\Markup;
 use Pure\Core\MissingSlotException;
@@ -233,6 +235,108 @@ class CallTest extends TestCase
         $this->assertStringContainsString("unknown data key 'tex' (did you mean 'text'?)", $warnings[0]);
     }
 
+    public function testDeprecatedPropWarnsInDevelopment(): void
+    {
+        Compile::guard(true);
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
+            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
+        } finally {
+            Compile::guard(false);
+            restore_error_handler();
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString("component 'FluentDeclared': prop 'style' is deprecated: use style()", $warnings[0]);
+    }
+
+    public function testTrustedPropWarnsForValuesThatAreNotMarkup(): void
+    {
+        Compile::guard(true);
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            FluentDeclared('hi')->icon('<svg/>')->render();
+        } finally {
+            Compile::guard(false);
+            restore_error_handler();
+        }
+
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString("prop 'icon' is declared as markup (#[Trusted]) but received string", $warnings[0]);
+        $this->assertStringContainsString('Raw::of()', $warnings[0]);
+    }
+
+    public function testTrustedPropAcceptsMarkupAndArraysOfIt(): void
+    {
+        Compile::guard(true);
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->render();
+            FluentDeclared('hi')->icon([Raw::of('<a/>'), Raw::of('<b/>')])->render();
+        } finally {
+            Compile::guard(false);
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+    }
+
+    public function testDeclarationsAreSilentWithoutTheGuard(): void
+    {
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            if ($errno === E_USER_WARNING) {
+                $warnings[] = $message;
+
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            FluentDeclared('hi')->icon('<svg/>')->render();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+    }
+
     public function testCallRendersThroughTheArtifactWhenFresh(): void
     {
         $file = self::anchor('FluentArtifact.cmp.php', <<<'PHP'
@@ -314,6 +418,22 @@ class CallTest extends TestCase
         self::register('FluentArtifact', static fn (): \Pure\Compile\Shape => Compile::shape(
             div(h2(Slot::value('title')))
         ));
+
+        self::register(
+            'FluentDeclared',
+            static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('text'), div(Slot::raw('icon'))->class(Slot::value('style')->default(null)))
+            ),
+            static function (
+                string $text,
+                #[Trusted]
+                mixed $icon,
+                #[Prop(deprecated: 'use style()')]
+                ?string $style = null,
+            ): array {
+                return ['text' => $text, 'icon' => $icon, 'style' => $style];
+            }
+        );
 
         self::register(
             'FluentSection',
@@ -421,4 +541,9 @@ function FluentArtifact(string $title): Call
 function FluentSection(string $section, string $class, callable $item): Call
 {
     return component('FluentSection')->section($section)->class($class)->item($item);
+}
+
+function FluentDeclared(string $text): Call
+{
+    return component('FluentDeclared')->text($text);
 }
