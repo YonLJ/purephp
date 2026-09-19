@@ -113,6 +113,17 @@ First public version. No tag has been cut yet.
   'titel'?`) or lists the keys the scope did provide, and rendering through
   `render()` prefixes the component name or template path
   (`component 'Card': slot 'title' is required ...`).
+- `pure check <path>...` validates the component contract statically: the slots
+  a template reads against the named bindings of its component function's
+  `render()` call (a binding the template does not read is an error with a
+  `did you mean` suggestion, a required slot the call does not bind is an
+  error), the function's parameter types against the slot kinds (a list slot
+  needs an iterable, a child scope an array, a text slot a stringable, a raw
+  slot either), and a slot name one template uses as both a scalar and a scope.
+  An unpacked bindings array is resolved when its helper returns a single array
+  literal (`...featuresBindings()`), and a unit without a component function (a
+  page) is checked through the `render()` calls in its file. `--strict` fails on
+  warnings; `pure compile --check` remains the artifact freshness check.
 
 ### Changed
 

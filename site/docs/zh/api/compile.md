@@ -84,7 +84,8 @@ function Card(string $title, string $content): string
 跳过工厂调用与形状树构建；否则调用工厂（每个编译 generation 一次）或编译 shape 文件
 （磁盘缓存仍然生效）。文件缺失、模板未返回标签树或 `Shape`、产物未返回 `Renderer` 都会抛出带文件名
 的 `RuntimeException`。用 `pure compile` 为所有 `*.shape.php` 与 `*.cmp.php` 构建产物，
-用 `pure compile --list` 打印发现的单元，用 `pure compile --check` 在 CI 中保证产物新鲜。
+用 `pure compile --list` 打印发现的单元，用 `pure compile --check` 在 CI 中保证产物新鲜，
+用 `pure check` 在不写入任何文件的前提下校验组件契约（槽位 vs. 绑定与参数类型）。
 
 ## 形状与数据
 

@@ -284,6 +284,32 @@ compare the flavors while developing.
 - Output echoed while a shape file loads is discarded; build messages are the
   only thing `pure compile` writes.
 
+### Contract Check
+
+`pure check` validates the contract of every unit statically, so a mismatch
+fails in CI instead of at render time:
+
+```bash
+vendor/bin/pure check src
+```
+
+- The **slots** a template reads against the **named bindings** of its component
+  function's `render()` call: a binding the template does not read is an error
+  (with a `did you mean` suggestion), and a required slot the call does not bind
+  is an error. An unpacked bindings array is resolved when the helper returns a
+  single array literal (`render('Features', ...featuresBindings())`) and
+  reported as `info` when it is computed at runtime.
+- The **parameter types** of the component function against the slot kinds: a
+  list slot needs an iterable, a child scope an array, a text slot a stringable,
+  a raw slot either. A nullable parameter for a required slot is a warning
+  (binding `null` throws `MissingSlotException`), as is a parameter that is
+  neither used in the function nor a slot of the template.
+- A slot name one template uses as both a scalar (value/raw) and a scope
+  (child/each) is an error; `*.shape.php` templates are checked for that too.
+
+Exit code 1 on errors, and on warnings with `--strict`. `pure check` does not
+look at artifacts — `pure compile --check` is the freshness check.
+
 ### Component Artifacts and Caching
 
 Every component is a `*.cmp.php` unit (a `*.shape.php` template also works), so

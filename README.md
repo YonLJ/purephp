@@ -122,6 +122,7 @@ lower-level `*.shape.php` template) into a `*.pure.php` artifact that returns a
 vendor/bin/pure compile components            # *.pure.php: the compiled renderer
 vendor/bin/pure compile --plain components    # + *.plain.php: a dependency-free view
 vendor/bin/pure compile --list components     # name -> file (component|page)
+vendor/bin/pure check components              # slots vs. bindings vs. parameters
 ```
 
 ```php
@@ -142,7 +143,9 @@ $html = (string)ob_get_clean();
 ```
 
 `pure compile --check` reports stale or missing artifacts for CI
-(`--check --plain` covers both flavors). See
+(`--check --plain` covers both flavors), and `pure check` validates the
+component contract — the slots a template reads against the bindings and typed
+parameters of its component function. See
 [Compiled Components](https://yonld.github.io/purephp/guide/compiled#precompiled-artifacts)
 for the artifact contract, the freshness rules and the plain-view caveats.
 

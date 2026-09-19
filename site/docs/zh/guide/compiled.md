@@ -279,6 +279,27 @@ function featuresPage(): string
   拒绝并返回退出码 1，因此 `a.pure.php` 归属哪个模板不会由发现顺序决定。
 - 加载形状文件时产生的输出会被丢弃；`pure compile` 只输出构建信息。
 
+### 契约检查
+
+`pure check` 静态校验每个单元的契约，让不匹配在 CI 中失败，而不是等到渲染时：
+
+```bash
+vendor/bin/pure check src
+```
+
+- 模板读取的**槽位**与组件函数 `render()` 调用的**具名绑定**：绑定了一个模板不读取的键
+  是错误（并给出 `did you mean` 建议），必填槽位没有被绑定也是错误。展开的绑定数组在
+  辅助函数只返回一个字面量数组时会被解析（`render('Features', ...featuresBindings())`），
+  运行时计算的则报告为 `info`。
+- 组件函数的**参数类型**与槽位种类：列表槽需要可迭代值、child 作用域需要数组、值槽需要
+  可字符串化值、raw 槽两者皆可。必填槽对应的可空参数是警告（绑定 `null` 会抛出
+  `MissingSlotException`）；既未被函数使用、也不是模板槽位的参数同样是警告。
+- 同一个模板把一个槽位同时用作标量（value/raw）与作用域（child/each）是错误；
+  `*.shape.php` 模板也会做这项检查。
+
+有错误时退出码为 1，带 `--strict` 时警告也返回 1。`pure check` 不看产物——
+产物新鲜度由 `pure compile --check` 负责。
+
 ### 组件产物与缓存策略
 
 每个组件都是一个 `*.cmp.php` 单元（也支持 `*.shape.php` 模板），因此 `pure compile` 会像

@@ -94,8 +94,10 @@ generation) or the shape file is compiled (the disk cache still applies).
 Missing files, a template that does not return a tag tree or a `Shape` and an
 artifact that does not return a `Renderer` all raise a `RuntimeException` naming
 the file. Run `pure compile` to build artifacts for every `*.shape.php` and
-`*.cmp.php` file, `pure compile --list` to print the units found, and
-`pure compile --check` to keep artifacts fresh in CI.
+`*.cmp.php` file, `pure compile --list` to print the units found,
+`pure compile --check` to keep artifacts fresh in CI, and `pure check` to
+validate the component contract (slots against bindings and parameter types)
+without writing anything.
 
 ## Shape vs. Data
 
