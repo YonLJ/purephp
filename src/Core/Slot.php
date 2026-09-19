@@ -32,10 +32,11 @@ final class Slot
     /**
      * Value slot: the bound value is interpreted by position.
      *
-     * In child position the value is coerced to string and escaped (true→"1",
-     * null→empty string). In attribute position the value follows
-     * Tag::setAttr() semantics (null/false omitted, true→`name="name"`).
-     * The slot name is the data key holding the value.
+     * In child position the value is coerced to string and escaped (true→"1");
+     * a required slot rejects an explicit null with MissingSlotException, while
+     * an optional slot renders it as an empty string. In attribute position the
+     * value follows Tag::setAttr() semantics (null/false omitted,
+     * true→`name="name"`). The slot name is the data key holding the value.
      *
      * @param string $name The slot/data key.
      * @return self
@@ -50,6 +51,8 @@ final class Slot
      *
      * The bound value may be a string, any Stringable, or an iterable of such
      * values: each is stringified and the results are concatenated in order.
+     * Like a value slot, a required raw slot rejects an explicit null; an
+     * optional one renders it as an empty string.
      *
      * Choose between the two list slots by when the markup exists: raw()
      * concatenates markup that is already rendered; each() is data-driven and

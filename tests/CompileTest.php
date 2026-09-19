@@ -65,16 +65,29 @@ class CompileTest extends TestCase
         $this->assertSame('<div><i>raw</i> & more</div>', $shape(['body' => '<i>raw</i> & more']));
     }
 
-    public function testNullTextSlotRendersEmptyContent(): void
+    public function testNullTextSlotFailsARequiredSlot(): void
     {
         $shape = Compile::shape(div(Slot::value('value')));
 
+        try {
+            $shape(['value' => null]);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame("slot 'value' is required but was null.", $e->getMessage());
+        }
+    }
+
+    public function testNullTextSlotRendersEmptyForAnOptionalSlot(): void
+    {
+        $shape = Compile::shape(div(Slot::value('value')->default(null)));
+
         $this->assertSame('<div></div>', $shape(['value' => null]));
+        $this->assertSame('<div></div>', $shape([]));
     }
 
     public function testNullTextSlotDoesNotEmitDeprecations(): void
     {
-        $shape = Compile::shape(div(Slot::value('value')));
+        $shape = Compile::shape(div(Slot::value('value')->default(null)));
 
         set_error_handler(static function (int $severity, string $message): bool {
             throw new ErrorException($message, 0, $severity);
@@ -298,11 +311,13 @@ class CompileTest extends TestCase
         $trueShape = Compile::shape(div(Slot::value('flag')));
         $this->assertSame('<div>1</div>', $trueShape(['flag' => true]));
 
-        $nullShape = Compile::shape(div(Slot::value('flag')));
-        $this->assertSame('<div></div>', $nullShape(['flag' => null]));
+        $optional = Compile::shape(div(Slot::value('flag')->required(false)));
+        $this->assertSame('<div></div>', $optional(['flag' => null]));
 
-        $defaultNullShape = Compile::shape(div(Slot::value('flag')->default(null)));
-        $this->assertSame('<div></div>', $defaultNullShape([]));
+        $this->expectException(MissingSlotException::class);
+        $this->expectExceptionMessage("slot 'flag' is required but was null.");
+
+        Compile::shape(div(Slot::value('flag')))(['flag' => null]);
     }
 
     public function testValueSlotSameKeyNameDifferentPositionsHaveDifferentFingerprints(): void
@@ -555,11 +570,49 @@ class CompileTest extends TestCase
         }
     }
 
-    public function testNullRawSlotRendersEmpty(): void
+    public function testNullRawSlotFailsARequiredSlot(): void
     {
         $shape = Compile::shape(div(Slot::raw('body')));
 
-        $this->assertSame('<div></div>', $shape(['body' => null]));
+        try {
+            $shape(['body' => null]);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame("slot 'body' is required but was null.", $e->getMessage());
+        }
+
+        $optional = Compile::shape(div(Slot::raw('body')->default(null)));
+        $this->assertSame('<div></div>', $optional(['body' => null]));
+    }
+
+    public function testMissingSlotMessageNamesTheClosestProvidedKey(): void
+    {
+        $shape = Compile::shape(div(Slot::value('title')));
+
+        try {
+            $shape(['titel' => 'typo']);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame(
+                "slot 'title' is required but was not provided; did you mean 'titel'?",
+                $e->getMessage()
+            );
+        }
+    }
+
+    public function testMissingSlotMessageListsProvidedKeysWithoutASuggestion(): void
+    {
+        $shape = Compile::shape(div(Slot::value('heading')));
+
+        try {
+            $shape(['title' => 'a', 'body' => 'b']);
+            $this->fail('Expected MissingSlotException to be thrown.');
+        } catch (MissingSlotException $e) {
+            $this->assertSame(
+                "slot 'heading' is required but was not provided; provided keys: 'title', 'body'.",
+                $e->getMessage()
+            );
+        }
     }
 
     public function testRawSlotJoinsAnIterableVerbatim(): void

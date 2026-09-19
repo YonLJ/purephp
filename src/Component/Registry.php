@@ -10,7 +10,9 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Renderer;
 use Pure\Compile\Shape;
+use Pure\Core\MissingSlotException;
 use RuntimeException;
+use Throwable;
 
 /**
  * Registry of component units, referenced by name or by file path.
@@ -184,11 +186,44 @@ final class Registry
 
         $binder =
             /** @param array<string, mixed> $data */
-            static fn (array $data): string => $renderer->render($data);
+            static function (array $data) use ($renderer, $key): string {
+                try {
+                    return $renderer->render($data);
+                } catch (MissingSlotException|InvalidArgumentException $error) {
+                    // The renderer knows the slot contract, not who owns it:
+                    // name the unit or template so one failing slot in a page of
+                    // components is traceable from the message alone.
+                    throw self::withContext($error, $key);
+                }
+            };
 
         self::$binders[$key] = ['binder' => $binder, 'generation' => $generation];
 
         return $binder;
+    }
+
+    /**
+     * Prefix a slot error with the component or template it came from. The
+     * class is preserved (a MissingSlotException stays catchable), with the
+     * original attached as the previous exception.
+     *
+     * @param MissingSlotException|InvalidArgumentException $error The slot error.
+     * @param string $key The binder key: a component name or `path:`-prefixed file.
+     * @return Throwable The contextual error to throw.
+     */
+    private static function withContext(Throwable $error, string $key): Throwable
+    {
+        if (str_starts_with($key, 'path:')) {
+            $context = "template '" . substr($key, strlen('path:')) . "'";
+        } else {
+            $context = "component '{$key}'";
+        }
+
+        $message = $context . ': ' . $error->getMessage();
+
+        return $error instanceof MissingSlotException
+            ? new MissingSlotException($message, 0, $error)
+            : new InvalidArgumentException($message, 0, $error);
     }
 
     /**

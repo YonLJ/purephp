@@ -47,6 +47,10 @@ function register(string $name, string $file, Closure $factory, bool $override =
  * string keys: `render($file, ...$bindings)`. A slot value may be a string or
  * any Stringable: it is coerced to a string at render time.
  *
+ * A slot error is prefixed with the component name or template path
+ * (`component 'Card': slot 'title' is required ...`), so the failing unit is
+ * identifiable from the message alone.
+ *
  * The rendered markup is the tree as written, with no document header. To
  * emit a full document, prepend the header of the root tag yourself, e.g.
  * `$html->documentHeader() . render('Page', ...$data)`.

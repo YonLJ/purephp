@@ -9,6 +9,7 @@ use Pure\Component\Registry;
 
 use function Pure\Component\render;
 
+use Pure\Core\MissingSlotException;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
@@ -177,6 +178,41 @@ class ComponentTest extends TestCase
             '<html><body>a</body></html>',
             render($file, title: 'a')
         );
+    }
+
+    public function testSlotErrorsNameTheComponentOrTemplate(): void
+    {
+        $unit = $this->dir . '/card.cmp.php';
+        file_put_contents($unit, <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\\Compile\\Compile;
+            use Pure\\Core\\Slot;
+
+            use function Pure\\Component\\register;
+            use function Pure\\HTML\\div;
+
+            register('Card', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(div(Slot::value('title'))));
+            PHP);
+
+        require $unit;
+
+        $this->expectException(MissingSlotException::class);
+        $this->expectExceptionMessage("component 'Card': slot 'title' is required but was not provided; did you mean 'titel'?");
+
+        render('Card', titel: 'typo');
+    }
+
+    public function testTemplateSlotErrorsNameTheTemplatePath(): void
+    {
+        $file = $this->shapeFile('badge.shape.php', 'div');
+
+        $this->expectException(MissingSlotException::class);
+        $this->expectExceptionMessage("template '{$file}': slot 'title' is required but was not provided; provided keys: 'other'.");
+
+        render($file, other: 'x');
     }
 
     public function testMissingTemplateThrows(): void

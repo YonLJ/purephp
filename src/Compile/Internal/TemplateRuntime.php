@@ -13,9 +13,10 @@ use Pure\Core\MissingSlotException;
  * A template artifact reads its slots through these helpers, so the generated
  * template stays readable (`TemplateRuntime::text($v, 'title')`) while keeping
  * the flat renderer's semantics: a required slot throws MissingSlotException
- * when the data does not provide it, an optional slot falls back to the
- * compiled default, and values are coerced by SlotRuntime, so both sources
- * render byte-identical output.
+ * when the data does not provide it (an explicit null fails a text or raw slot,
+ * while an attribute slot keeps omitting itself), an optional slot falls back
+ * to the compiled default, and values are coerced by SlotRuntime, so both
+ * sources render byte-identical output.
  *
  * The `$path` argument is only passed when the slot path differs from the slot
  * key (slots inside `Slot::each()` and `Slot::child()` scopes); it is the path
@@ -38,7 +39,7 @@ final class TemplateRuntime
     public static function text(array $scope, string $key, ?string $path = null, mixed $default = null): string
     {
         $value = $scope[$key]
-            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4, true);
 
         // Scalars (the common case) escape inline with the shared constants,
         // exactly like the flat renderer's generated expression; everything
@@ -63,7 +64,7 @@ final class TemplateRuntime
     public static function raw(array $scope, string $key, ?string $path = null, mixed $default = null): string
     {
         $value = $scope[$key]
-            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4, true);
 
         return is_scalar($value) ? (string)$value : SlotRuntime::raw($value, $path ?? $key);
     }
@@ -81,7 +82,7 @@ final class TemplateRuntime
     public static function attr(array $scope, string $key, ?string $name = null, ?string $path = null, mixed $default = null): string
     {
         $value = $scope[$key]
-            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 5);
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 5, false);
 
         $name ??= $key;
 
@@ -119,7 +120,7 @@ final class TemplateRuntime
     public static function child(array $scope, string $key, ?string $path = null, mixed $default = null): array
     {
         $value = $scope[$key]
-            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4, false);
 
         return is_array($value) ? $value : SlotRuntime::scope($value, $path ?? $key);
     }
@@ -136,7 +137,7 @@ final class TemplateRuntime
     public static function items(array $scope, string $key, ?string $path = null, mixed $default = null): iterable
     {
         $value = $scope[$key]
-            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4);
+            ?? self::fallback($scope, $key, $path, $default, func_num_args() >= 4, false);
 
         return is_iterable($value) ? $value : SlotRuntime::items($value, $path ?? $key);
     }
@@ -156,8 +157,9 @@ final class TemplateRuntime
     /**
      * Resolve a slot the fast path could not: an optional slot falls back to
      * the compiled default (also when the value is null, exactly like `??`), a
-     * required slot keeps null when the key exists, and a missing required slot
-     * throws.
+     * required text or raw slot rejects an explicit null, and any other
+     * required slot keeps null when the key exists (an attribute omits itself,
+     * a scope slot fails its own type check). A missing required slot throws.
      *
      * Only the cold path calls this, so `func_num_args()` at the call site
      * never runs for present, non-null values.
@@ -167,18 +169,23 @@ final class TemplateRuntime
      * @param ?string $path The slot path for error messages, when it differs from the key.
      * @param mixed $default The compiled default of an optional slot.
      * @param bool $optional Whether the slot has a compiled default.
+     * @param bool $nullThrows Whether an explicit null fails the slot.
      * @return mixed The slot value.
      */
-    private static function fallback(array $scope, string $key, ?string $path, mixed $default, bool $optional): mixed
+    private static function fallback(array $scope, string $key, ?string $path, mixed $default, bool $optional, bool $nullThrows): mixed
     {
         if ($optional) {
             return $scope[$key] ?? $default;
+        }
+
+        if ($nullThrows) {
+            throw MissingSlotException::forPath($path ?? $key, $scope);
         }
 
         if (array_key_exists($key, $scope)) {
             return null;
         }
 
-        throw MissingSlotException::forPath($path ?? $key);
+        throw MissingSlotException::forPath($path ?? $key, $scope);
     }
 }

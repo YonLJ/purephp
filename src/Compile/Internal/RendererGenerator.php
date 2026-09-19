@@ -279,15 +279,22 @@ abstract class RendererGenerator implements ShapeVisitor
         return '(' . $dataVar . '[' . var_export($slot->name, true) . '] ?? ' . var_export($slot->default, true) . ')';
     }
 
-    private function valueAccess(Slot $slot, string $dataVar, string $slotPath): string
+    private function valueAccess(Slot $slot, string $dataVar, string $slotPath, bool $nullThrows = false): string
     {
         $key = var_export($slot->name, true);
+        $path = var_export($slotPath, true);
 
-        if ($slot->required) {
-            return '(\array_key_exists(' . $key . ', ' . $dataVar . ') ? ' . $dataVar . '[' . $key . '] : throw \Pure\Core\MissingSlotException::forPath(' . var_export($slotPath, true) . '))';
+        if (!$slot->required) {
+            return '(' . $dataVar . '[' . $key . '] ?? ' . var_export($slot->default, true) . ')';
         }
 
-        return '(' . $dataVar . '[' . $key . '] ?? ' . var_export($slot->default, true) . ')';
+        if ($nullThrows) {
+            // An explicit null fails a required text or raw slot. `??` catches
+            // both the null and the missing case, and forPath tells them apart.
+            return '(' . $dataVar . '[' . $key . '] ?? throw \Pure\Core\MissingSlotException::forPath(' . $path . ', ' . $dataVar . '))';
+        }
+
+        return '(\array_key_exists(' . $key . ', ' . $dataVar . ') ? ' . $dataVar . '[' . $key . '] : throw \Pure\Core\MissingSlotException::forPath(' . $path . ', ' . $dataVar . '))';
     }
 
     /**
@@ -295,13 +302,15 @@ abstract class RendererGenerator implements ShapeVisitor
      */
     protected function valueSource(string $kind, Slot $slot, string $dataVar, string $slotPath): string
     {
-        $access = $this->valueAccess($slot, $dataVar, $slotPath);
+        $access = $this->valueAccess($slot, $dataVar, $slotPath, true);
 
         if ($kind === 'text') {
             // Scalars (the common case) are escaped inline with the shared
             // Escaper constants. Everything else keeps the SlotRuntime::text()
-            // call, so null stays silent, Stringable values are coerced and
-            // arrays keep the InvalidArgumentException with the slot path.
+            // call, so an optional null stays silent, Stringable values are
+            // coerced and arrays keep the InvalidArgumentException with the
+            // slot path. A required slot never reaches it with null: valueAccess
+            // rejects that above.
             return '(is_scalar($text = ' . $access . ')'
                 . ' ? htmlspecialchars((string)$text, \Pure\Core\Escaper::FLAGS, \Pure\Core\Escaper::ENCODING, false)'
                 . ' : \Pure\Compile\Internal\SlotRuntime::text($text, ' . var_export($slotPath, true) . '))';
