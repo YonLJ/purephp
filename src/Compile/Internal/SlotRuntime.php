@@ -43,10 +43,12 @@ final class SlotRuntime
     /**
      * Coerce a raw slot value to verbatim output.
      *
-     * A single value (string, Raw, Stringable, or null) is stringified as-is;
-     * an iterable of such values is stringified element by element and
+     * The common value is a scalar (or null) and is cast as-is, so it never
+     * pays for the iterable check. An iterable of such values (a string, a Raw,
+     * a Stringable, or null, per element) is stringified element by element and
      * concatenated, so a rendered list of component markup can be passed
-     * directly without an intermediate implode().
+     * directly without an intermediate implode(). A non-stringable element
+     * reports its offset: slot 'navs[2]' must be stringable.
      *
      * @param mixed $value The slot value.
      * @param string $path The slot path for error messages.
@@ -54,10 +56,14 @@ final class SlotRuntime
      */
     public static function raw(mixed $value, string $path): string
     {
+        if (is_null($value) || is_scalar($value)) {
+            return (string)$value;
+        }
+
         if (is_iterable($value)) {
             $out = '';
-            foreach ($value as $item) {
-                $out .= self::stringify($item, $path);
+            foreach ($value as $index => $item) {
+                $out .= self::stringify($item, $path . '[' . $index . ']');
             }
 
             return $out;

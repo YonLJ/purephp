@@ -535,7 +535,7 @@ class CompileTest extends TestCase
         $shape = Compile::shape(div(Slot::raw('body')));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("slot 'body' must be stringable, array given.");
+        $this->expectExceptionMessage("slot 'body[1]' must be stringable, array given.");
 
         $shape(['body' => ['a', ['nested']]]);
     }

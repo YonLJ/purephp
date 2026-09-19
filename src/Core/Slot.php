@@ -74,6 +74,10 @@ final class Slot
      * and the results are concatenated in order. Pass a Raw or a rendered list
      * of component markup directly, without casting to string or implode().
      *
+     * Choose between the two list slots by when the markup exists: raw()
+     * concatenates markup that is already rendered; each() is data-driven and
+     * renders every item through its own shape.
+     *
      * @param string $name The slot name.
      * @return self
      */
@@ -97,6 +101,10 @@ final class Slot
     /**
      * List slot: the value is an iterable of arrays, each rendered by $shape
      * and each being the nested scope of its item.
+     *
+     * If the items are already-rendered markup (a Raw, or a list of them), use a
+     * raw() slot and pass the list directly instead: each() is for data you
+     * still need to render item by item.
      *
      * @param string $name The slot name.
      * @param ShapeContract $shape The shape or bare tag tree rendering each item.
