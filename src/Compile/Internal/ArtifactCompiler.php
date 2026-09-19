@@ -354,7 +354,13 @@ final class ArtifactCompiler
         }
     }
 
-    private static function load(string $shapeFile): Shape
+    /**
+     * Load a shape file into a Shape, discarding anything it echoes.
+     *
+     * @param string $shapeFile The shape file path.
+     * @return Shape The loaded shape.
+     */
+    public static function load(string $shapeFile): Shape
     {
         if (!is_file($shapeFile)) {
             throw new InvalidArgumentException("'{$shapeFile}' does not exist.");

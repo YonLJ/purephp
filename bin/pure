@@ -14,6 +14,9 @@ require $autoload;
 /** @var list<string> $argv */
 $argv = $_SERVER['argv'] ?? [];
 
-exit((new Pure\Compile\Internal\ArtifactCommand(
-    static fn (string $file): array => Pure\Component\Registry::unitsFor($file)
-))->run($argv));
+$units = static fn (string $file): array => Pure\Component\Registry::unitsFor($file);
+
+exit(match ($argv[1] ?? null) {
+    'check' => (new Pure\Compile\Internal\CheckCommand($units))->run($argv),
+    default => (new Pure\Compile\Internal\ArtifactCommand($units))->run($argv),
+});

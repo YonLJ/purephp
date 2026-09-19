@@ -8,10 +8,6 @@ use Closure;
 use InvalidArgumentException;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use RuntimeException;
-use SplFileInfo;
 use Throwable;
 
 /**
@@ -23,6 +19,12 @@ final class ArtifactCommand
 {
     private const USAGE = <<<'USAGE'
         Pure shape compiler.
+
+        Commands:
+          pure compile <path>...   write *.pure.php artifacts (and --plain views)
+          pure check <path>...     check component contracts (slots, bindings)
+
+        Run `pure check --help` for the contract checks.
 
         Usage:
           pure compile <path>... [--check] [--plain] [--list]
@@ -43,13 +45,16 @@ final class ArtifactCommand
 
         USAGE;
 
+    private readonly UnitLoader $loader;
+
     /**
      * @param (Closure(string): array<string, array{factory: Closure(): mixed}>)|null $units
      *     Resolves the units registered by a `*.cmp.php` file; null disables
      *     unit support (plain ArtifactCompiler use).
      */
-    public function __construct(private readonly ?Closure $units = null)
+    public function __construct(?Closure $units = null)
     {
+        $this->loader = new UnitLoader($units);
     }
 
     /**
@@ -135,7 +140,7 @@ final class ArtifactCommand
 
         foreach ($paths as $path) {
             try {
-                foreach (self::unitFiles($path) as $file) {
+                foreach (UnitFinder::discover($path) as $file) {
                     $files[] = $file;
                 }
             } catch (Throwable $error) {
@@ -148,7 +153,7 @@ final class ArtifactCommand
 
         foreach ($files as $file) {
             try {
-                $units = $this->unitsOf($file);
+                $units = $this->loader->unitsOf($file);
 
                 if ($list) {
                     self::printList($stdout, $file, $units);
@@ -295,37 +300,6 @@ final class ArtifactCommand
     }
 
     /**
-     * The units a file registers: null for a shape file, the unit map for a
-     * `*.cmp.php` file.
-     *
-     * @param string $file The discovered file.
-     * @return array<string, array{factory: Closure(): mixed}>|null
-     */
-    private function unitsOf(string $file): ?array
-    {
-        if (!str_ends_with($file, '.cmp.php')) {
-            return null;
-        }
-
-        if ($this->units === null) {
-            throw new RuntimeException('unit files need the component registry; run `pure compile` through bin/pure.');
-        }
-
-        $level = ob_get_level();
-        ob_start();
-
-        try {
-            (static fn (string $path): mixed => require_once $path)($file);
-        } finally {
-            while (ob_get_level() > $level) {
-                ob_end_clean();
-            }
-        }
-
-        return ($this->units)($file);
-    }
-
-    /**
      * @param resource $stdout The output stream.
      * @param array<string, array{factory: Closure(): mixed}>|null $units
      */
@@ -342,49 +316,4 @@ final class ArtifactCommand
         }
     }
 
-    /**
-     * @param string $path A file or directory argument.
-     * @return list<string> The `*.shape.php` and `*.cmp.php` files to compile.
-     */
-    private static function unitFiles(string $path): array
-    {
-        if (is_file($path)) {
-            ArtifactCompiler::artifactPath($path);
-
-            return [$path];
-        }
-
-        if (is_dir($path)) {
-            $found = [];
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS)
-            );
-
-            foreach ($iterator as $file) {
-                if (!$file instanceof SplFileInfo || !$file->isFile()) {
-                    continue;
-                }
-
-                foreach (ArtifactCompiler::UNIT_SUFFIXES as $suffix) {
-                    if (str_ends_with($file->getPathname(), $suffix)) {
-                        $found[] = $file->getPathname();
-
-                        break;
-                    }
-                }
-            }
-
-            if ($found === []) {
-                throw new InvalidArgumentException(
-                    "no " . implode(' or ', array_map(static fn (string $s): string => '*' . $s, ArtifactCompiler::UNIT_SUFFIXES)) . " files found in '{$path}'."
-                );
-            }
-
-            sort($found);
-
-            return $found;
-        }
-
-        throw new InvalidArgumentException("'{$path}' does not exist.");
-    }
 }
