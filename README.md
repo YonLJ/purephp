@@ -111,6 +111,10 @@ Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`
 (or `Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
 Everything else is plain PHP.
 
+A parent takes its children's markup as an ordinary value and passes it through
+a raw slot: `div(Slot::raw('body'))` bound as `render('Page', body: Card(...))`.
+A `Raw` needs no `(string)` cast, and an array of them is concatenated in order.
+
 For production, `pure compile` precompiles every `*.cmp.php` unit (and every
 lower-level `*.shape.php` template) into a `*.pure.php` artifact that returns a
 `Renderer` without building the shape tree:
@@ -140,18 +144,18 @@ $html = (string)ob_get_clean();
 
 `pure compile --check` reports stale or missing artifacts for CI
 (`--check --plain` covers both flavors). See
-[Compiled Components](/guide/compiled#precompiled-artifacts) for the artifact
-contract and the map closures it can copy.
+[Compiled Components](https://yonld.github.io/purephp/guide/compiled#precompiled-artifacts)
+for the artifact contract, the freshness rules and the plain-view caveats.
 
 ## Examples
 
 `examples/bootstrap` is a small MVC setup with three pages behind one router.
 `views/features.cmp.php` and `views/pricing.cmp.php` are page units that compile
 into a strict artifact (`*.pure.php`, loaded by `renderPage()`) and a
-dependency-free view (`*.plain.php`, loaded by `plain()`); the two controllers
-of a page share its view data through `featuresData()` / `pricingData()`. The
-cover page is static markup through the string renderer (`views/cover.php`), so
-it has neither variant. Routes:
+dependency-free view (`*.plain.php`, required by the example's `plain()`
+helper); the two controllers of a page share its view data through
+`featuresData()` / `pricingData()`. The cover page is static markup through the
+string renderer (`views/cover.php`), so it has neither variant. Routes:
 
 ```
 /cover             the static cover page
@@ -165,7 +169,8 @@ it has neither variant. Routes:
 vendor/bin/pure compile --plain examples/bootstrap
 php -S localhost:8000 -t examples/bootstrap/public \
     examples/bootstrap/public/index.php
-# http://localhost:8000/cover, /features and /pricing
+# http://localhost:8000/cover, and either flavor of each page:
+# /pure/features /plain/features /pure/pricing /plain/pricing
 ```
 
 A request that matches nothing gets a 404 that lists every route.
@@ -175,7 +180,7 @@ unit plus a `public/index.php` router for `/`, `/pure` and `/plain` — and `xml
 adds `write.php`, the CLI entry that writes `example.xml`.
 
 Every artifact is byte-identical to its template, and every plain view to its
-artifact. See [here](https://github.com/YonLD/purephp/tree/master/examples).
+artifact. See [the examples](examples).
 
 ## License
 

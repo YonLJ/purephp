@@ -47,7 +47,7 @@ echo $page([
 | --- | --- | --- |
 | `Slot::text($name)` | 可字符串化或 `null` | 转字符串后转义；`null` 渲染为空内容 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 省略该属性（与 `setAttr(null)` 一致） |
-| `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
+| `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；可迭代集合会逐元素转成字符串后拼接 |
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 当 `$data[$name]` 为真时渲染 `$then`，否则渲染 `$else`；缺失的键为 false，且绝不抛出异常 |
@@ -60,7 +60,7 @@ echo $page([
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - `Slot::child()` / `Slot::each()` / `Slot::eachKind()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
-值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
+值转换：文本/属性/raw 槽位接受 `null`、标量与 `Stringable`，因此子组件返回的 `Raw` 不需要 `(string)` 强制转换；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
 
 ## 作用域与缺失数据
 
@@ -138,7 +138,7 @@ $shape(['blocks' => [
 
 每个项都必须是带有判别键的数组（默认是 `kind`；可以把不同的键作为 `Slot::eachKind()` 的第三个参数传入）。
 
-开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 12µs，见
+开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 10µs，见
 `bench/registry.php`），因此「产物 + opcache」就是生产路径。单文件 bundle 曾按该数据做过原型
 并被否决：冷启动比全部可读模板加起来更慢，热路径打平，因此库不再提供 bundle。
 
@@ -216,7 +216,8 @@ $pureBody = static function (array $v): string {
 };
 ```
 
-`Renderer::$header` 保存构建时捕获的文档声明（`html()` 根标签的 `<!DOCTYPE html>`）。
+`Renderer::$header` 保存构建时捕获的文档声明（任何 HTML 根标签都是 `<!DOCTYPE html>`，
+XML 或 SVG 根标签则是 XML 声明）。
 `examples/bootstrap` 的组件与页面都是建立在其上的单元：
 
 ```php
@@ -235,22 +236,36 @@ function featuresPage(array $data): Raw
 {
     return renderPage('Features', [
         'title' => $data['title'],
-        'content' => (string) FeaturesBody($data['content']),
+        'content' => FeaturesBody($data['content']),
     ]);
 }
 ```
 
-`Pure\Component\render()` 与 `renderPage()` 会在 shape 文件旁边存在产物、且产物不早于
-shape 文件时直接加载产物，否则编译 shape 文件（磁盘缓存仍然生效）。`renderPage()` 会附加
-文档声明，`render()` 只返回片段；底层绑定器是 `component()` / `page()`，内联树可以直接持有
-它们。
+子组件的 `Raw` 直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的数组按顺序拼接。
 
-它的 `PlainFeaturesController` 把同一份 bindings 交给 `plain()` 渲染；单一入口
+`Pure\Component\render()` 与 `renderPage()` 会在 shape 文件旁边存在产物、且产物不早于
+shape 文件时直接加载产物，否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件
+（磁盘缓存仍然生效）。`renderPage()` 会附加文档声明，`render()` 只返回片段——并且会拒绝
+用 `registerPage()` 注册的名字，因为没有文档声明的页面正文就是一次静默截断。底层绑定器是
+`component()` / `page()`，内联树可以直接持有它们。
+
+它的 `PlainFeaturesController` 把同一份 bindings 交给示例自带的 `plain()` 助手（一个应用
+函数：它 require 视图文件并展开数据）；单一入口
 `public/index.php` 为每个页面同时提供两种形态：`/pure/features`、`/pure/pricing` 走页面函数，
 `/plain/features`、`/plain/pricing` 走普通视图，开发时可以对照。
 - 请使用与生产环境相同的 PHP 次版本号构建产物：指纹与产物头部都嵌入了 PHP 版本（与缓存一致）。
 - 产物是构建输出：修改形状后需要重新构建。加载时不会校验形状树，因此请用 `--check`
   发现过期产物。
+- 产物还带有它的 `Compile::CACHE_VERSION`：加载由库的其他版本写出的产物时，抛出的是带
+  `pure compile` 提示的异常，而不是在产物所描述的 `Renderer` 签名上报错。版本号提升本身就会
+  使 `Compile::cachePath()` 里的渲染器失效，却绝不会使模板旁的产物失效，所以 `pure compile`
+  是升级流程的一部分。
+- 新鲜度用 `filemtime()` 比较，它的整秒粒度意味着与单元在同一秒写入的产物就已经可用。
+  这是有意为之：tar、rsync 或 git checkout 造成的 `touch` 式时间偏移很常见，精确比较会丢弃
+  这些产物并逐请求重新编译。而对每个单元做内容哈希实测约每个文件 7 µs，相比之下开启
+  opcache 后 require 它的产物约 0.5 µs，所以它也算不上更便宜的守卫。
+- 两个会写出同一个产物的源文件（`a.shape.php` 紧邻 `a.cmp.php`）会被 `pure compile` 一并
+  拒绝并返回退出码 1，因此 `a.pure.php` 归属哪个模板不会由发现顺序决定。
 - 加载形状文件时产生的输出会被丢弃；`pure compile` 只输出构建信息。
 
 ### 组件产物与缓存策略
@@ -262,8 +277,10 @@ shape 文件时直接加载产物，否则编译 shape 文件（磁盘缓存仍�
 
 开启哪些取决于部署形态：
 
-- **PHP-FPM**——开启 `Compile::cachePath()` 并构建产物。否则每个请求都要为每个组件重建形状树
-  与指纹（示例中每个组件约 14 µs），组件多时累积明显；产物把这段降为一个 `require`。
+- **PHP-FPM**——开启 `Compile::cachePath()` 并构建产物。没有产物时，每个请求都要为该组件
+  重建形状树、遍历指纹，然后才渲染：仅 features 页面的骨架编译就要 ~780 µs（冷启动）、
+  ~260 µs（磁盘缓存命中，`bench/cache.php`）。产物把这段降为一个 `require`，而在开启
+  opcache 时一次 require 远低于 1 µs。
 - **长驻 worker**（RoadRunner、Swoole、FrankenPHP）——开启 `Compile::cachePath()` 并保留
   绑定器的路径缓存（`render()` 内置，内联树用 `static $render`）；renderer 常驻内存，产物可选。
 - **`opcache.preload`**——preload 只把代码常驻内存，不会让 static 变量跨请求保留（PHP preload
@@ -294,7 +311,9 @@ $html = (string)ob_get_clean();
 
 - 必填槽缺失是未定义变量，不再抛出 `MissingSlotException`；
 - `null` 属性输出为空值，而不是整个属性消失；
-- 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`。
+- 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`；
+- raw 槽只输出单个值：`Raw` 或任何 `Stringable` 都可以，它们的可迭代集合不行，因为视图里
+  没有 `SlotRuntime::raw()` 去拼接它。请由控制器传入 `implode('', $rows)`，或者绑定字符串。
 
 使用函数组件时，控制器会先渲染组件、再把它们的标记作为 raw bindings 传给页面形状，因此视图
 文件仍然无依赖，而请求处理器会用到库。
@@ -316,23 +335,26 @@ $html = (string)ob_get_clean();
 
 ## 性能
 
-在 PHP 8.4 上实测（604 个元素的页面，200 行数据；可用 `php bench/compare.php` 复现）：
+每个请求有两项开销：进程拿到一个渲染器要付的代价，以及用它渲染要付的代价。实测行见
+`bench/README.md`；绝对数值会随 PHP 版本、opcache 与 CPU 变化，所以先在自己的机器上跑一遍
+再与下表对照（PHP 8.1.34，单个 604 元素、200 行的页面，`php bench/compare.php`）。
 
-| 路径 | 每次渲染耗时 |
-| --- | --- |
-| 构建树 + `render()` | ~700–750 µs |
-| 仅渲染（复用同一棵树） | ~220–230 µs |
-| 编译形状 + 数据 | ~120 µs |
-| 编译静态树（字面量） | < 1 µs |
+| 路径 | 每次渲染耗时 | 端到端加速 |
+| --- | --- | --- |
+| 构建树 + `render()` | ~1.2 ms | 1× |
+| 仅渲染（复用同一棵树） | ~345 µs | 3.4× |
+| 编译形状 + 数据 | ~180 µs | 6.6× |
+| 编译静态树（字面量） | < 1 µs | — |
 
-bootstrap features 示例使用编译路径后渲染约快 10 倍。
+开启 opcache 后，构建树依然昂贵，而编译路径几乎不变，因此加速比落在 5.5×，开启 JIT 时为
+4.6×。预编译产物路径把构建从第二列里彻底移除：对单个页面形状，构建加编译约 2.9 ms，而
+require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php bench/artifact.php`）。
 
-复现方式：
-
-```bash
-php bench/compare.php
-php examples/bootstrap/bench.php
-```
+一整个页面的开销取决于它如何组合。bootstrap 的 features 页面用组件函数拼正文，因此
+`examples/bootstrap/bench.php` 量的是真实页面而不是单个形状：经典树 ~340 µs/op，页面函数
+跑在它的产物之上 ~104 µs/op（2.8–3.3×），普通视图 ~20 µs/op。该基准的
+`skeleton artifact + bindings` 行渲染的是页面*模板*，组件标记已经绑定好了，所以它的
+~1.5 µs 是每个形状的数值，而不是一次页面渲染。
 
 ## 限制
 

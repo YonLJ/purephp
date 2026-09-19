@@ -130,7 +130,7 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 | --- | --- | --- |
 | `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders as empty content |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
-| `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
+| `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated |
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
@@ -142,9 +142,16 @@ Modifiers:
 - `->default($value)` — fallback used when the key is missing.
 - `Slot::if()` rejects both modifiers with a `LogicException`.
 
-Values must be stringable: `null`, scalars, and `Stringable` are accepted;
-arrays and other objects raise an `InvalidArgumentException` naming the full
-slot path.
+Value slots (`text`, `attr`, `raw`) must be stringable: `null`, scalars, and
+`Stringable` (including the `Raw` a child component returns) are accepted; other
+objects raise an `InvalidArgumentException` naming the full slot path. A `raw`
+slot additionally accepts an iterable of stringable values and concatenates them
+verbatim; a non-stringable element names its offset, e.g.
+`slot 'items[2]' must be stringable`.
+
+Pick a list slot by whether the markup is already rendered: `raw()` concatenates
+markup that already exists (pass a `Raw`, or a list of them); `each()` is
+data-driven and renders every item through its own shape.
 
 ## Static Subtree Folding
 
@@ -161,9 +168,16 @@ $shape = Compile::shape(div(Header(), Slot::text('title')));
 ## Structure Fingerprint
 
 `Shape::id()` is a sha1 fingerprint of the shape's structure: tag names,
-attributes, slot kinds and names, defaults, nested shapes and a library cache
-version. It is computed without compiling and is used as the cache file name
-and as a component cache key:
+attribute names and values, slot kinds and names, defaults, nested shapes and a
+library cache version. It is computed without compiling, and it keys the
+on-disk renderer cache: the generated source is stored under it, so two shapes
+that differ anywhere in the structure cannot share a cached renderer. A
+`*.pure.php` artifact records it next to its source, which is how
+`pure compile --check` recognizes a stale artifact. It is not what
+`Pure\Component\render()` resolves a component by — that is the registered name
+or the unit file — and it does not change when only the *data* changes. Where it
+does help is an application that assembles a different shape per variant: the
+fingerprint is a cheap, stable key for the memo it keeps them in:
 
 ```php
 $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
@@ -254,19 +268,12 @@ contain slots, because there is no data to bind. `toJSON()` describes slots as
 
 ## Performance
 
-Measured on PHP 8.4 (604-element page, 200 rows; reproduce with
-`php bench/compare.php`):
-
-| Path | Time per render |
-| --- | --- |
-| build tree + `render()` | ~700–750 µs |
-| render only (same tree reused) | ~220–230 µs |
-| compiled shape + data | ~120 µs |
-| compiled static tree (literal) | < 1 µs |
-
-The bootstrap features example renders about 10× faster with the compiled path.
-
-Benchmarks are manual, not part of CI:
+`bench/compare.php` measures the paths on a 604-element page, and
+`examples/bootstrap/bench.php` measures a real page composed from component
+functions; `bench/README.md` holds the recorded rows and [the compiled
+guide](/guide/compiled#performance) explains which cost dominates when.
+Absolute numbers move with the PHP version, opcache and the CPU, so run them
+before comparing:
 
 ```bash
 php bench/compare.php

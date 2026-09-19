@@ -80,13 +80,14 @@ function Button(Raw $icon, string $label): Raw
 Button(Icon('#plus'), 'Add');
 ```
 
-列表同理：在组件函数里循环、拼接标记，再把字符串传给 raw 槽。若列表项只是普通数据行、
-不需要逐项组件逻辑，可以在模板里直接用 `Slot::each()`。
+列表同理：在组件函数里循环，把子组件 `Raw` 值组成的列表传给 raw 槽——它逐元素转成字符串后
+拼接，所以用不着 `implode()`。若列表项只是普通数据行、不需要逐项组件逻辑，可以在模板里直接用
+`Slot::each()`。
 
 ## 页面
 
-页面同样是单元：用 `registerPage()` 注册，绑定器会补上根标签的文档声明（`html()` 根的
-`<!DOCTYPE html>`）：
+页面同样是单元：用 `registerPage()` 注册，绑定器会补上根标签的文档声明（任何 HTML 根标签
+都是 `<!DOCTYPE html>`，XML 或 SVG 根标签则是 XML 声明）：
 
 ```php
 <?php
@@ -103,10 +104,13 @@ function featuresPage(array $data): Raw
 {
     return renderPage('Features', [
         'title' => $data['title'],
-        'content' => (string) FeaturesBody($data['content']),
+        'content' => FeaturesBody($data['content']),
     ]);
 }
 ```
+
+`renderPage()` 把 bindings 作为一个数组接收，而用 `registerPage()` 注册的名字只能经由它渲染：
+`render()` 会拒绝这样的名字，而不是返回一份没有文档声明的文档。
 
 `pure compile --plain` 会把同一个页面写成无依赖视图文件，因此没有安装 purephp 的部署也能
 渲染；两种形态下控制器传入同一份 bindings。

@@ -74,7 +74,7 @@ Slot types:
 | --- | --- | --- |
 | `Slot::text()` | stringable value, escaped | no |
 | `Slot::attr()` | attribute value, escaped | no |
-| `Slot::raw()` | stringable value, verbatim | no |
+| `Slot::raw()` | stringable value (or a list of them), verbatim | no |
 | `Slot::child()` | array | yes |
 | `Slot::each()` | iterable of arrays | yes, per item |
 | `Slot::if()` | truthy condition | no (branches share the scope) |
@@ -113,8 +113,9 @@ Key properties:
   renderers so warm workers load code instead of generating it.
 
 `Shape::id()` is a structural fingerprint (tags, attributes, slots and nested
-shapes) that is available without compiling; it is used as the cache file name
-and as a component cache key.
+shapes) that is available without compiling; it names the on-disk cache file, and
+a precompiled artifact records it so `pure compile --check` can tell a stale one.
+Components are resolved by their registered name or unit file, not by it.
 
 ## Data Binding and Scope
 

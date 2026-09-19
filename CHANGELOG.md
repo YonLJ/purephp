@@ -26,6 +26,16 @@ First public version. No tag has been cut yet.
   (`*.shape.php` or `*.cmp.php`) whose shape is already known, so a `*.cmp.php`
   unit gets the same `*.pure.php` artifact and `*.plain.php` view as a shape
   file; `writeUnit()` skips files whose content is already current.
+- Every artifact carries a one-line cache-version guard, so loading a
+  `*.pure.php` written by another `Compile::CACHE_VERSION` throws a
+  `RuntimeException` that names `pure compile` instead of failing on the
+  `Renderer` constructor signature it describes. The check compares two integer
+  literals, so it stays far cheaper than verifying the file content (which
+  measured ~7 µs per artifact against ~0.5 µs to load it with opcache).
+- `pure compile` rejects two source files that would write the same artifact
+  (`a.shape.php` and `a.cmp.php` beside each other): both are reported, neither
+  is written, and the command fails, so discovery order cannot decide which
+  template owns `a.pure.php`.
 
 - `Pure\Component\render()` and `Pure\Component\renderPage()` render a
   `*.shape.php` template in one expression (`render($file, title: $title)`),
@@ -103,6 +113,13 @@ First public version. No tag has been cut yet.
   build and memoize a nested tree separately). The examples, tests and guides
   use the bare form, with one test keeping the wrapped form covered. Generated
   code and fingerprints are unchanged, so existing artifacts stay current.
+- A `Slot::raw()` value may be an iterable of stringable values, not only a
+  single one: `SlotRuntime::raw()` stringifies each element and concatenates
+  them, so a rendered list of component markup goes straight into the slot
+  without an `implode()`. Raw and text/attribute slots accept a `Raw` (or any
+  `Stringable`) as it is, so a component result is passed to its parent without
+  a `(string)` cast; the examples and guides drop theirs. Nested arrays still
+  raise an `InvalidArgumentException` naming the slot path.
 
 - `pure compile` skips the files whose content is already current: the shape is
   still loaded and compiled (so a change in anything it pulls in is picked up),
@@ -118,8 +135,10 @@ First public version. No tag has been cut yet.
   (3.9 us -> 1.7 us in the microbenchmark) and stays byte-identical.
 - `ShapeIndex` encodes a null slot default (every required slot) without
   `serialize()`, cutting about a tenth of the fingerprint walk;
-  `Compile::CACHE_VERSION` is bumped to 7 for the new fingerprints, so cached
-  renderers and artifacts written earlier are rebuilt.
+  `Compile::CACHE_VERSION` is bumped for the new fingerprints. A bump discards
+  the `Compile::cachePath()` renderers automatically, but it does not touch the
+  `*.pure.php` artifacts beside your templates: run `pure compile` after every
+  upgrade (see the artifact guard below).
 
 - The examples are function components: each component is a function with typed
   parameters returning `Raw`, backed by a fixed `*.shape.php` template, and
@@ -250,7 +269,7 @@ First public version. No tag has been cut yet.
 
 ### Removed
 
-- The `$map` third argument of `Slot::child()`, `Slot::each()` and
+- **Breaking** — The `$map` third argument of `Slot::child()`, `Slot::each()` and
   `Slot::eachKind()`, along with the closure-copying machinery that carried maps
   into artifacts (`Pure\Compile\Internal\ClosureSource`, namespace blocks and
   imported-name splitting in generated files). A nested scope now always reads
@@ -258,6 +277,20 @@ First public version. No tag has been cut yet.
   adaptation lives in the data layer where it is explicit and testable. The
   `$maps` parameter of the `Renderer` constructor and the `maps=` field of cache
   and artifact headers are gone with it.
+  Migration — derive the nested data where the data is built:
+
+  ```php
+  // before: the shape reached into the parent scope through a map
+  Slot::each('rows', RowShape(), static fn (array $d): array => ['href' => '#' . $d['icon']]);
+
+  // after: the caller binds the array the child shape reads
+  Slot::each('rows', Compile::shape(li(Slot::text('href'))));
+  // … and the data: ['rows' => array_map(static fn (array $r): array => ['href' => '#' . $r['icon']], $rows)]
+  ```
+
+  Because the constructor signature changed, an artifact written before the
+  removal fatals when a newer `Renderer` loads it; the cache-version guard above
+  turns that into a `pure compile` message, and `--check` reports the file.
 - `Pure\Core\Dom`, `PDom` and `NDom`, and `Tag::toDom()` in favor of string
   rendering and the compiled path.
 - `Pure\Core\RawType`, `Raw::toJSON()`, and the `Pure\Utils\rawHtml()` /
@@ -266,6 +299,21 @@ First public version. No tag has been cut yet.
 
 ### Fixed
 
+- The structure fingerprint left out the attribute name of a slot-valued
+  attribute, because the slot path it encodes carries the slot name only:
+  `->class(Slot::attr('x'))` and `->id(Slot::attr('x'))` shared an `id()`, so
+  with `Compile::cachePath()` enabled the second shape was served the first
+  one's cached renderer and printed the wrong attribute. The attribute name is
+  now part of the fingerprint and `Compile::CACHE_VERSION` is 8.
+- `Pure\Component\render()` of a name registered with `registerPage()` returned
+  the page body without its document header; it now throws and names
+  `renderPage()`, since a silently truncated document is the one failure an
+  application notices last. The page form still accepts a component unit.
+- `Pure\Component\render()` with the path of a `*.cmp.php` unit that has no
+  artifact required the unit and then reported that the file "must return a
+  Shape", which is what a `*.shape.php` template must do. It now says the file is
+  a component unit and how to render it, and an unregistered unit path is no
+  longer loaded as a template at all.
 - SVG camelCase self-closing tags (`animateMotion`, `feBlend`, `feColorMatrix`,
   `feDisplacementMap`, `feDropShadow`, `feGaussianBlur`, `feImage`) are matched
   case-sensitively again, as the API documentation always claimed.

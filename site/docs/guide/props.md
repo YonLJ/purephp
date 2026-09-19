@@ -99,7 +99,7 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | --- | --- | --- |
 | `Slot::text($name)` | stringable or `null` | escaped text content; `null` renders empty |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value ($name is the data key); `null` omits the attribute |
-| `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
+| `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is concatenated in order |
 | `Slot::child($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders a branch; a missing key is false |
@@ -127,8 +127,11 @@ Slot::text('subtitle')->default('—');       // fallback for a missing key
 ## Value Coercion and Escaping
 
 Text, attribute and raw slots accept `null`, scalars and `Stringable`
-objects. They are converted to string before use; arrays and other objects
-raise an `InvalidArgumentException` naming the full slot path.
+objects — including the `Raw` a component returns, which needs no cast. They are
+converted to string before use; arrays and other objects raise an
+`InvalidArgumentException` naming the full slot path. A raw slot goes one step
+further and accepts an iterable of stringable values, concatenating them in
+order.
 
 - `Slot::text()` escapes with `htmlspecialchars(..., double_encode: false)`,
   so entities you already escaped (`&copy;`) stay intact.

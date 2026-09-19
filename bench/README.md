@@ -39,7 +39,9 @@ Scripts that render both paths (`bench/compare.php` and
 ## Recorded Numbers
 
 Machine: AMD Ryzen 5 7500F, Linux, PHP 8.4.24 CLI (NTS, opcache 8.4.24).
-Recorded 2026-09-16.
+Recorded 2026-09-16. Sections below that say "the i5-1135G7 box" were recorded
+on a second machine (PHP 8.1.34, 2026-09-20); every number here is a record of
+one run, not a promise about yours.
 
 ### `bench/compare.php` — 200 rows / ~604 elements, 3000 iterations
 
@@ -51,63 +53,95 @@ Recorded 2026-09-16.
 | compiled static tree (literal) | 0.1 µs | 0.1 µs | 0.2 µs |
 | end-to-end speedup | 4.5× | 4.5× | 4.0× |
 
+The same script on a slower box (i5-1135G7, PHP 8.1.34, recorded 2026-09-20)
+reads 1187.3 / 178.9 / 344.1 / 0.1 µs for the four rows, for 6.6× end to end
+without opcache, 5.5× with it and 4.6× with the JIT. The µs columns are
+machine-local; the ordering and the ~4–7× ratio are what carries over.
+
+### `bench/artifact.php` — one page shape: build+compile vs requiring its artifact
+
+| Phase | Time |
+| --- | --- |
+| shape: build tree + compile | 1.7–2.9 ms |
+| artifact: first `require` | 38–67 µs |
+| artifact: warm `require` | 25 µs |
+| render per call, either path | 1.4–2.5 µs |
+
+Run `php bench/artifact.php --write` once, then `php bench/artifact.php`; the
+second run of the pair is what the table calls warm. Pass `--write` again after
+changing the compiler, or the script reports `id match: NO` for the artifact it
+left in `/tmp` (its output still matches, only the fingerprint differs).
+
 ### `examples/bootstrap/bench.php` — 3000 iterations
 
-The rows below were recorded for the shape-based example; after the move to
-function components the benchmark prints the page function, the skeleton
-artifact and the plain view instead (the body is composed by component
-functions, so it no longer renders as one compiled shape). Re-run
-`php examples/bootstrap/bench.php` to record the current rows.
+Recorded 2026-09-20 on the i5-1135G7 box above (PHP 8.1.34), for the
+function-component example:
 
-| Path (previous shape-based example) | no opcache | opcache | opcache + JIT |
-| --- | --- | --- | --- |
-| classic build + `render()` | 188–204 µs | 183.6 µs | 147.8 µs |
-| compiled shape + data | 25–33 µs | 24.9 µs | 22.6 µs |
-| speedup | 6.2–8.3× | 7.4× | 6.6× |
+| Path | no opcache |
+| --- | --- |
+| classic build + `render()` | 339.3 µs |
+| page function (components + artifact) | 104 µs |
+| plain view + bindings | 20 µs |
+| page vs classic | 2.8–3.3× |
 
-The benchmark also renders the precompiled `index.pure.php` artifact and the
-`features.plain.php` plain view of `examples/bootstrap`, and asserts both
-match the in-process document shape byte for byte (the artifact with the same
-id). Artifacts read every slot through `TemplateRuntime`, so their render
+The rows recorded for the previous shape-based example (188–204 µs classic,
+25–33 µs compiled, 6.2–8.3×) no longer apply: the body is composed by component
+functions now, so the page no longer renders as one compiled shape.
+
+The benchmark also renders the precompiled `views/features.pure.php` artifact and
+the `views/features.plain.php` plain view of `examples/bootstrap`, and asserts
+both match the in-process document shape byte for byte (the artifact with the
+same id). Artifacts read every slot through `TemplateRuntime`, so their render
 carries one extra call per value while skipping the shape build and compile
 entirely; plain views inline `htmlspecialchars()` and are the fastest flavor,
 but they are includes, so their row only pays off with opcache enabled (the
 benchmark ages the freshly compiled view, because opcache revalidates a file
 whose mtime just changed on every include).
 
+Note that the `skeleton artifact + bindings` row the script prints (~1.5–1.9 µs)
+is **not** a page render: it binds already-rendered component markup and prints
+the page template around it, which is why it is two orders of magnitude below
+the page function row.
+
 ### `bench/cache.php` — compile only, the features page skeleton
 
 Measures the page template of `examples/bootstrap/views/features.cmp.php`, the
 unit the example precompiles with `pure compile`. The body of the page is
-composed by the component functions and is not part of this shape, so the
-numbers recorded for the previous body shape (~640–780 µs cold, ~340–480 µs
-warm) no longer apply.
+composed by the component functions and is not part of this shape, so this is
+the skeleton only.
 
 | Phase | Time |
 | --- | --- |
-| cold (generate + write cache file) | ~0.8–1.1 ms |
-| warm (read + `require` cached renderer) | ~0.3–0.4 ms |
+| cold (generate + write cache file) | ~0.78 ms |
+| warm (read + `require` cached renderer) | ~0.26 ms |
 
 The remaining warm cost is the structure fingerprint walk plus loading the
 generated file; the shape build itself dominates per-process startup either
-way. (Recorded 2026-09-18 on PHP 8.1.34 CLI; re-run the two commands above to
-record your machine.)
+way. (Recorded 2026-09-20 on the i5-1135G7 box above, PHP 8.1.34; re-run the
+two commands above to record your machine.)
 
 ### `bench/registry.php` — component loading, 22 unit artifacts
 
 | opcache | cold | warm (second require in the process) |
 | --- | --- | --- |
-| off | 457 µs | 301 µs (13.7 µs each) |
-| on | 915 µs | **11.6 µs (0.5 µs each)** |
+| off | 667–702 µs | 360–414 µs (16.4–18.8 µs each) |
+| on | 1.4–1.7 ms | **10–14 µs (0.5–0.6 µs each)** |
 
-Recorded 2026-09-18 on PHP 8.1.34 CLI (see the machine note above).
+Recorded 2026-09-20 on the i5-1135G7 box above (PHP 8.1.34). Every artifact now
+carries a one-line cache-version guard, which costs about a microsecond per
+artifact per cold require without opcache and nothing measurable with opcache;
+an earlier recording of this table predates it. A multi-line guard that
+concatenates the installed version into its message measured ~5 µs per artifact
+instead, which is why the generated line is short and its message is static.
 
 A single-file bundle was prototyped to replace the per-unit requires and
 rejected on this data: with opcache a per-unit require is about half a
 microsecond, while one flat bundle (55 KB of `$out .=` code plus function
 stubs) compiled slower cold than the 22 readable templates together (899 µs
 vs 470 µs) and tied warm. Artifacts plus opcache are the production path, so
-the library ships no bundle.
+the library ships no bundle. Reading each artifact's header instead of requiring
+it measured ~4 µs per file, and hashing every unit ~7 µs, against ~0.5 µs to
+load the artifact with opcache: validating content costs more than compiling it.
 
 ## Notes
 
@@ -121,5 +155,13 @@ the library ships no bundle.
 - Subtrees without slots are folded into literals at compile time, which is
   why fully static trees render in well under a microsecond.
 - The bootstrap page has many dynamic slots, so its per-render cost is
-  dominated by slot binding, not by static markup; the plan's ≤15 µs target for
-  it was not reached (~22 µs), while the fully static case is effectively free.
+  dominated by slot binding, not by static markup. Composed from component
+  functions it measures ~104 µs/op for the page function, ~20 µs/op for the
+  plain view; the ≤15 µs target set for the earlier single-shape page was
+  reached only by the plain view, while the fully static case is effectively
+  free.
+- A page function pays for every child component call in the request: the
+  benchmark's `artifact vs page` ratio (0.01–0.02×) says how much of the page
+  cost is the template itself, and the rest is composing the components. A page
+  rendered as one precompiled artifact, without that composition, costs about
+  half as much per request as the same page built from component functions.

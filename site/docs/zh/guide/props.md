@@ -87,7 +87,7 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | --- | --- | --- |
 | `Slot::text($name)` | 可字符串化或 `null` | 转义后的文本内容；`null` 渲染为空 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值（`$name` 是数据键）；`null` 省略该属性 |
-| `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
+| `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；集合按顺序拼接 |
 | `Slot::child($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 渲染分支；缺失的键为 false |
@@ -110,7 +110,7 @@ Slot::text('subtitle')->default('—');       // 键缺失时的回退值
 
 ## 值转换与转义
 
-文本槽位、属性槽位与 raw 槽位接受 `null`、标量和 `Stringable` 对象。使用前会先转换为字符串；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。
+文本槽位、属性槽位与 raw 槽位接受 `null`、标量和 `Stringable` 对象——包括组件返回的 `Raw`，它不需要强制转换。使用前会先转换为字符串；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。raw 槽位更进一步，还接受可字符串化值的可迭代集合，并按顺序拼接它们。
 
 - `Slot::text()` 使用 `htmlspecialchars(..., double_encode: false)` 转义，因此你已经转义过的实体（`&copy;`）会保持不变。
 - `Slot::attr()` 使用 `double_encode: true` 转义。

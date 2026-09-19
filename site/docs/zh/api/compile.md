@@ -119,7 +119,7 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 | --- | --- | --- |
 | `Slot::text($name)` | 可字符串化或 `null` | 转换为字符串后转义；`null` 渲染为空内容 |
 | `Slot::attr($name)` | 可字符串化或 `null` | 转义后的属性值；`null` 时省略该属性（与 `setAttr(null)` 相同） |
-| `Slot::raw($name)` | 可字符串化或 `null` | 原样输出，绝不转义 |
+| `Slot::raw($name)` | 可字符串化值、`null`，或这类值的可迭代集合 | 原样输出，绝不转义；集合按顺序拼接 |
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个 item 渲染一次 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | `$data[$name]` 为真值时渲染 `$then`，否则渲染 `$else`；键缺失视为 false，绝不抛异常 |
@@ -132,8 +132,13 @@ $shape = Compile::shape(div(Header(), Slot::each('rows', $row))->class('page'));
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
 - 嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
-值必须可字符串化：接受 `null`、标量和 `Stringable`；数组或其它对象会抛出
-`InvalidArgumentException`，错误信息中会指出完整槽位路径。
+值槽位（`text`、`attr`、`raw`）必须可字符串化：接受 `null`、标量和 `Stringable`（含子
+组件返回的 `Raw`）；其它对象抛出 `InvalidArgumentException`，错误信息中会指出完整槽位路径。
+`raw` 槽位额外接受这类值的可迭代集合并原样拼接；某个元素不可字符串化时，报错会带上下标，
+例如 `slot 'items[2]' must be stringable`。
+
+选择列表槽位看标记是否已渲染：`raw()` 直接拼接已渲染好的标记（传单个 `Raw` 或它们的列表），
+`each()` 则是数据驱动、逐项用自己的 shape 渲染。
 
 ## 静态子树折叠
 
@@ -148,8 +153,12 @@ $shape = Compile::shape(div(Header(), Slot::text('title')));
 
 ## 结构指纹
 
-`Shape::id()` 是形状结构的 sha1 结构指纹：标签名、属性、槽位种类与名称、默认值、
-嵌套形状以及库缓存版本。它无需编译即可计算，用作缓存文件名和组件缓存键：
+`Shape::id()` 是形状结构的 sha1 指纹：标签名、属性名与属性值、槽位种类与名称、默认值、
+嵌套形状以及库缓存版本。它无需编译即可计算，并被用作磁盘渲染器缓存的键：生成的源码以它为
+键存放，因此结构任何一处不同的两个形状不可能共用同一个缓存的渲染器。`*.pure.php` 产物会在
+源码旁记下它，`pure compile --check` 正是据此识别过期产物。它并不是 `Pure\Component\render()`
+解析组件所依据的东西——那是注册名或单元文件——而且只有*数据*变化时它不会改变。真正用得上它
+的是那种为每个变体组装不同形状的应用：指纹就是存放它们的记忆表的一个廉价而稳定的键：
 
 ```php
 $shapes[$classList . '|' . $item->id()] ??= Compile::shape(...);
@@ -229,18 +238,10 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 
 ## 性能
 
-在 PHP 8.4 上实测（604 个元素的页面，200 行数据；可用 `php bench/compare.php` 复现）：
-
-| 路径 | 每渲染耗时 |
-| --- | --- |
-| 构建树 + `render()` | ~700–750 µs |
-| 仅渲染（复用同一棵树） | ~220–230 µs |
-| 编译形状 + 数据 | ~120 µs |
-| 编译静态树（字面量） | < 1 µs |
-
-bootstrap features 示例使用编译路径后渲染约快 10 倍。
-
-基准测试为手动运行，不属于 CI：
+`bench/compare.php` 量的是 604 元素页面上的各条路径，`examples/bootstrap/bench.php` 量的则是
+一个由组件函数组合起来的真实页面；实测行见 `bench/README.md`，[编译组件指南](/zh/guide/compiled#性能)
+说明各项开销分别在什么时候占主导。绝对数值会随 PHP 版本、opcache 与 CPU 变化，因此对照之前
+请先自己跑一遍：
 
 ```bash
 php bench/compare.php

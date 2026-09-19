@@ -53,7 +53,7 @@ paths share the same escaping implementation.
 | --- | --- | --- |
 | `Slot::text($name)` | stringable or `null` | coerced to string, escaped; `null` renders empty content |
 | `Slot::attr($name)` | stringable or `null` | escaped attribute value; `null` omits the attribute (same as `setAttr(null)`) |
-| `Slot::raw($name)` | stringable or `null` | emitted verbatim, never escaped |
+| `Slot::raw($name)` | stringable, `null`, or an iterable of those | emitted verbatim, never escaped; an iterable is stringified element by element and concatenated |
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
@@ -66,8 +66,11 @@ Modifiers:
 - `Slot::if()` rejects both modifiers with a `LogicException`.
 
 Value coercion: `null`, scalars and `Stringable` are accepted for
-text/attribute/raw slots; arrays and other objects raise an
-`InvalidArgumentException` naming the full slot path.
+text/attribute/raw slots, so the `Raw` a child component returns needs no
+`(string)` cast; arrays and other objects raise an `InvalidArgumentException`
+naming the full slot path. Only a raw slot additionally accepts an iterable of
+stringable values, which it concatenates — a list of rendered rows can go in as
+it is, without `implode()`. A nested array is still an error.
 
 ## Scope and Missing Data
 
@@ -247,9 +250,9 @@ $pureBody = static function (array $v): string {
 };
 ```
 
-`Renderer::$header` holds the document header captured at build time (the
-`<!DOCTYPE html>` of an `html()` root). Components and pages in
-`examples/bootstrap` are units built on that:
+`Renderer::$header` holds the document header captured at build time
+(`<!DOCTYPE html>` for any HTML root, the XML declaration for an XML or SVG
+one). Components and pages in `examples/bootstrap` are units built on that:
 
 ```php
 // components/Icon.cmp.php: typed props, backed by its precompiled template
@@ -269,20 +272,26 @@ function featuresPage(array $data): Raw
 {
     return renderPage('Features', [
         'title' => $data['title'],
-        'content' => (string) FeaturesBody($data['content']),
+        'content' => FeaturesBody($data['content']),
     ]);
 }
 ```
+
+A child component's `Raw` goes straight into a raw slot — no `(string)` cast —
+and an array of them is concatenated in order.
 
 `Pure\Component\render()` and `renderPage()` load the artifact of a unit or
 shape file when one exists next to it and is at least as new as the file;
 otherwise they call the registered factory (once per compile generation) or
 compile the shape file (the disk cache still applies). `renderPage()` prepends
-the document header, `render()` returns the fragment. The binder underneath is
-`component()` / `page()`, which you can hold yourself for inline trees.
+the document header, `render()` returns the fragment — and refuses a name
+registered with `registerPage()`, because a page body without its header is a
+silent truncation. The binder underneath is `component()` / `page()`, which you
+can hold yourself for inline trees.
 
-Its `PlainFeaturesController` passes the same bindings through `plain()`, and
-one router (`public/index.php`) serves every page in both flavors —
+Its `PlainFeaturesController` passes the same bindings through the example's
+`plain()` helper (an app function: it requires the view file and extracts the
+data), and one router (`public/index.php`) serves every page in both flavors —
 `/pure/features` and `/pure/pricing` render the page functions while
 `/plain/features` and `/plain/pricing` render the plain views — so you can
 compare the flavors while developing.
@@ -290,6 +299,20 @@ compare the flavors while developing.
   and the artifact header embed the PHP version, as the cache does.
 - Artifacts are build output: rebuild them after changing a shape. Loading does
   not verify the shape tree, so `--check` is the way to notice a stale artifact.
+- An artifact also carries its `Compile::CACHE_VERSION`: loading one written by
+  another version of the library throws with a `pure compile` message instead of
+  failing on the `Renderer` signature it describes. A version bump invalidates
+  the `Compile::cachePath()` renderers on its own, never the artifacts beside
+  your templates, so `pure compile` is part of an upgrade.
+- Freshness is compared with `filemtime()`, whose whole-second granularity means
+  an artifact written in the same second as its unit already serves it. This is
+  deliberate: `touch`-style skew from a tar, rsync or git checkout is common,
+  and an exact comparison would discard those artifacts and recompile them per
+  request. A content hash of every unit measured ~7 µs per file against ~0.5 µs
+  to require its artifact with opcache, so it is not a cheaper guard either.
+- Two source files that would write the same artifact (`a.shape.php` beside
+  `a.cmp.php`) are both rejected by `pure compile` with exit code 1, so
+  discovery order cannot decide which template owns `a.pure.php`.
 - Output echoed while a shape file loads is discarded; build messages are the
   only thing `pure compile` writes.
 
@@ -304,10 +327,12 @@ artifacts with exit code 1.
 
 What to enable depends on the deployment:
 
-- **PHP-FPM** — enable `Compile::cachePath()` and build artifacts. Every
-  request otherwise rebuilds each component's shape tree and fingerprint
-  (roughly 14 µs per component in the examples), which adds up on
-  component-heavy pages; the artifact cuts that to a `require`.
+- **PHP-FPM** — enable `Compile::cachePath()` and build artifacts. Without an
+  artifact every request rebuilds the component's shape tree and walks its
+  fingerprint before rendering: the features page skeleton alone compiles in
+  ~780 µs cold and ~260 µs from the disk cache (`bench/cache.php`). An artifact
+  cuts that to one `require`, and with opcache a require is well under a
+  microsecond.
 - **Long-running workers** (RoadRunner, Swoole, FrankenPHP) — enable
   `Compile::cachePath()`; the per-path binder cache (built into `render()`,
   `static $render` for inline trees) keeps the renderer in memory, so
@@ -317,7 +342,7 @@ What to enable depends on the deployment:
   so it is not a substitute for either of the above.
 
 With opcache, requiring the artifacts of every component on a page costs about
-half a microsecond each (22 artifacts load in ~12 µs; see
+half a microsecond each (22 artifacts load in ~10 µs; see
 `bench/registry.php`), so artifacts plus opcache are the production path. A
 single-file bundle was prototyped and rejected on that data: it compiled slower
 cold than the readable templates together and tied warm, so the library ships
@@ -354,7 +379,10 @@ compiled component, so the strict slot semantics stay with the artifact:
 - a missing required slot is an undefined variable, not `MissingSlotException`;
 - a `null` attribute prints an empty value instead of disappearing;
 - list slots are not checked for being iterable, and values are stringified by
-  PHP rather than by `SlotRuntime`.
+  PHP rather than by `SlotRuntime`;
+- a raw slot prints exactly one value: a `Raw` or any `Stringable` is fine, an
+  iterable of them is not, because the view has no `SlotRuntime::raw()` to join
+  it. Pass `implode('', $rows)` from the controller, or bind a string.
 
 With function components the controller renders the components first and passes
 their markup as the raw bindings the page shape prints, so the view file stays
@@ -385,23 +413,32 @@ render parses the file again, which is the one case where the artifact wins.
 
 ## Performance
 
-Measured on PHP 8.4 (604-element page, 200 rows; reproduce with
-`php bench/compare.php`):
+Two costs matter per request: what a process pays to get a renderer, and what it
+pays to render with it. `bench/README.md` holds the recorded rows; absolute
+numbers move with the PHP version, opcache and the CPU, so run the scripts
+before comparing them with the table below (PHP 8.1.34, one 604-element page of
+200 rows, `php bench/compare.php`).
 
-| Path | Time per render |
-| --- | --- |
-| build tree + `render()` | ~700–750 µs |
-| render only (same tree reused) | ~220–230 µs |
-| compiled shape + data | ~120 µs |
-| compiled static tree (literal) | < 1 µs |
+| Path | Time per render | End-to-end speedup |
+| --- | --- | --- |
+| build tree + `render()` | ~1.2 ms | 1× |
+| render only (same tree reused) | ~345 µs | 3.4× |
+| compiled shape + data | ~180 µs | 6.6× |
+| compiled static tree (literal) | < 1 µs | — |
 
-The bootstrap features example renders about 10× faster with the compiled
-path. Reproduce them with:
+With opcache the build stays expensive while the compiled path barely changes, so
+the speedup lands at 5.5×, and 4.6× with the JIT on. The precompiled artifact
+path removes the build from that second column entirely: for one page shape,
+building and compiling cost ~2.9 ms against ~25–67 µs to require its artifact
+(`php bench/artifact.php --write && php bench/artifact.php`).
 
-```bash
-php bench/compare.php
-php examples/bootstrap/bench.php
-```
+What a whole page costs depends on how it is composed. The bootstrap features
+page builds its body from component functions, so `examples/bootstrap/bench.php`
+measures the real page, not one shape: ~340 µs/op for the classic tree, ~104 µs/op
+for the page function over its artifact (2.8–3.3×), and ~20 µs/op for the plain
+view. The benchmark's `skeleton artifact + bindings` row renders the page
+*template* with the component markup already bound, so its ~1.5 µs is a per-shape
+figure, not a page render.
 
 ## Limitations
 

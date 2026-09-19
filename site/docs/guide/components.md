@@ -87,14 +87,17 @@ function Button(Raw $icon, string $label): Raw
 Button(Icon('#plus'), 'Add');
 ```
 
-Lists work the same way: loop in the component function, join the markup, pass
-the string into a raw slot. Use `Slot::each()` inside the template when the
-items are plain data rows that need no per-item component logic.
+Lists work the same way: loop in the component function and pass the list of
+child `Raw` values into a raw slot — it is stringified element by element and
+concatenated, so there is no `implode()` to remember. Use `Slot::each()` inside
+the template when the items are plain data rows that need no per-item component
+logic.
 
 ## Pages
 
 A page is a unit too: register it with `registerPage()` and the binder prepends
-the document header of the root tag (`<!DOCTYPE html>` for an `html()` root):
+the document header of the root tag (`<!DOCTYPE html>` for any HTML root, the
+XML declaration for an XML or SVG one):
 
 ```php
 <?php
@@ -111,10 +114,14 @@ function featuresPage(array $data): Raw
 {
     return renderPage('Features', [
         'title' => $data['title'],
-        'content' => (string) FeaturesBody($data['content']),
+        'content' => FeaturesBody($data['content']),
     ]);
 }
 ```
+
+`renderPage()` takes the bindings as one array, and a name registered with
+`registerPage()` renders only through it: `render()` refuses such a name rather
+than returning a document without its header.
 
 `pure compile --plain` writes the same page as a dependency-free view file, so a
 deployment without purephp can serve it; the controller prints the same
