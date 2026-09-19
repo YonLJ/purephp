@@ -25,10 +25,13 @@ use Pure\Core\Tag;
  * Values are escaped with `htmlspecialchars()` using the same flags as the
  * compiled renderer, so a plain view renders byte-identical output for
  * ordinary data. A raw slot joins an iterable with `implode()`, like the
- * runtime does. The strict slot semantics (MissingSlotException, attributes
- * omitted for null, per-element validation) belong to the runtime renderer and
- * are not part of a plain view: a missing slot is an undefined variable, a
- * null attribute prints an empty value.
+ * runtime does. The view starts with the markup of a fragment and with the
+ * document header of a document root, so a page keeps its `<!DOCTYPE html>` /
+ * XML declaration while an included fragment stays a fragment. The strict slot
+ * semantics (MissingSlotException, attributes omitted for null, per-element
+ * validation) belong to the runtime renderer and are not part of a plain view:
+ * a missing slot is an undefined variable, a null attribute prints an empty
+ * value.
  *
  * @internal
  */
@@ -50,7 +53,10 @@ final class PlainGenerator extends TemplateGenerator
     ];
 
     /**
-     * The plain view body of a tree, with the document header of its root tag.
+     * The plain view body of a tree, preceded by the document header only when
+     * the root tag heads a complete document. A fragment (a div, an inline SVG)
+     * starts with its markup, so including the view cannot inject a header into
+     * the middle of a document.
      *
      * @param Tag $tree The shape tree to compile.
      * @return string The view source, starting with the header and markup.
@@ -69,7 +75,9 @@ final class PlainGenerator extends TemplateGenerator
             throw new LogicException('a plain view must start with markup.');
         }
 
-        return '?>' . $tree->documentHeader() . substr($body, 3);
+        $header = $tree->isDocumentRoot() ? $tree->documentHeader() : '';
+
+        return '?>' . $header . substr($body, 3);
     }
 
     protected function valueSource(string $kind, Slot $slot, string $dataVar, string $slotPath): string

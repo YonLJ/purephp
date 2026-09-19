@@ -425,10 +425,8 @@ class ArtifactTest extends TestCase
             ],
         ];
 
-        $header = $shape->tree()->documentHeader();
-
         foreach ($sets as $set) {
-            $this->assertSame($header . $flat->render($set), self::renderPlain($plain, $set));
+            $this->assertSame($flat->render($set), self::renderPlain($plain, $set));
         }
     }
 
@@ -460,7 +458,7 @@ class ArtifactTest extends TestCase
         };
 
         $this->assertSame(
-            $shape->tree()->documentHeader() . '<div><b>a</b><i>b</i></div>',
+            '<div><b>a</b><i>b</i></div>',
             self::renderPlain($plain, ['items' => $items()])
         );
     }
@@ -583,7 +581,7 @@ class ArtifactTest extends TestCase
         ];
 
         $this->assertSame(
-            $shape->tree()->documentHeader() . $flat->render($data),
+            $flat->render($data),
             self::renderPlain((string)$written['plain'], $data)
         );
     }
@@ -629,7 +627,7 @@ class ArtifactTest extends TestCase
         $written = ArtifactCompiler::writeAll($file, true);
 
         $this->assertSame(
-            $shape->tree()->documentHeader() . $flat->render($data),
+            $flat->render($data),
             self::renderPlain((string)$written['plain'], $data)
         );
     }
@@ -649,9 +647,35 @@ class ArtifactTest extends TestCase
         $written = ArtifactCompiler::writeAll($file, true);
 
         $this->assertSame(
-            '<!DOCTYPE html><div>static &amp; &lt;raw&gt;</div>',
+            '<div>static &amp; &lt;raw&gt;</div>',
             self::renderPlain((string)$written['plain'], [])
         );
+    }
+
+    public function testPlainViewsKeepTheDocumentHeaderOfDocumentRootsOnly(): void
+    {
+        $cases = [
+            'plain-fragment.shape.php' => ["Pure\\HTML\\div('x')", ''],
+            'plain-document.shape.php' => ["Pure\\HTML\\html(Pure\\HTML\\body('x'))", '<!DOCTYPE html>'],
+            'plain-svg.shape.php' => ["Pure\\SVG\\svg('x')", ''],
+            'plain-xml.shape.php' => ["Pure\\Core\\XML::root('x')", '<?xml version="1.0"?>'],
+        ];
+
+        foreach ($cases as $name => [$tree, $header]) {
+            $file = $this->shapeFile(
+                $name,
+                "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape({$tree});\n"
+            );
+            $written = ArtifactCompiler::writeAll($file, true);
+            $artifact = self::load($written['artifact']);
+
+            $this->assertInstanceOf(Renderer::class, $artifact);
+            $this->assertSame(
+                $header . $artifact->render([]),
+                self::renderPlain((string)$written['plain'], []),
+                $name
+            );
+        }
     }
 
     public function testCompileRequiresAtLeastOnePath(): void
