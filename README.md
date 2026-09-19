@@ -90,7 +90,9 @@ echo div(
 
 `render('Card', ...)` stays the low-level entry; both forms resolve the same
 binder, artifacts, cache and errors, and `pure check` validates the fluent props
-against the template's slots.
+against the template's slots, and a `#[Prop]` declaration on a `prepare()`
+parameter (`slot`, `item`, `required`, `deprecated`) is verified against the
+signature and the template.
 
 The above code will output:
 

@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Prop;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -30,7 +31,7 @@ register('CustomCard', __FILE__,
             )->class('d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1')
         )->class('card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg')->style(Slot::value('style'))
     )->class('col'),
-    prepare: static function (string $title, string $icon, string $location, string $date, string $bgImg): array {
+    prepare: static function (string $title, string $icon, string $location, string $date, #[Prop(slot: 'style')] string $bgImg): array {
         return [
             'title' => $title,
             'icon' => $icon,

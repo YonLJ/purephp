@@ -136,6 +136,40 @@ Section()->section('columns')->class('row g-4')->item(IconColumn(...));
 没有 `prepare` 闭包时，props 直接就是 bindings，适合纯模板组件。`pure check` 会把
 `prepare()` 的参数与返回的键同模板槽位逐一比对。
 
+### 用 #[Prop] 声明 props 契约
+
+签名表达不了全部信息：prop 与槽位名字不一致时它绑定谁、列表 prop 的每一项长什么样、
+某个 prop 是否准备废弃。`#[Prop]` 注解把这些事实写出来，让 `pure check` 去校验，而不是
+靠推断：
+
+```php
+<?php
+
+use Pure\Component\Prop;
+
+register('Card', __FILE__,
+    factory: static fn () => Compile::shape(...),
+    prepare: static function (
+        #[Prop(slot: 'title')] string $text,
+        #[Prop(item: 'value')] array $features,
+        #[Prop(required: false)] ?string $class = null,
+        #[Prop(deprecated: 'use class()')] ?string $style = null,
+    ): array {
+        return ['title' => $text, 'features' => ..., 'class' => $class, 'style' => $style];
+    }
+);
+```
+
+- `slot` 指定该 prop 绑定的槽位名，默认与参数名相同。当 `prepare()` 返回的不是一个可读的
+  字面量数组（分步构建或合并而来）时，模板的必填槽位改为与声明的槽位比对，而不再是一句
+  “未做比对”的 `info`。
+- `item` 指定列表 prop 的每一项在 `Slot::each` 的 item 形状里填哪个槽位，检查器会把两者
+  对比。
+- `required` 声明调用方的义务；与签名矛盾的声明会被报告。
+- `deprecated` 携带迁移提示，`pure check` 会在每个绑定该 prop 的调用点打印。
+
+注解只被 `pure check` 读取，渲染时完全不会查询；没有注解的单元行为与之前完全一致。
+
 每次链式调用比 `render()` 多花约 2 微秒：调用对象、prop setter 与 `prepare()` 调用各占
 一部分。产物与无依赖视图路径不受影响，`examples/bootstrap/bench.php` 会分别报告两条路径。
 

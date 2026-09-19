@@ -152,6 +152,45 @@ Without a `prepare` closure the props are the bindings as they are, which fits
 pure templates. `pure check` compares the `prepare()` parameters and the keys it
 returns against the template's slots.
 
+### Declared Props
+
+A signature cannot state everything: which binding a prop fills when the names
+differ, the shape of a list prop's items, or that a prop is on its way out. A
+`#[Prop]` attribute states those facts, and `pure check` verifies them against
+the template instead of inferring them:
+
+```php
+<?php
+
+use Pure\Component\Prop;
+
+register('Card', __FILE__,
+    factory: static fn () => Compile::shape(...),
+    prepare: static function (
+        #[Prop(slot: 'title')] string $text,
+        #[Prop(item: 'value')] array $features,
+        #[Prop(required: false)] ?string $class = null,
+        #[Prop(deprecated: 'use class()')] ?string $style = null,
+    ): array {
+        return ['title' => $text, 'features' => ..., 'class' => $class, 'style' => $style];
+    }
+);
+```
+
+- `slot` names the binding the prop fills; the parameter name is the default.
+  When `prepare()` does not return one readable array literal — it builds the
+  array in steps, or merges one — the declared slots are what the required slots
+  of the template are checked against, instead of the checker going quiet.
+- `item` names the single slot each item of a list prop fills in the item shape
+  of a `Slot::each` slot, so the checker compares the two.
+- `required` states the caller obligation; a declaration that contradicts the
+  signature is reported.
+- `deprecated` carries a migration hint that `pure check` prints for every call
+  site binding the prop.
+
+Declarations are read by `pure check` only; they are never consulted while
+rendering, and a unit without them behaves exactly as before.
+
 A fluent call costs about two microseconds more than `render()` per component:
 the call object, the prop setters and the `prepare()` invocation. The compiled
 artifact and the plain view are unaffected, and the benchmark in

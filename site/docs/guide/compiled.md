@@ -308,6 +308,13 @@ vendor/bin/pure check src
   **`prepare()` closure** instead: its parameters are the prop contract and must
   match the slots by name and type, and the keys of the array literal it returns
   must be the slots the template reads (a computed return is reported as `info`).
+- A **`#[Prop]` declaration** on a `prepare()` parameter states what a
+  signature cannot: `slot` names the binding the prop fills, `item` the single
+  slot each item of a list prop fills in a `Slot::each` item shape, `required`
+  the caller obligation and `deprecated` a migration hint. Declarations are
+  compared with the signature and the template, and when `prepare()` does not
+  return one readable array literal they are what the required slots are
+  checked against; a call site binding a deprecated prop is a warning.
 - The **fluent calls** in every checked file: a `->prop(...)` the target does
   not accept is an error with a `did you mean`, `->children(...)` points at the
   call syntax instead, and a prop set unpacked from a variable is skipped. The

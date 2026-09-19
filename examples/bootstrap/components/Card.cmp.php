@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Prop;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -19,7 +20,7 @@ register('Card', __FILE__,
             button(Slot::value('text'))->type('button')->class(Slot::value('class'))
         )->class('card-body')
     )->class('card mb-4 box-shadow'),
-    prepare: static function (string $type, string $price, array $features, string $text, string $class): array {
+    prepare: static function (string $type, string $price, #[Prop(item: 'value')] array $features, string $text, string $class): array {
         return [
             'type' => $type,
             'price' => $price,

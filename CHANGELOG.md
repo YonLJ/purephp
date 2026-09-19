@@ -162,6 +162,17 @@ First public version. No tag has been cut yet.
   render() call targets this component", and the returned-keys reader now
   handles interpolated strings, so a `prepare()` literal like
   `"background-image: url('{$bg}');"` no longer hides its keys.
+- `Pure\Component\Prop` declares what a `prepare()` signature cannot, and
+  `pure check` verifies it against the template: `slot` names the binding the
+  prop fills (the parameter name by default), `item` the single slot each item
+  of a list prop fills in the item shape of a `Slot::each` slot, `required` the
+  caller obligation (a declaration contradicting the signature is reported) and
+  `deprecated` a migration hint that every call site binding the prop is warned
+  about. When `prepare()` does not return one readable array literal, the
+  declared slots are what the required slots are checked against, so a computed
+  `prepare()` no longer goes unchecked; `Card` and `CustomCard` in the
+  bootstrap example declare their list items and their renamed `style` prop.
+  The attribute is read by `pure check` only and never takes part in rendering.
 
 ### Changed
 
