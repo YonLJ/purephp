@@ -91,7 +91,6 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | `Slot::child($name, $shape)` | 数组 | 为 `$shape` 创建嵌套作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 逐项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 渲染分支；缺失的键为 false |
-| `Slot::eachKind($name, ['kind' => $shape])` | 数组的可迭代集合 | 按判别键逐项分派 |
 
 ## 修饰符
 
@@ -129,7 +128,7 @@ try {
 }
 ```
 
-路径用于标识嵌套作用域：`card.title` 表示 `Slot::child()` 槽位，`items[].title` 表示列表项，`items[].kind` 表示异构列表的判别键。
+路径用于标识嵌套作用域：`card.title` 表示 `Slot::child()` 槽位，`items[].title` 表示列表项。
 
 ## 派生 props
 
@@ -151,7 +150,7 @@ $shape(['user' => ['label' => 'ADA']]); // <div><span class="badge">ADA</span></
 嵌套 shape 也可以是裸标签树——`Slot::child('user', span(Slot::value('label')))` 同样可行；
 只有需要单独构建并复用嵌套树时才要写 `Compile::shape()`。
 
-`Slot::each()` 与 `Slot::eachKind()` 同理：每个元素本身就是该项的作用域，所以控制器先把原始行整理成 props 数组列表再渲染。
+`Slot::each()` 同理：每个元素本身就是该项的作用域，所以控制器先把原始行整理成 props 数组列表再渲染。
 
 ## 组件 props 契约
 

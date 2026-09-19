@@ -201,7 +201,7 @@ $config->print(['settings' => [
 ```
 
 When the structure itself has to vary with the data, use `Slot::if()` or
-`Slot::eachKind()`; the tag set of a shape cannot.
+dispatch in the data layer; the tag set of a shape cannot.
 
 ## Performance Considerations
 

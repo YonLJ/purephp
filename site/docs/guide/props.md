@@ -103,7 +103,6 @@ $shape(['classList' => 'btn btn-primary', 'disabled' => 'disabled']); // disable
 | `Slot::child($name, $shape)` | array | nested scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` per item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders a branch; a missing key is false |
-| `Slot::eachKind($name, ['kind' => $shape])` | iterable of arrays | dispatches per item on the discriminator key |
 
 ## Modifiers
 
@@ -154,7 +153,7 @@ try {
 ```
 
 Paths identify nested scopes: `card.title` for a child slot, `items[].title` for
-a list item, `items[].kind` for a heterogeneous list discriminator.
+a list item.
 
 ## Derived Props
 
@@ -178,7 +177,7 @@ A nested shape can be a bare tag tree — `Slot::child('user', span(Slot::value(
 works too; `Compile::shape()` is only needed when the nested tree is built and
 memoized separately.
 
-`Slot::each()` and `Slot::eachKind()` read their items the same way: every item
+`Slot::each()` reads its items the same way: every item
 is already the item scope, so a controller turns a list of rows into a list of
 prop arrays before handing it to the shape.
 

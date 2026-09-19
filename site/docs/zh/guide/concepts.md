@@ -183,25 +183,30 @@ Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
 
-## 条件与异构列表
+## 条件与混合列表
 
-上文的主表覆盖日常槽位。对于混合列表——同一份数据、多种标记形态——`Slot::eachKind()`
-按判别键把每一项分派到对应的形状：
+上文的主表覆盖日常槽位。列表项需要不同标记时，在数据层分派：逐项调用合适的组件函数，
+把拼好的标记交给 raw 槽位。
 
 ```php
-$blocks = Compile::shape(div(Slot::eachKind('blocks', [
-    'text' => p(Slot::value('value')),
-    'link' => a(Slot::value('value'))->href(Slot::value('href')),
-])));
+function Blocks(array $blocks): string
+{
+    $html = '';
 
-$blocks(['blocks' => [
-    ['kind' => 'text', 'value' => '你好'],
-    ['kind' => 'link', 'value' => '文档', 'href' => '/docs'],
-]]);
+    foreach ($blocks as $block) {
+        $html .= $block['kind'] === 'link'
+            ? LinkBlock($block['value'], $block['href'])
+            : TextBlock($block['value']);
+    }
+
+    return $html;
+}
+
+$blocks = Compile::shape(div(Slot::raw('blocks')));
+$blocks(['blocks' => Blocks($blocks)]);
 ```
 
-未知 kind 会抛出异常。完整处理见编译组件指南的
-[异构列表](/zh/guide/compiled#异构列表-eachkind)。
+完整处理见编译组件指南的[混合列表](/zh/guide/compiled#混合列表)。
 
 ## 下一步
 

@@ -7,7 +7,6 @@ namespace Pure\Compile\Internal;
 use Pure\Compile\Compile;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
-use Pure\Core\SlotKind;
 use Pure\Core\Tag;
 
 /**
@@ -93,10 +92,6 @@ final class ShapeIndex implements ShapeVisitor
     public function slotEnter(Slot $slot, string $slotPath): void
     {
         $this->parts[] = $this->describeSlot($slot, $slotPath);
-
-        if ($slot->kind === SlotKind::EachKind) {
-            $this->parts[] = 'kindKey:' . ($slot->kindKey ?? 'kind');
-        }
     }
 
     public function slotBranch(string|int $label): void

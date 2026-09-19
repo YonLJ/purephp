@@ -25,9 +25,9 @@ use Pure\Core\Tag;
  * Values are escaped with `htmlspecialchars()` using the same flags as the
  * compiled renderer, so a plain view renders byte-identical output for
  * ordinary data. The strict slot semantics (MissingSlotException, attributes
- * omitted for null, iterable and kind validation) belong to the runtime
- * renderer and are not part of a plain view: a missing slot is an undefined
- * variable, a null attribute prints an empty value.
+ * omitted for null, iterable validation) belong to the runtime renderer and
+ * are not part of a plain view: a missing slot is an undefined variable, a
+ * null attribute prints an empty value.
  *
  * @internal
  */
@@ -123,16 +123,6 @@ final class PlainGenerator extends TemplateGenerator
         $this->dataStack[] = $itemVar;
     }
 
-    protected function enterEachKind(Slot $slot, string $slotPath): void
-    {
-        $itemVar = $this->itemVar();
-        $childVar = $this->childVar();
-        $kindKey = var_export($slot->kindKey ?? 'kind', true);
-        $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
-        $this->statement('switch (' . $itemVar . '[' . $kindKey . '] ?? null) {');
-        $this->eachKindStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
-    }
-
     protected function enterIf(Slot $slot, string $slotPath): void
     {
         // Condition slots are never required, so the access carries the default.
@@ -140,11 +130,6 @@ final class PlainGenerator extends TemplateGenerator
     }
 
     protected function eachScope(string $childVar, string $itemVar, string $scopePath): string
-    {
-        return $itemVar;
-    }
-
-    protected function branchScope(string $childVar, string $itemVar, string $scopePath): string
     {
         return $itemVar;
     }

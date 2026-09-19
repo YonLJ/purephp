@@ -139,45 +139,6 @@ final class SlotRuntime
         return $value;
     }
 
-    /**
-     * Validate a heterogeneous list item and return its discriminator.
-     *
-     * @param mixed $item The list item to validate.
-     * @param string $kindKey The key used to dispatch items by kind.
-     * @param string $path The slot path for error messages.
-     * @param array<int, string> $allowed
-     * @return string The validated kind discriminator.
-     * @throws InvalidArgumentException When the item is invalid.
-     */
-    public static function kind(mixed $item, string $kindKey, string $path, array $allowed): string
-    {
-        if (!is_array($item)) {
-            throw new InvalidArgumentException("slot '{$path}' must be an array, " . get_debug_type($item) . ' given.');
-        }
-
-        if (!array_key_exists($kindKey, $item)) {
-            throw new InvalidArgumentException("slot '{$path}.{$kindKey}' is required but was not provided.");
-        }
-
-        $kind = $item[$kindKey];
-        if (!is_string($kind) || !in_array($kind, $allowed, true)) {
-            throw new InvalidArgumentException("slot '{$path}.{$kindKey}' must be one of " . self::listKinds($allowed) . ', ' . get_debug_type($kind) . ' given.');
-        }
-
-        return $kind;
-    }
-
-    /**
-     * Format allowed kind values for error messages.
-     *
-     * @param array<int, string> $allowed
-     * @return string The formatted list string.
-     */
-    private static function listKinds(array $allowed): string
-    {
-        return implode(', ', array_map(static fn (string $kind): string => "'{$kind}'", $allowed));
-    }
-
     private static function stringify(mixed $value, string $path): string
     {
         if (is_null($value) || is_scalar($value)) {

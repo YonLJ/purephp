@@ -103,13 +103,6 @@ final class ShapeWalker
                 }
 
                 break;
-            case SlotKind::EachKind:
-                foreach ($slot->variants as $kind => $variant) {
-                    $this->visitor->slotBranch((string)$kind);
-                    $this->tag($variant->tree(), $slotPath . '[]');
-                }
-
-                break;
             case SlotKind::Value:
             case SlotKind::Raw:
                 break;

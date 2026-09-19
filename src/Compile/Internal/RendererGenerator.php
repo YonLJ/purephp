@@ -27,9 +27,6 @@ abstract class RendererGenerator implements ShapeVisitor
     /** @var list<array{slot: Slot, slotPath: string}> */
     protected array $slotStack = [];
 
-    /** @var list<array{itemVar: string, childVar: string, branchOpen: bool}> */
-    protected array $eachKindStack = [];
-
     /** @var list<string> */
     protected array $dataStack = ['$v'];
 
@@ -121,33 +118,13 @@ abstract class RendererGenerator implements ShapeVisitor
     {
         $slot = $this->currentContext()['slot'];
 
-        if ($slot->kind === SlotKind::If) {
-            if ($label === 1) {
-                $this->statement('} else {');
-            }
-
-            return;
-        }
-
-        if ($slot->kind !== SlotKind::EachKind) {
+        if ($slot->kind !== SlotKind::If) {
             throw new LogicException("unexpected branch event for slot kind '{$slot->kind->name}'.");
         }
 
-        $context = array_pop($this->eachKindStack);
-        if ($context === null) {
-            throw new LogicException('eachKind branch without an open list.');
+        if ($label === 1) {
+            $this->statement('} else {');
         }
-
-        if ($context['branchOpen']) {
-            $this->statement('break;');
-            array_pop($this->dataStack);
-        }
-
-        $current = $this->currentContext();
-        $this->statement('case ' . var_export((string)$label, true) . ':');
-        $this->dataStack[] = $this->branchScope($context['childVar'], $context['itemVar'], $current['slotPath'] . '[]');
-        $context['branchOpen'] = true;
-        $this->eachKindStack[] = $context;
     }
 
     public function slotLeave(Slot $slot, string $slotPath): void
@@ -166,16 +143,6 @@ abstract class RendererGenerator implements ShapeVisitor
 
                 break;
             case SlotKind::If:
-                $this->statement('}');
-
-                break;
-            case SlotKind::EachKind:
-                $context = array_pop($this->eachKindStack);
-                if ($context !== null && $context['branchOpen']) {
-                    $this->statement('break;');
-                    array_pop($this->dataStack);
-                }
-                $this->statement('}');
                 $this->statement('}');
 
                 break;
@@ -215,10 +182,6 @@ abstract class RendererGenerator implements ShapeVisitor
                 $this->enterIf($slot, $slotPath);
 
                 return;
-            case SlotKind::EachKind:
-                $this->enterEachKind($slot, $slotPath);
-
-                return;
             default:
                 throw new LogicException("slot kind '{$slot->kind->name}' is not supported in child position.");
         }
@@ -253,33 +216,9 @@ abstract class RendererGenerator implements ShapeVisitor
     }
 
     /**
-     * Open a heterogeneous list slot: iterate, read the kind and switch on it.
-     */
-    protected function enterEachKind(Slot $slot, string $slotPath): void
-    {
-        $itemVar = $this->itemVar();
-        $childVar = $this->childVar();
-        $kindVar = '$kind' . $this->scope;
-        $this->statement('foreach (' . $this->itemsSource($slot, $this->data(), $slotPath) . ' as ' . $itemVar . ') {');
-        $this->statement($kindVar . ' = ' . $this->kindSource($itemVar, $slot, $slotPath) . ';');
-        $this->statement('switch (' . $kindVar . ') {');
-        $this->eachKindStack[] = ['itemVar' => $itemVar, 'childVar' => $childVar, 'branchOpen' => false];
-    }
-
-    /**
      * Bind the data scope of one list item and return the variable holding it.
      */
     protected function eachScope(string $childVar, string $itemVar, string $scopePath): string
-    {
-        $this->statement($childVar . ' = ' . $this->scopeSource($itemVar, $scopePath) . ';');
-
-        return $childVar;
-    }
-
-    /**
-     * Bind the data scope of one eachKind branch and return its variable.
-     */
-    protected function branchScope(string $childVar, string $itemVar, string $scopePath): string
     {
         $this->statement($childVar . ' = ' . $this->scopeSource($itemVar, $scopePath) . ';');
 
@@ -390,24 +329,11 @@ abstract class RendererGenerator implements ShapeVisitor
     }
 
     /**
-     * Expression producing the iterable of an each or eachKind slot.
+     * Expression producing the iterable of an each slot.
      */
     protected function itemsSource(Slot $slot, string $dataVar, string $slotPath): string
     {
         return '\Pure\Compile\Internal\SlotRuntime::items(' . $this->valueAccess($slot, $dataVar, $slotPath) . ', ' . var_export($slotPath, true) . ')';
-    }
-
-    /**
-     * Expression validating one eachKind item and returning its discriminator.
-     */
-    protected function kindSource(string $itemVar, Slot $slot, string $slotPath): string
-    {
-        $kinds = [];
-        foreach (array_keys($slot->variants) as $kind) {
-            $kinds[] = var_export((string)$kind, true);
-        }
-
-        return '\Pure\Compile\Internal\SlotRuntime::kind(' . $itemVar . ', ' . var_export($slot->kindKey ?? 'kind', true) . ', ' . var_export($slotPath . '[]', true) . ', [' . implode(', ', $kinds) . '])';
     }
 
     /**

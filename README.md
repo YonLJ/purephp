@@ -73,7 +73,7 @@ Under standard PHP-FPM every request starts fresh, so enable
 `Compile::cachePath()` (or precompile with `pure compile`) to load generated
 renderers instead of rebuilding them; long-running workers keep them in memory.
 See the [compiled rendering guide](https://yonld.github.io/purephp/guide/compiled)
-for caching, conditionals and heterogeneous lists.
+for caching, conditionals and mixed lists.
 
 ## Snippets and debugging
 
@@ -104,9 +104,8 @@ once instead of on every render.
 
 ## Compiled components
 
-Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`
-(or `Slot::eachKind()` for mixed item types), and conditionals use `Slot::if()`.
-Everything else is plain PHP.
+Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`,
+and conditionals use `Slot::if()`. Everything else is plain PHP.
 
 A parent takes its children's markup as an ordinary value and passes it through
 a raw slot: `div(Slot::raw('body'))` bound as `render('Page', body: Card(...))`.

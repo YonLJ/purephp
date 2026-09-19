@@ -125,8 +125,8 @@ function Card(string $title, string $content, string $class = 'card'): string
 
 Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`,
 optional/conditional markup uses `Slot::if()`, and rendered child components
-enter through `Slot::raw()`. Mixed-list dispatch is in the
-[Heterogeneous Lists](#heterogeneous-lists-eachkind) appendix.
+enter through `Slot::raw()`. Mixed-list dispatch happens in the data layer, see
+the [Mixed Lists](#mixed-lists) appendix.
 
 ### Lists
 
@@ -352,8 +352,8 @@ figure, not a page render.
 ## Limitations
 
 - Tag names cannot depend on data: a shape always uses the same tags. Use
-  `Slot::if()` for conditional markup or `Slot::eachKind()` for mixed lists
-  ([appendix](#heterogeneous-lists-eachkind)), or normalize the data before rendering.
+  `Slot::if()` for conditional markup or dispatch mixed lists in the data layer
+  ([appendix](#mixed-lists)), or normalize the data before rendering.
 - Compiled code is tied to the shape structure; changing a shape changes its
   `id()` and therefore its cache file.
 - A shape tree is read live while it compiles, and `id()` reflects the tree as
@@ -424,24 +424,30 @@ child/list scopes become array shapes and iterables of them. Odd slot names are
 declared on the loader's `$data` array. Annotations are comments: they add no
 output bytes.
 
-## Heterogeneous Lists (eachKind)
+## Mixed Lists
 
-`Slot::eachKind()` dispatches every item on a discriminator key (default `'kind'`)
-to the matching shape. An unknown kind throws `InvalidArgumentException`.
+A shape has one structure, so a list whose items need different markup is
+dispatched in the data layer: render each item through the component function
+that fits it and pass the joined markup into a raw slot.
 
 ```php
-$shape = Compile::shape(div(Slot::eachKind('blocks', [
-    'text'  => Compile::shape(p(Slot::value('value'))),
-    'link'  => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
-])));
+function Blocks(array $blocks): string
+{
+    $html = '';
 
-$shape(['blocks' => [
-    ['kind' => 'text', 'value' => 'hi'],
-    ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
-]]);
-// → <div><p>hi</p><a href="#x">go</a></div>
+    foreach ($blocks as $block) {
+        $html .= $block['kind'] === 'link'
+            ? LinkBlock($block['value'], $block['href'])
+            : TextBlock($block['value']);
+    }
+
+    return $html;
+}
+
+$shape = Compile::shape(div(Slot::raw('blocks')));
+$shape(['blocks' => Blocks($blocks)]);
 ```
 
-Kind keys must be non-empty strings; PHP array keys that look numeric are ints
-at runtime and cannot match the string kinds used by the generated dispatch, so
-they are rejected at construction time.
+`Slot::each()` covers the homogeneous case: one shape, every item. When the
+variants are only conditional details inside one item shape, `Slot::if()` on
+precomputed keys keeps the dispatch in the template.

@@ -39,7 +39,7 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 | `Pure\Compile\Compile` | Facade: `shape()`, `cachePath()`, `clearCache()`, `flush()`, `guard()` |
 | `Pure\Compile\Shape` | A data-free tree: `__invoke($data)`, `compile()`, `id()`, `print($data)`, `save($path, $data)` |
 | `Pure\Compile\Renderer` | The compiled renderer: `render($data)`, `save($path, $data, $header = '')` and the readonly `source` / `id` properties |
-| `Pure\Core\Slot` | Placeholder constructors (`value`, `raw`, `child`, `each`, `if`, `eachKind`) and modifiers |
+| `Pure\Core\Slot` | Placeholder constructors (`value`, `raw`, `child`, `each`, `if`) and modifiers |
 | `Pure\Core\MissingSlotException` | Thrown when a required slot is missing, with the full path |
 
 ## Function Components
@@ -131,7 +131,6 @@ $shape(['header' => Header(), 'rows' => $rows]);
 | `Slot::child($name, $shape)` | array | nested data scope for `$shape` |
 | `Slot::each($name, $shape)` | iterable of arrays | renders `$shape` for every item |
 | `Slot::if($name, $then, $else = null)` | truthy check | renders `$then` when `$data[$name]` is truthy, otherwise `$else`; a missing key is false and never throws |
-| `Slot::eachKind($name, ['kind' => $shape], $kindKey = 'kind')` | iterable of arrays | dispatches each item on `$item[$kindKey]`; unknown kinds throw an `InvalidArgumentException` |
 
 Modifiers:
 
@@ -254,12 +253,9 @@ process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
   for example `slot 'items[].title' is required but was not provided.`
 - Wrong placement (raw slot as an attribute value)
   or a missing shape: `LogicException` at compile time.
-- `Slot::eachKind()` with no variants or with an empty/numeric kind key:
-  `InvalidArgumentException` at build time (and `required()`/`default()` on
+- Non-iterable list, non-array item or scope, non-stringable value:
+  `InvalidArgumentException` at render time (and `required()`/`default()` on
   `Slot::if()` throw a `LogicException`).
-- Non-iterable list, non-array item or scope, an item whose discriminator is
-  missing or unknown, non-stringable value: `InvalidArgumentException` at render
-  time.
 
 ## Trees with Slots Cannot Use Other Output Paths
 
@@ -284,8 +280,8 @@ php examples/bootstrap/bench.php
 ## Limitations
 
 - Tag names cannot depend on data: a shape always uses the same tags. Use
-  `Slot::if()` / `Slot::eachKind()` for structural variation, or normalize the
-  data before rendering.
+  `Slot::if()` for structural variation, or normalize the data before
+  rendering.
 - Shapes only persist for the lifetime of a PHP process. In long-running
   workers (or with `opcache.preload`) that is once per worker; under standard
   PHP-FPM the shape tree is rebuilt and the renderer regenerated on every

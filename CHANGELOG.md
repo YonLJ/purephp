@@ -45,7 +45,7 @@ First public version. No tag has been cut yet.
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
   subtrees without slots are folded into literals.
 - Slot types `Slot::value()`, `Slot::raw()`, `Slot::child()`,
-  `Slot::each()`, `Slot::if()` and `Slot::eachKind()`, with `required(false)`
+  `Slot::each()` and `Slot::if()`, with `required(false)`
   and `default()` modifiers.
 - `Pure\Core\MissingSlotException` with full slot paths for missing data, and
   `InvalidArgumentException` for non-stringable values and list contract
@@ -101,7 +101,8 @@ First public version. No tag has been cut yet.
   escapes to text; attribute position follows `Tag::setAttr()` with bool/null
   omission). Generated code is byte-identical for equivalent usages; the
   fingerprint encodes the slot kind name, so it keys differently and
-  `Compile::CACHE_VERSION` is bumped 9 → 10. Local `*.pure.php` / `*.plain.php`
+  `Compile::CACHE_VERSION` is bumped 9 → 11 (the slot-kind rekeying plus the
+  `Slot::eachKind()` removal below). Local `*.pure.php` / `*.plain.php`
   artifacts become stale and must be regenerated with `pure compile --plain`
   (plain views are not rebuilt or checked without `--plain`); they are
   gitignored and not committed.
@@ -113,7 +114,7 @@ First public version. No tag has been cut yet.
   `Raw` remains available in `Pure\Core` for verbatim children inside a raw
   slot.
 
-- `Slot::child()`, `Slot::each()`, `Slot::if()` and `Slot::eachKind()` accept a
+- `Slot::child()`, `Slot::each()` and `Slot::if()` accept a
   bare tag tree: `Tag` implements `ShapeContract` by returning itself, so
   `Slot::each('items', li(Slot::value('value')))` no longer needs a
   `Compile::shape()` wrapper (which is still accepted, and still the way to
@@ -259,8 +260,8 @@ First public version. No tag has been cut yet.
 - `Tag::save()` and `Renderer::save()` write with `file_put_contents()`, so a
   long document is always written in full.
 - `Slot::sub()` and `Slot::eachAny()` are now `Slot::child()` and
-  `Slot::eachKind()` (with `SlotKind::Child` / `SlotKind::EachKind`), matching the
-  vocabulary the guides already used (child component, kind discriminator); the
+  `Slot::each()` (with `SlotKind::Child` / `SlotKind::Each`), matching the
+  vocabulary the guides already used (child component, list); the
   internal scope helper is `SlotRuntime::scope()`, so `Compile::CACHE_VERSION` is
   now 6 and cached renderers are discarded and regenerated.
 - Source directories now mirror the namespaces one to one —
@@ -281,8 +282,14 @@ First public version. No tag has been cut yet.
   returns a `Closure(array): string`.
 - **Breaking** — `Slot::text()` and `Slot::attr()` are removed in favour of
   `Slot::value()`.
-- **Breaking** — The `$map` third argument of `Slot::child()`, `Slot::each()` and
-  `Slot::eachKind()`, along with the closure-copying machinery that carried maps
+- **Breaking** — `Slot::eachKind()` and `SlotKind::EachKind` are removed. A list
+  whose items need different markup is dispatched in the data layer: render each
+  item through the component function that fits it and pass the joined markup
+  into a raw slot, while `Slot::each()` covers the homogeneous case. Cached
+  renderers and artifacts written with the old kind are discarded by the
+  `Compile::CACHE_VERSION` bump.
+- **Breaking** — The `$map` third argument of `Slot::child()` and
+  `Slot::each()`, along with the closure-copying machinery that carried maps
   into artifacts (`Pure\Compile\Internal\ClosureSource`, namespace blocks and
   imported-name splitting in generated files). A nested scope now always reads
   `$data[$name]`, and bindings carry the nested array the shape expects, so the
@@ -342,8 +349,5 @@ First public version. No tag has been cut yet.
 - `->default()` rejects objects, closures and resources with an
   `InvalidArgumentException` instead of failing later with a bare
   `serialize()` error or broken generated code.
-- `Slot::eachKind()` rejects non-string kind keys, which PHP array keys turn
-  into ints, with an `InvalidArgumentException` instead of compiling branches
-  that can never match: generated dispatch compares string kinds strictly.
 
 [Unreleased]: https://github.com/YonLD/purephp/commits/main

@@ -10,7 +10,6 @@ use Pure\Core\Slot;
 use function Pure\HTML\div;
 use function Pure\HTML\li;
 use function Pure\HTML\span;
-use function Pure\HTML\ul;
 
 final class ScopeTypesTest extends TestCase
 {
@@ -42,21 +41,6 @@ final class ScopeTypesTest extends TestCase
             . " * @var scalar|null|\\Stringable \$subtitle\n"
             . " * @var scalar|null|\\Stringable \$city\n"
             . " * @var array{title: scalar|null|\\Stringable, subtitle: scalar|null|\\Stringable, city: scalar|null|\\Stringable, 'user-name': scalar|null|\\Stringable} \$data\n"
-            . ' */',
-            ScopeTypes::docblock($tree)
-        );
-    }
-
-    public function testEachKindItemsShareOneFlattenedShape(): void
-    {
-        $tree = Compile::shape(ul(Slot::eachKind('blocks', [
-            'text' => li(Slot::value('value')),
-            'link' => li(Slot::value('value'))->class(Slot::value('class')),
-        ])))->tree();
-
-        $this->assertSame(
-            "/**\n"
-            . " * @var iterable<array-key, array{kind?: 'text'|'link', value: scalar|null|\\Stringable, class: scalar|null|\\Stringable}> \$blocks\n"
             . ' */',
             ScopeTypes::docblock($tree)
         );

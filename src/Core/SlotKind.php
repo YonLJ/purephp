@@ -11,5 +11,4 @@ enum SlotKind
     case Child;
     case Each;
     case If;
-    case EachKind;
 }

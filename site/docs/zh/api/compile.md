@@ -37,7 +37,7 @@ echo $shape([
 | `Pure\Compile\Compile` | 门面：`shape()`、`cachePath()`、`clearCache()`、`flush()`、`guard()` |
 | `Pure\Compile\Shape` | 不含数据的树：`__invoke($data)`、`compile()`、`id()`、`print($data)`、`save($path, $data)` |
 | `Pure\Compile\Renderer` | 编译后的渲染器：`render($data)`、`save($path, $data, $header = '')`，以及只读属性 `source` / `id` |
-| `Pure\Core\Slot` | 占位符构造器（`value`、`raw`、`child`、`each`、`if`、`eachKind`）与修饰符 |
+| `Pure\Core\Slot` | 占位符构造器（`value`、`raw`、`child`、`each`、`if`）与修饰符 |
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
 ## 函数组件
@@ -119,7 +119,6 @@ $shape(['header' => Header(), 'rows' => $rows]);
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个 item 渲染一次 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | `$data[$name]` 为真值时渲染 `$then`，否则渲染 `$else`；键缺失视为 false，绝不抛异常 |
-| `Slot::eachKind($name, ['kind' => $shape], $kindKey = 'kind')` | 数组的可迭代集合 | 按 `$item[$kindKey]` 分发每个 item；未知 kind 抛出 `InvalidArgumentException` |
 
 修饰符：
 
@@ -224,11 +223,9 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 - 必填槽位缺失：`Pure\Core\MissingSlotException`，带完整路径，例如
   `slot 'items[].title' is required but was not provided.`
 - 位置错误（raw 槽用作属性值）或缺少形状：编译期抛 `LogicException`。
-- `Slot::eachKind()` 没有分支形状，或判别键为空、数字形：构建期抛
+- 列表不可迭代、item 或作用域不是数组、值不可字符串化：渲染期抛
   `InvalidArgumentException`（对 `Slot::if()` 使用 `required()` / `default()` 会抛
   `LogicException`）。
-- 列表不可迭代、item 或作用域不是数组、item 的判别键缺失或未知、值不可字符串化：
-  渲染期抛 `InvalidArgumentException`。
 
 ## 含槽位的树不能使用其它输出路径
 
@@ -249,8 +246,8 @@ php examples/bootstrap/bench.php
 
 ## 限制
 
-- 标签名不能依赖数据：一个形状始终使用相同的标签。结构变化请用 `Slot::if()` /
-  `Slot::eachKind()`，或者在渲染前规整数据。
+- 标签名不能依赖数据：一个形状始终使用相同的标签。结构变化请用 `Slot::if()`，
+  或者在渲染前规整数据。
 - 形状只在 PHP 进程的生命周期内存在。长驻 worker（或 `opcache.preload`）下是每个
   worker 一次；标准 PHP-FPM 下形状树会在每个请求中重建、渲染器会被重新生成，反而比
   `render()` 更慢。请启用 `cachePath()`，让请求加载生成的渲染器而不是重新生成。

@@ -6,18 +6,14 @@ use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Core\Slot;
 
-use function Pure\HTML\a;
-use function Pure\HTML\b;
 use function Pure\HTML\div;
 use function Pure\HTML\em;
-use function Pure\HTML\i;
 use function Pure\HTML\li;
-use function Pure\HTML\p;
 use function Pure\HTML\span;
 use function Pure\HTML\ul;
 
 /**
- * Behaviour of the conditional and heterogeneous slots.
+ * Behaviour of the conditional and list slots.
  */
 class SlotTest extends TestCase
 {
@@ -66,24 +62,21 @@ class SlotTest extends TestCase
             Slot::child('box', span(Slot::value('label'))),
             Slot::each('items', li(Slot::value('value'))),
             Slot::if('flag', em('on'), em('off')),
-            Slot::eachKind('kinds', ['a' => i('A'), 'b' => b('B')]),
         ));
 
         $wrapped = Compile::shape(div(
             Slot::child('box', Compile::shape(span(Slot::value('label')))),
             Slot::each('items', Compile::shape(li(Slot::value('value')))),
             Slot::if('flag', Compile::shape(em('on')), Compile::shape(em('off'))),
-            Slot::eachKind('kinds', ['a' => Compile::shape(i('A')), 'b' => Compile::shape(b('B'))]),
         ));
 
         $data = [
             'box' => ['label' => 'boxed'],
             'items' => [['value' => 'one'], ['value' => 'two']],
             'flag' => true,
-            'kinds' => [['kind' => 'a'], ['kind' => 'b']],
         ];
 
-        $expected = '<div><span>boxed</span><li>one</li><li>two</li><em>on</em><i>A</i><b>B</b></div>';
+        $expected = '<div><span>boxed</span><li>one</li><li>two</li><em>on</em></div>';
 
         $this->assertSame($expected, $bare($data));
         $this->assertSame($expected, $wrapped($data));
@@ -126,115 +119,10 @@ class SlotTest extends TestCase
         $this->assertSame('<ul></ul>', $shape([]));
     }
 
-    public function testEachKindDispatchesByKind(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::value('value'))),
-            'link' => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
-        ])));
-
-        $this->assertSame(
-            '<div><p>hi</p><a href="#x">go</a></div>',
-            $shape(['items' => [
-                ['kind' => 'text', 'value' => 'hi'],
-                ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
-            ]])
-        );
-    }
-
-    public function testEachKindSupportsACustomKindKey(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'a' => Compile::shape(span('A')),
-        ], 'type')));
-
-        $this->assertSame('<div><span>A</span></div>', $shape(['items' => [['type' => 'a']]]));
-    }
-
-    public function testEachKindRejectsUnknownKindWithFullPath(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::value('value'))),
-        ])));
-
-        try {
-            $shape(['items' => [['kind' => 'video', 'value' => 'x']]]);
-            $this->fail('Expected InvalidArgumentException to be thrown.');
-        } catch (InvalidArgumentException $e) {
-            $this->assertStringContainsString("slot 'items[].kind'", $e->getMessage());
-            $this->assertStringContainsString("'text'", $e->getMessage());
-        }
-    }
-
-    public function testEachKindRejectsNonArrayAndMissingKind(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => Compile::shape(p(Slot::value('value'))),
-        ])));
-
-        try {
-            $shape(['items' => ['nope']]);
-            $this->fail('Expected InvalidArgumentException to be thrown.');
-        } catch (InvalidArgumentException $e) {
-            $this->assertSame("slot 'items[]' must be an array, string given.", $e->getMessage());
-        }
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("slot 'items[].kind' is required but was not provided.");
-
-        $shape(['items' => [[]]]);
-    }
-
-    public function testEachKindRequiresAtLeastOneShape(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        Slot::eachKind('items', []);
-    }
-
-    public function testEachKindRejectsInvalidKindKeys(): void
-    {
-        try {
-            Slot::eachKind('items', ['' => span('x')]);
-            $this->fail('Expected InvalidArgumentException to be thrown.');
-        } catch (InvalidArgumentException $e) {
-            $this->assertSame("slot 'items' eachKind variants must be non-empty strings.", $e->getMessage());
-        }
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("slot 'items' eachKind variants must be non-empty strings.");
-
-        Slot::eachKind('items', [0 => span('x')]);
-    }
-
-    public function testEachKindRejectsNonStringKindValue(): void
-    {
-        $shape = Compile::shape(div(Slot::eachKind('items', [
-            'text' => p('x'),
-        ])));
-
-        try {
-            $shape(['items' => [['kind' => 42]]]);
-            $this->fail('Expected InvalidArgumentException to be thrown.');
-        } catch (InvalidArgumentException $e) {
-            $this->assertSame("slot 'items[].kind' must be one of 'text', int given.", $e->getMessage());
-        }
-    }
-
     public function testIfSlotInAttributePositionIsRejected(): void
     {
         $this->expectException(LogicException::class);
 
         Compile::shape(div('x')->class(Slot::if('on', span('y'))))->compile();
     }
-
-    public function testEachKindSlotInAttributePositionIsRejected(): void
-    {
-        $this->expectException(LogicException::class);
-
-        Compile::shape(div('x')->class(Slot::eachKind('items', [
-            'a' => Compile::shape(span('y')),
-        ])))->compile();
-    }
-
 }

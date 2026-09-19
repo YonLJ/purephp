@@ -19,9 +19,6 @@ use LogicException;
  */
 final class Slot
 {
-    /**
-     * @param array<array-key, ShapeContract> $variants
-     */
     private function __construct(
         public readonly SlotKind $kind,
         public readonly string $name,
@@ -29,8 +26,6 @@ final class Slot
         public readonly bool $required,
         public readonly mixed $default,
         public readonly ?ShapeContract $else = null,
-        public readonly array $variants = [],
-        public readonly ?string $kindKey = null,
     ) {
     }
 
@@ -113,34 +108,6 @@ final class Slot
     }
 
     /**
-     * Heterogeneous list slot: every item is dispatched on `$item[$kindKey]`
-     * to the matching shape; an unknown kind throws an InvalidArgumentException.
-     *
-     * Kind keys must be non-empty strings; PHP array keys that look numeric are
-     * ints at runtime and cannot match the string kinds used by the generated
-     * dispatch, so they are rejected here.
-     *
-     * @param string $name The slot name.
-     * @param array<array-key, ShapeContract> $shapes Shapes or bare tag trees, by kind.
-     * @param string $kindKey The key used to dispatch items by kind.
-     * @return self
-     */
-    public static function eachKind(string $name, array $shapes, string $kindKey = 'kind'): self
-    {
-        if ($shapes === []) {
-            throw new InvalidArgumentException("slot '{$name}' eachKind requires at least one shape.");
-        }
-
-        foreach (array_keys($shapes) as $kind) {
-            if (!is_string($kind) || $kind === '') {
-                throw new InvalidArgumentException("slot '{$name}' eachKind variants must be non-empty strings.");
-            }
-        }
-
-        return new self(SlotKind::EachKind, $name, null, true, null, null, $shapes, $kindKey);
-    }
-
-    /**
      * Mark the slot as optional.
      *
      * @param bool $required Whether the slot is required (default true).
@@ -152,7 +119,7 @@ final class Slot
             throw new LogicException("slot '{$this->name}' is a condition slot; required() does not apply.");
         }
 
-        return new self($this->kind, $this->name, $this->shape, $required, $this->default, $this->else, $this->variants, $this->kindKey);
+        return new self($this->kind, $this->name, $this->shape, $required, $this->default, $this->else);
     }
 
     /**
@@ -177,7 +144,7 @@ final class Slot
             );
         }
 
-        return new self($this->kind, $this->name, $this->shape, false, $value, $this->else, $this->variants, $this->kindKey);
+        return new self($this->kind, $this->name, $this->shape, false, $value, $this->else);
     }
 
     private static function isValueType(mixed $value): bool

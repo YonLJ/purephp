@@ -189,8 +189,8 @@ a template so escaping and structure costs are paid once.
 ## Slot Reference
 
 Components are functions; slots are the vocabulary *inside* a template:
-`Slot::value()`, `Slot::raw()`, `Slot::child()`, `Slot::each()`, `Slot::if()`
-and `Slot::eachKind()`. See [Props and Slots](/guide/props) for
+`Slot::value()`, `Slot::raw()`, `Slot::child()`, `Slot::each()` and
+`Slot::if()`. See [Props and Slots](/guide/props) for
 the complete binding reference.
 
 ## Next Steps

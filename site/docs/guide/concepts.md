@@ -212,26 +212,32 @@ Store::set('user', ['name' => 'John']);
 $user = Store::get('user');
 ```
 
-## Conditional and Heterogeneous Lists
+## Conditional Lists
 
-The main table above covers the everyday slots. For mixed lists — one data
-shape, several markup variants — `Slot::eachKind()` dispatches every item on a
-discriminator key to the matching shape:
+The main table above covers the everyday slots. A list whose items need
+different markup is dispatched in the data layer: render each item through the
+component function that fits it and pass the joined markup into a raw slot.
 
 ```php
-$blocks = Compile::shape(div(Slot::eachKind('blocks', [
-    'text' => p(Slot::value('value')),
-    'link' => a(Slot::value('value'))->href(Slot::value('href')),
-])));
+function Blocks(array $blocks): string
+{
+    $html = '';
 
-$blocks(['blocks' => [
-    ['kind' => 'text', 'value' => 'hello'],
-    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
-]]);
+    foreach ($blocks as $block) {
+        $html .= $block['kind'] === 'link'
+            ? LinkBlock($block['value'], $block['href'])
+            : TextBlock($block['value']);
+    }
+
+    return $html;
+}
+
+$blocks = Compile::shape(div(Slot::raw('blocks')));
+$blocks(['blocks' => Blocks($blocks)]);
 ```
 
-An unknown kind throws. See [Heterogeneous lists](/guide/compiled#heterogeneous-lists-eachkind)
-in the compiled guide for the full treatment.
+See [Mixed lists](/guide/compiled#mixed-lists) in the compiled guide for the
+full treatment.
 
 ## Next Steps
 

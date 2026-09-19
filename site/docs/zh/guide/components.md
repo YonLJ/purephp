@@ -171,7 +171,7 @@ div(h2('Title'), p('Content'))->class('card')->print();
 ## 槽位参考
 
 组件是函数；槽位是模板*内部*的词汇：`Slot::value()`、`Slot::raw()`、`Slot::child()`、
-`Slot::each()`、`Slot::if()` 与 `Slot::eachKind()`。完整的数据绑定参考见
+`Slot::each()` 与 `Slot::if()`。完整的数据绑定参考见
 [Props 与槽位](/zh/guide/props)。
 
 ## 下一步

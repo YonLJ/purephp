@@ -146,11 +146,7 @@ class ArtifactTest extends TestCase
                     Slot::value('subtitle')->default('none'),
                     Slot::if('flag', em('on'), em('off')),
                     Slot::if('absent', em('never')),
-                    ul(Slot::each('items', $item)),
-                    ul(Slot::eachKind('mixed', [
-                        'a' => li('A'),
-                        'b' => li('B'),
-                    ]))
+                    ul(Slot::each('items', $item))
                 )->class(Slot::value('cardClass'))
             );
             PHP);
@@ -168,7 +164,6 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('endforeach;', $contents);
         $this->assertStringContainsString('endif;', $contents);
         $this->assertStringContainsString('else:', $contents);
-        $this->assertStringContainsString('switch (', $contents);
         $this->assertStringContainsString('use Pure\Compile\Internal\TemplateRuntime;', $contents);
         $this->assertStringNotContainsString('array_key_exists', $contents);
 
@@ -186,7 +181,6 @@ class ArtifactTest extends TestCase
                 'flag' => true,
                 'cardClass' => 'c1',
                 'items' => [['label' => 'one', 'class' => 'i1'], ['label' => 'two', 'class' => 'i2']],
-                'mixed' => [['kind' => 'a'], ['kind' => 'b']],
             ],
             [
                 'title' => 'Empty',
@@ -195,7 +189,6 @@ class ArtifactTest extends TestCase
                 'flag' => false,
                 'cardClass' => null,
                 'items' => [],
-                'mixed' => [['kind' => 'b']],
             ],
         ];
 
@@ -459,7 +452,7 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString('stale: ' . $this->dir . '/flavours.plain.php', $stale['stdout']);
     }
 
-    public function testPlainViewsHandleChildAndEachKindSlots(): void
+    public function testPlainViewsHandleChildAndEachSlots(): void
     {
         $file = $this->shapeFile('plain-scopes.shape.php', <<<'PHP'
             <?php
@@ -478,13 +471,7 @@ class ArtifactTest extends TestCase
 
             return Compile::shape(
                 div(
-                    Slot::child('meta', $list),
-                    ul(
-                        Slot::eachKind('blocks', [
-                            'text' => Compile::shape(li(Slot::value('value'))),
-                            'link' => Compile::shape(li(Slot::value('value'))->class('link')),
-                        ])
-                    )
+                    Slot::child('meta', $list)
                 )
             );
             PHP);
@@ -492,14 +479,8 @@ class ArtifactTest extends TestCase
         $plain = (string)ArtifactCompiler::build($file, true);
         $written = ArtifactCompiler::writeAll($file, true);
         $this->assertStringContainsString('foreach ($meta[\'items\'] as $item', $plain);
-        $this->assertStringContainsString('switch ($item2[\'kind\'] ?? null)', $plain);
-        $this->assertStringContainsString("case 'link':", $plain);
         $this->assertStringContainsString(
             '@var array{items: iterable<array-key, array{value: scalar|null|\\Stringable}>} $meta',
-            $plain
-        );
-        $this->assertStringContainsString(
-            '@var iterable<array-key, array{kind?: \'text\'|\'link\', value: scalar|null|\\Stringable}> $blocks',
             $plain
         );
 
@@ -510,7 +491,6 @@ class ArtifactTest extends TestCase
 
         $data = [
             'meta' => ['items' => [['value' => 'm1'], ['value' => 'm2']]],
-            'blocks' => [['kind' => 'text', 'value' => 'a'], ['kind' => 'link', 'value' => 'b']],
         ];
 
         $this->assertSame(

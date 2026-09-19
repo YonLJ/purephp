@@ -172,17 +172,6 @@ class TemplateGenerator extends RendererGenerator
         return 'TemplateRuntime::items(' . $this->access($dataVar, $slot, $slotPath) . ')';
     }
 
-    protected function kindSource(string $itemVar, Slot $slot, string $slotPath): string
-    {
-        $kinds = [];
-        foreach (array_keys($slot->variants) as $kind) {
-            $kinds[] = var_export((string)$kind, true);
-        }
-
-        return 'TemplateRuntime::kind(' . $itemVar . ', ' . var_export($slot->kindKey ?? 'kind', true)
-            . ', ' . var_export($slotPath . '[]', true) . ', [' . implode(', ', $kinds) . '])';
-    }
-
     protected function scopeSource(string $value, string $scopePath): string
     {
         return 'TemplateRuntime::scope(' . $value . ', ' . var_export($scopePath, true) . ')';

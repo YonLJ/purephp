@@ -154,20 +154,6 @@ final class TemplateRuntime
     }
 
     /**
-     * Validate a heterogeneous list item and return its discriminator.
-     *
-     * @param mixed $item The list item to validate.
-     * @param string $kindKey The key used to dispatch items by kind.
-     * @param string $path The slot path for error messages.
-     * @param array<int, string> $allowed The kind discriminators the slot accepts.
-     * @return string The validated kind discriminator.
-     */
-    public static function kind(mixed $item, string $kindKey, string $path, array $allowed): string
-    {
-        return SlotRuntime::kind($item, $kindKey, $path, $allowed);
-    }
-
-    /**
      * Resolve a slot the fast path could not: an optional slot falls back to
      * the compiled default (also when the value is null, exactly like `??`), a
      * required slot keeps null when the key exists, and a missing required slot

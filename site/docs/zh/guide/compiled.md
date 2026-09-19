@@ -50,14 +50,13 @@ echo $root([
 | `Slot::child($name, $shape)` | 数组 | 作为 `$shape` 的嵌套数据作用域 |
 | `Slot::each($name, $shape)` | 数组的可迭代集合 | 为每个项渲染 `$shape` |
 | `Slot::if($name, $then, $else = null)` | 真值判断 | 当 `$data[$name]` 为真时渲染 `$then`，否则渲染 `$else`；缺失的键为 false，且绝不抛出异常 |
-| `Slot::eachKind($name, ['kind' => $shape, ...])` | 数组的可迭代集合 | 按 `$item['kind']` 逐项分派；未知的 kind 会抛出 `InvalidArgumentException` |
 
 修饰符：
 
 - `->required(false)`——槽位可以缺失。
 - `->default($value)`——键缺失时使用的回退值。
 - `Slot::if()` 会以 `LogicException` 拒绝这两个修饰符。
-- `Slot::child()` / `Slot::each()` / `Slot::eachKind()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
+- `Slot::child()` / `Slot::each()` 的嵌套作用域直接读取 `$data[$name]`，数据形状由调用方在渲染前准备好。
 
 值转换：值槽位与 raw 槽位接受 `null`、标量与 `Stringable`，因此子组件返回的字符串不需要 `(string)` 强制转换；数组和其他对象会抛出 `InvalidArgumentException`，并在信息中给出完整槽位路径。只有 raw 槽位额外接受可字符串化值的可迭代集合，并把它拼接起来——已经渲染好的行列表可以原样传入，不需要 `implode()`。嵌套数组仍然是一个错误。
 
@@ -65,7 +64,7 @@ echo $root([
 
 `Slot::child()` 与 `Slot::each()` 会创建嵌套数据作用域；在其中，槽位针对该作用域解析。缺失必填键会抛出带完整路径的 `Pure\Core\MissingSlotException`，例如 `slot 'items[].title' is required but was not provided.`。可选数据请使用 `default()` 或 `required(false)`。
 
-`Slot::if()` 与 `Slot::eachKind()` 的分支共享当前作用域，因此下面这样写可以自然工作：
+`Slot::if()` 的分支共享当前作用域，因此下面这样写可以自然工作：
 
 ```php
 $item = Compile::shape(
@@ -104,8 +103,8 @@ function Card(string $title, string $content, string $class = 'card'): string
 }
 ```
 
-模板内部：嵌套形状用 `Slot::child()`，列表用 `Slot::each()`，混合列表用
-`Slot::eachKind()`，可选/条件标记用 `Slot::if()`，已渲染的子组件经 `Slot::raw()` 注入。
+模板内部：嵌套形状用 `Slot::child()`，列表用 `Slot::each()`，可选/条件标记用
+`Slot::if()`，已渲染的子组件经 `Slot::raw()` 注入。
 
 ### 列表
 
@@ -116,24 +115,31 @@ $shape = Compile::shape(ul(Slot::each('rows', $row)));
 $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 ```
 
-### 异构列表
+### 混合列表
+
+一个形状只有一种结构，因此列表项需要不同标记时，在数据层分派：逐项调用合适的组件函数，
+把拼好的标记交给 raw 槽位。
 
 ```php
-$text = Compile::shape(p(Slot::value('value')));
-$link = Compile::shape(a(Slot::value('value'))->href(Slot::value('href')));
+function Blocks(array $blocks): string
+{
+    $html = '';
 
-$shape = Compile::shape(div(Slot::eachKind('blocks', [
-    'text' => $text,
-    'link' => $link,
-])));
+    foreach ($blocks as $block) {
+        $html .= $block['kind'] === 'link'
+            ? LinkBlock($block['value'], $block['href'])
+            : TextBlock($block['value']);
+    }
 
-$shape(['blocks' => [
-    ['kind' => 'text', 'value' => 'hello'],
-    ['kind' => 'link', 'value' => 'docs', 'href' => '/docs'],
-]]);
+    return $html;
+}
+
+$shape = Compile::shape(div(Slot::raw('blocks')));
+$shape(['blocks' => Blocks($blocks)]);
 ```
 
-每个项都必须是带有判别键的数组（默认是 `kind`；可以把不同的键作为 `Slot::eachKind()` 的第三个参数传入）。
+同构列表用 `Slot::each()`；变体只是单个 item 内部的细节时，可以用预置的布尔键配合
+`Slot::if()` 把分派留在模板里。
 
 开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 10µs，见
 `bench/registry.php`），因此「产物 + opcache」就是生产路径。单文件 bundle 曾按该数据做过原型
@@ -327,7 +333,8 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 
 ## 限制
 
-- 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()` / `Slot::eachKind()`，或者在渲染前规范化数据。
+- 标签名不能依赖数据：形状始终使用相同的标签。结构变化请使用 `Slot::if()`，混合列表在数据层
+  分派（见[混合列表](#混合列表)），或者在渲染前规范化数据。
 - 编译后的代码与形状结构绑定；改变形状会改变它的 `id()`，从而改变其缓存文件。
 - 编译时会读取当前的形状树，`id()` 也反映调用时刻的树。已编译的渲染器会持续渲染它编译时的那份树，因此在修改已包装为形状的树之后需要调用 `Compile::flush()`；每个进程只构建一次形状即可完全避免此问题。
 - 形状不得包含请求数据——它们是进程级产物。
@@ -390,24 +397,3 @@ array shape 及它们的 iterable；特殊槽名声明在加载器的 `$data` �
 
 视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，那是
 无依赖视图唯一比产物更快的场景。
-
-## 异构列表 (eachKind)
-
-`Slot::eachKind()` 按判别键（默认 `'kind'`）把每一项分派到对应的形状；未知
-kind 会抛出 `InvalidArgumentException`。
-
-```php
-$shape = Compile::shape(div(Slot::eachKind('blocks', [
-    'text'  => Compile::shape(p(Slot::value('value'))),
-    'link'  => Compile::shape(a(Slot::value('value'))->href(Slot::value('href'))),
-])));
-
-$shape(['blocks' => [
-    ['kind' => 'text', 'value' => 'hi'],
-    ['kind' => 'link', 'value' => 'go', 'href' => '#x'],
-]]);
-// → <div><p>hi</p><a href="#x">go</a></div>
-```
-
-判别键必须是非空字符串：看似数字的 PHP 数组键在运行时是 int，无法匹配生成
-分派所用的字符串 kind，因此在构造时就被拒绝。

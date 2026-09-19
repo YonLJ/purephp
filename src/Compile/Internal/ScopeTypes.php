@@ -17,8 +17,8 @@ use Pure\Core\Tag;
  * and every nested slot as an offset of the array its root slot holds, so the
  * compiler can tell static analyzers what the view expects: text, raw and
  * attribute slots accept what PHP stringifies (`scalar|null|\Stringable`),
- * condition slots are `mixed` (they are read as `(bool)`), and child, each and
- * eachKind slots become array shapes and iterables of them.
+ * condition slots are `mixed` (they are read as `(bool)`), and child and each
+ * slots become array shapes and iterables of them.
  *
  * @internal
  */
@@ -167,7 +167,6 @@ final class ScopeTypes
             SlotKind::Value, SlotKind::Raw => self::VALUE,
             SlotKind::Child => $this->shapeType($slot->shape),
             SlotKind::Each => 'iterable<array-key, ' . $this->shapeType($slot->shape) . '>',
-            SlotKind::EachKind => 'iterable<array-key, ' . $this->kindItemType($slot) . '>',
             default => throw new LogicException("slot kind '{$slot->kind->name}' has no scope type."),
         };
     }
@@ -188,40 +187,13 @@ final class ScopeTypes
     }
 
     /**
-     * The item type of an eachKind list: one flattened shape per branch, with
-     * the discriminator first and every branch key shared; the kind is read
-     * with `?? null`, so it is optional.
-     */
-    private function kindItemType(Slot $slot): string
-    {
-        $kinds = [];
-        foreach (array_keys($slot->variants) as $kind) {
-            $kinds[] = var_export((string)$kind, true);
-        }
-
-        $scope = [];
-        $this->merge($scope, $slot->kindKey ?? 'kind', $this->entry(implode('|', $kinds), true));
-
-        foreach ($slot->variants as $variant) {
-            $branch = [];
-            $this->collect($variant->tree(), $branch);
-            foreach ($branch as $name => $entry) {
-                $this->merge($scope, $name, $entry);
-            }
-        }
-
-        return $this->render($scope);
-    }
-
-    /**
      * Whether a container slot is optional in the generated reads.
      */
     private function isOptionalContainer(Slot $slot): bool
     {
         return !$slot->required
             && ($slot->kind === SlotKind::Child
-                || $slot->kind === SlotKind::Each
-                || $slot->kind === SlotKind::EachKind);
+                || $slot->kind === SlotKind::Each);
     }
 
     /**
