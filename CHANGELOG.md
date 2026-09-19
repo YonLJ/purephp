@@ -145,6 +145,23 @@ First public version. No tag has been cut yet.
   `pure check` compares the `prepare()` parameters and returned keys against the
   slots, and the fluent calls in every checked file against the props their
   target accepts.
+- `Call::props(array $props)` sets several props at once from a record whose
+  keys are prop names (`IconColumn()->props($record)`), which keeps
+  record-to-component mapping short inside `prepare()` closures.
+- The bootstrap, event-counter and xml examples call their components fluently:
+  the pricing deck builds `Card()->type('Free')->price('0')->features([...])`,
+  the features page passes record mappers to `Section()->...->item(...)`, and
+  the units keep their logic in `prepare()` closures (`Section`, `CardDeck`,
+  `PageHeader`, `PageFooter`, `FeatureSection`, `PricingHeader`, `CustomCard`,
+  `IconColumn`, `CellIcon`, `HangingIcon`, `FeatureTitle`). The rendered output
+  is byte-identical to the function-call version, and the example's `plain()`
+  loader renders Markup bindings to strings before the plain view loads, so that
+  view still needs nothing of purephp at render time.
+- `pure check` understands the migrated units: a fluent unit without
+  `prepare()` is reported as checked through its call sites instead of "no
+  render() call targets this component", and the returned-keys reader now
+  handles interpolated strings, so a `prepare()` literal like
+  `"background-image: url('{$bg}');"` no longer hides its keys.
 
 ### Changed
 

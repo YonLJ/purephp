@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
 use function Pure\Component\{register, render};
@@ -49,7 +50,11 @@ register('Pricing', __FILE__, static function () {
  * The page function and the plain view controller share these bindings, so
  * both flavors render one page.
  *
- * @return array{header: string, pricing: string, deck: string, footer: string}
+ * Every block is a fluent component call; the plain view controller passes the
+ * same bindings, and its loader renders the calls to strings before the view
+ * loads.
+ *
+ * @return array{header: Call, pricing: Call, deck: Call, footer: Call}
  */
 function pricingBindings(): array
 {

@@ -136,28 +136,33 @@ Section()->section('columns')->class('row g-4')->item(IconColumn(...));
 没有 `prepare` 闭包时，props 直接就是 bindings，适合纯模板组件。`pure check` 会把
 `prepare()` 的参数与返回的键同模板槽位逐一比对。
 
+每次链式调用比 `render()` 多花约 2 微秒：调用对象、prop setter 与 `prepare()` 调用各占
+一部分。产物与无依赖视图路径不受影响，`examples/bootstrap/bench.php` 会分别报告两条路径。
+
 ## 组合组件
 
-父组件调用子组件，并通过 `Slot::raw` 注入它们的输出：
+需要包裹 markup 的组件从 raw 的 `children` 槽读取它，调用方则像标签一样把 children
+传给调用：
 
 ```php
 <?php
 
 // components/Button.cmp.php
 register('Button', __FILE__, static fn () =>
-    button(Slot::raw('icon'), Slot::value('label'))->class('btn')
+    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
 );
 
-function Button(iterable|string $icon, string $label): string
+function Button(mixed ...$children): Call
 {
-    return render('Button', icon: $icon, label: $label);
+    return component('Button', ...$children);
 }
 
-Button(Icon('#plus'), 'Add');
+Button(Icon()->href('#plus'))->label('Add');
 ```
 
-列表同理：在组件函数里循环，把子组件渲染出的字符串组成的列表传给 raw 槽——它逐元素转成
-字符串后拼接，所以用不着 `implode()`。若列表项只是普通数据行、不需要逐项组件逻辑，可以在
+列表同理：在组件的 `prepare()` 或调用点构造子调用（或已渲染字符串）的列表并传给 raw
+槽——它逐元素转成字符串后拼接，所以用不着 `implode()`。若列表项只是普通数据行、不需要逐项
+组件逻辑，可以在
 模板里直接用 `Slot::each()`。
 
 ## 页面

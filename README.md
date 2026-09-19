@@ -193,8 +193,9 @@ into the props of one component, and each component fetches its own slice there
 `views/pricing.cmp.php` are component units that compile
 into a strict artifact (`*.pure.php`, loaded by `render()`) and a
 dependency-free view (`*.plain.php`, required by the example's `plain()`
-helper); the two controllers of a page share the bindings its component
-functions produce (`featuresBindings()` / `pricingBindings()`). The cover page
+helper); the two controllers of a page share the bindings its fluent component
+calls produce (`featuresBindings()` / `pricingBindings()`), which the plain
+loader renders to strings before the view loads. The cover page
 is static markup through the string renderer (`views/cover.php`), so it has
 neither variant. Routes:
 

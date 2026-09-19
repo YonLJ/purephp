@@ -1,15 +1,16 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h3, img, li, small, ul};
 use function Pure\SVG\{svg, svgUse};
 
 /**
  * One "custom cards" item template.
  */
-register('CustomCard', __FILE__, static fn () =>
-    div(
+register('CustomCard', __FILE__,
+    factory: static fn () => div(
         div(
             div(
                 h3(Slot::value('title'))->class('pt-5 mt-5 mb-4 display-6 lh-1 fw-bold'),
@@ -28,21 +29,23 @@ register('CustomCard', __FILE__, static fn () =>
                 )->class('d-flex list-unstyled mt-auto')
             )->class('d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1')
         )->class('card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg')->style(Slot::value('style'))
-    )->class('col')
+    )->class('col'),
+    prepare: static function (string $title, string $icon, string $location, string $date, string $bgImg): array {
+        return [
+            'title' => $title,
+            'icon' => $icon,
+            'location' => $location,
+            'date' => $date,
+            'style' => "background-image: url('{$bgImg}');",
+        ];
+    }
 );
 
 /**
  * One "custom cards" item: the cover image is the card background, the icon is
- * the avatar.
+ * the avatar. `CustomCard()->title(...)->icon(...)->location(...)->date(...)->bgImg(...)`.
  */
-function CustomCard(string $title, string $icon, string $location, string $date, string $bgImg): string
+function CustomCard(mixed ...$children): Call
 {
-    return render(
-        'CustomCard',
-        title: $title,
-        icon: $icon,
-        location: $location,
-        date: $date,
-        style: "background-image: url('{$bgImg}');",
-    );
+    return component('CustomCard', ...$children);
 }

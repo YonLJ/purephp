@@ -54,12 +54,18 @@ printf("page function first render (compiles components): %.1f us\n\n", $firstTi
 touch(__DIR__ . '/views/features.plain.php', time() - 5);
 
 $classic = fn (): string => classicFeaturesPage(FeaturesDao::content())->render();
-$bindings = featuresBindings();
+
+// The page function is the request path: it builds the fluent component calls
+// and renders them through the artifact.
+$pageTime = bench('page function (components + artifact)', $iters, fn (): string => featuresPage());
+
+// The blocks rendered once: the two scenarios below then measure the artifact
+// and the plain view on their own, with the component cost outside the loop.
+$bindings = array_map(static fn (mixed $block): string => (string)$block, featuresBindings());
 
 $classicTime = bench('classic build + render', $iters, $classic);
-$pageTime = bench('page function (components + artifact)', $iters, fn (): string => featuresPage());
-$artifactTime = bench('skeleton artifact + bindings', $iters, fn (): string => $renderer->render($bindings));
-$plainTime = bench('plain view + bindings', $iters, fn (): string => plain('features', $bindings));
+$artifactTime = bench('skeleton artifact + rendered blocks', $iters, fn (): string => $renderer->render($bindings));
+$plainTime = bench('plain view + rendered blocks', $iters, fn (): string => plain('features', $bindings));
 
 // The page function prepends this header itself; artifacts carry no header.
 $header = '<!DOCTYPE html>';

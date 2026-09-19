@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, img, small};
 
 /**
@@ -15,15 +16,9 @@ register('ColLogo', __FILE__, static fn () =>
 );
 
 /**
- * The footer logo column.
+ * The footer logo column: `ColLogo()->src(...)->width('24')->height('24')->text(...)`.
  */
-function ColLogo(string $src, string $text, string $width, string $height): string
+function ColLogo(mixed ...$children): Call
 {
-    return render(
-        'ColLogo',
-        src: $src,
-        width: $width,
-        height: $height,
-        text: $text,
-    );
+    return component('ColLogo', ...$children);
 }

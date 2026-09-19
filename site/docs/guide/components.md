@@ -152,30 +152,36 @@ Without a `prepare` closure the props are the bindings as they are, which fits
 pure templates. `pure check` compares the `prepare()` parameters and the keys it
 returns against the template's slots.
 
+A fluent call costs about two microseconds more than `render()` per component:
+the call object, the prop setters and the `prepare()` invocation. The compiled
+artifact and the plain view are unaffected, and the benchmark in
+`examples/bootstrap/bench.php` reports both paths.
+
 ## Composing Components
 
-A parent component calls its children and injects their output through
-`Slot::raw`:
+A component that wraps markup reads it from a raw `children` slot, and the
+caller passes the children to the call — exactly like a tag:
 
 ```php
 <?php
 
 // components/Button.cmp.php
 register('Button', __FILE__, static fn () =>
-    button(Slot::raw('icon'), Slot::value('label'))->class('btn')
+    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
 );
 
-function Button(iterable|string $icon, string $label): string
+function Button(mixed ...$children): Call
 {
-    return render('Button', icon: $icon, label: $label);
+    return component('Button', ...$children);
 }
 
-Button(Icon('#plus'), 'Add');
+Button(Icon()->href('#plus'))->label('Add');
 ```
 
-Lists work the same way: loop in the component function and pass the list of
-child rendered strings into a raw slot — it is stringified element by element and
-concatenated, so there is no `implode()` to remember. Use `Slot::each()` inside
+Lists work the same way: build the list of child calls (or rendered strings) in
+the component's `prepare()` or at the call site and pass it into a raw slot — it
+is stringified element by element and concatenated, so there is no `implode()`
+to remember. Use `Slot::each()` inside
 the template when the items are plain data rows that need no per-item component
 logic.
 

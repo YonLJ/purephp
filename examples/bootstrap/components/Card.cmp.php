@@ -1,14 +1,15 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h1, h4, li, small, ul};
 
 /**
  * One pricing card template.
  */
-register('Card', __FILE__, static fn () =>
-    div(
+register('Card', __FILE__,
+    factory: static fn () => div(
         div(
             h4(Slot::value('type'))->class('my-0 font-weight-normal')
         )->class('card-header'),
@@ -17,23 +18,29 @@ register('Card', __FILE__, static fn () =>
             ul(Slot::each('features', li(Slot::value('value'))))->class('list-unstyled mt-3 mb-4'),
             button(Slot::value('text'))->type('button')->class(Slot::value('class'))
         )->class('card-body')
-    )->class('card mb-4 box-shadow')
+    )->class('card mb-4 box-shadow'),
+    prepare: static function (string $type, string $price, array $features, string $text, string $class): array {
+        return [
+            'type' => $type,
+            'price' => $price,
+            'features' => array_map(static fn (string $feature): array => ['value' => $feature], $features),
+            'text' => $text,
+            'class' => $class,
+        ];
+    }
 );
 
 /**
- * One pricing card: the plan name, its price, the feature bullets and the
- * button label with its class list.
+ * One pricing card, called fluently:
  *
- * @param list<string> $features
+ *     Card()
+ *         ->type('Free')
+ *         ->price('0')
+ *         ->features(['10 users included', '2 GB of storage'])
+ *         ->text('Sign up for free')
+ *         ->class('btn btn-lg btn-block btn-outline-primary');
  */
-function Card(string $type, string $price, array $features, string $text, string $class): string
+function Card(mixed ...$children): Call
 {
-    return render(
-        'Card',
-        type: $type,
-        price: $price,
-        features: array_map(static fn (string $feature): array => ['value' => $feature], $features),
-        text: $text,
-        class: $class,
-    );
+    return component('Card', ...$children);
 }

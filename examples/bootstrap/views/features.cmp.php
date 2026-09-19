@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 
+use Pure\Component\Call;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
@@ -50,17 +51,17 @@ register('Features', __FILE__, static function () {
                 link()->rel('stylesheet')->href('./style.css')
             ),
             body(
-                Raw::of(IconSheet()),
+                Raw::of((string)IconSheet()),
                 main(
                     h1('Features examples')->class('visually-hidden'),
                     Slot::raw('columns'),
-                    Raw::of(Divider()),
+                    Raw::of((string)Divider()),
                     Slot::raw('hanging'),
-                    Raw::of(Divider()),
+                    Raw::of((string)Divider()),
                     Slot::raw('cards'),
-                    Raw::of(Divider()),
+                    Raw::of((string)Divider()),
                     Slot::raw('grid'),
-                    Raw::of(Divider()),
+                    Raw::of((string)Divider()),
                     Slot::raw('features')
                 )
             )
@@ -74,16 +75,32 @@ register('Features', __FILE__, static function () {
  * the skeleton has. The page function and the plain view controller share
  * these bindings, so both flavors render one page.
  *
- * @return array{title: string, columns: string, hanging: string, cards: string, grid: string, features: string}
+ * Every block is a fluent component call; the plain view controller passes the
+ * same bindings, and its loader renders the calls to strings before the view
+ * loads.
+ *
+ * @return array{title: string, columns: Call, hanging: Call, cards: Call, grid: Call, features: Call}
  */
 function featuresBindings(): array
 {
     return [
         'title' => FeaturesService::pageTitle(),
-        'columns' => Section('columns', 'row g-4 py-5 row-cols-1 row-cols-lg-3', IconColumn(...)),
-        'hanging' => Section('hanging', 'row g-4 py-5 row-cols-1 row-cols-lg-3', HangingIcon(...)),
-        'cards' => Section('cards', 'row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5', CustomCard(...)),
-        'grid' => Section('grid', 'row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5', CellIcon(...)),
+        'columns' => Section()
+            ->section('columns')
+            ->class('row g-4 py-5 row-cols-1 row-cols-lg-3')
+            ->item(static fn (array $record): Call => IconColumn()->props($record)),
+        'hanging' => Section()
+            ->section('hanging')
+            ->class('row g-4 py-5 row-cols-1 row-cols-lg-3')
+            ->item(static fn (array $record): Call => HangingIcon()->props($record)),
+        'cards' => Section()
+            ->section('cards')
+            ->class('row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5')
+            ->item(static fn (array $record): Call => CustomCard()->props($record)),
+        'grid' => Section()
+            ->section('grid')
+            ->class('row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5')
+            ->item(static fn (array $record): Call => CellIcon()->props($record)),
         'features' => FeatureSection(),
     ];
 }

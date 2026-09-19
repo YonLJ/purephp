@@ -1,31 +1,27 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\SVG\{svg, svgUse};
 
 /**
  * The icon template: a `<use>` reference into the SVG symbol sheet. The class
- * and the size come from the data, so one template serves every icon.
+ * and the size come from the data — with defaults, so the common call only
+ * passes the href.
  */
 register('Icon', __FILE__, static fn () =>
     svg(svgUse()->href(Slot::value('href')))
-        ->class(Slot::value('class'))
-        ->width(Slot::value('width'))
-        ->height(Slot::value('height'))
+        ->class(Slot::value('class')->default('bi'))
+        ->width(Slot::value('width')->default('1em'))
+        ->height(Slot::value('height')->default('1em'))
 );
 
 /**
- * An icon that references the SVG symbol sheet: `Icon('#home')` renders
- * `<svg class="bi" ...><use href="#home" /></svg>`.
+ * An icon that references the SVG symbol sheet:
+ * `Icon()->href('#home')` renders `<svg class="bi" ...><use href="#home" /></svg>`.
  */
-function Icon(string $href, string $class = 'bi', string $width = '1em', string $height = '1em'): string
+function Icon(mixed ...$children): Call
 {
-    return render(
-        'Icon',
-        href: $href,
-        class: $class,
-        width: $width,
-        height: $height,
-    );
+    return component('Icon', ...$children);
 }

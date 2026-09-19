@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{a, div, h3, p};
 
 /**
@@ -16,15 +17,10 @@ register('MainFeature', __FILE__, static fn () =>
 );
 
 /**
- * The "features with title" main column.
+ * The "features with title" main column:
+ * `MainFeature()->title(...)->content(...)->link(...)->linkText(...)`.
  */
-function MainFeature(string $title, string $content, string $link, string $linkText): string
+function MainFeature(mixed ...$children): Call
 {
-    return render(
-        'MainFeature',
-        title: $title,
-        content: $content,
-        link: $link,
-        linkText: $linkText,
-    );
+    return component('MainFeature', ...$children);
 }

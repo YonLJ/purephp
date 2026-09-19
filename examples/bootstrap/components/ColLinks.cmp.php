@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{a, div, h5, li, ul};
 
 /**
@@ -17,15 +18,10 @@ register('ColLinks', __FILE__, static fn () =>
 );
 
 /**
- * One footer link column.
- *
- * @param list<array{text: string, href: string}> $links
+ * One footer link column:
+ * `ColLinks()->title('Company')->links([['text' => 'Team', 'href' => '#']])`.
  */
-function ColLinks(string $title, array $links): string
+function ColLinks(mixed ...$children): Call
 {
-    return render(
-        'ColLinks',
-        title: $title,
-        links: $links,
-    );
+    return component('ColLinks', ...$children);
 }
