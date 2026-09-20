@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pure\Component;
 
+use BadMethodCallException;
 use Closure;
 use InvalidArgumentException;
 use Pure\Compile\Compile;
@@ -81,7 +82,7 @@ final class Call implements Markup
         }
 
         if (count($args) !== 1) {
-            throw new InvalidArgumentException(
+            throw new BadMethodCallException(
                 "component '{$this->name}': prop '{$prop}()' takes exactly one value."
             );
         }

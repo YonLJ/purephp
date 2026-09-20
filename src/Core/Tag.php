@@ -353,10 +353,10 @@ abstract class Tag implements ShapeContract
         }
 
         if (is_numeric($key)) {
-            throw new InvalidArgumentException("Element '{$this->tagName}' attribute name cannot be numbers '{$key}'.");
+            throw new InvalidArgumentException("Element '{$this->tagName}': attribute name must not be numeric, got '{$key}'.");
         }
         if (empty($key)) {
-            throw new InvalidArgumentException("Element '{$this->tagName}' attribute name cannot be empty '{$key}'.");
+            throw new InvalidArgumentException("Element '{$this->tagName}': attribute name must not be empty.");
         }
 
         $key = self::normalizeAttrKey((string)$key);

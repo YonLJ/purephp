@@ -220,7 +220,7 @@ final class Registry
             : self::templateRenderer(substr($key, strlen('path:')));
 
         $binder =
-            /** @param array<string, mixed> $data */
+            /** @param array<int|string, mixed> $data */
             static function (array $data) use ($renderer, $key): string {
                 try {
                     return $renderer->render($data);

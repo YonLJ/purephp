@@ -338,11 +338,11 @@ class TagTest extends TestCase
             div()->setAttrs([0 => 'x']); // @phpstan-ignore argument.type (an int-keyed map is the case under test)
             $this->fail('Expected InvalidArgumentException to be thrown.');
         } catch (InvalidArgumentException $e) {
-            $this->assertSame("Element 'div' attribute name cannot be numbers '0'.", $e->getMessage());
+            $this->assertSame("Element 'div': attribute name must not be numeric, got '0'.", $e->getMessage());
         }
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Element 'div' attribute name cannot be empty ''.");
+        $this->expectExceptionMessage("Element 'div': attribute name must not be empty.");
 
         div()->setAttrs(['' => 'x']);
     }

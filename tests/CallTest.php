@@ -129,7 +129,7 @@ class CallTest extends TestCase
 
     public function testPropTakesExactlyOneValue(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessage("prop 'type()' takes exactly one value");
 
         FluentCard()->type('a', 'b');
