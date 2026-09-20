@@ -99,7 +99,7 @@ jobs:
             exit 1
           fi
         done
-        php examples/event-counter/public/index.php | grep -q '<!DOCTYPE html>' || exit 1
+        php examples/event-counter/public/index.php | grep -q '<h1>JavaScript Counter App</h1>' || exit 1
         for route in /index.php /pure /plain; do
           if REQUEST_URI="$route" php examples/xml/public/index.php | grep -q '<routes '; then
             echo "route $route fell back to the 404 page"
