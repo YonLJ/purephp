@@ -14,8 +14,7 @@
             "src/Component/functions.php",
             "src/HTML/functions.php",
             "src/SVG/functions.php",
-            "src/Utils/clx.php",
-            "src/Utils/sty.php"
+            "src/Utils/functions.php"
         ]
     },
     "scripts": {

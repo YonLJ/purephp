@@ -25,7 +25,13 @@
   },
   "homepage": "https://github.com/YonLD/purephp#readme",
   "devDependencies": {
+    "postcss": "^8.5.28",
     "vue": "^3.4.21",
-    "vitepress": "^1.0.0-rc.44"
+    "vitepress": "^1.6.4"
+  },
+  "overrides": {
+    "vite": "^6.4.3",
+    "rollup": "^4.59.0",
+    "mdast-util-to-hast": "^13.2.1"
   }
 }
