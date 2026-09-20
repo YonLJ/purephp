@@ -131,7 +131,6 @@ final class Compile
      */
     public static function guard(bool $enabled = true): void
     {
-        ShapeGuard::enable($enabled);
         DevMode::enable($enabled);
     }
 

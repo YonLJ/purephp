@@ -319,7 +319,7 @@ class CompileCacheTest extends TestCase
 
     public function testGuardEnablesFromTheEnvironmentVariable(): void
     {
-        (new ReflectionProperty(ShapeGuard::class, 'enabled'))->setValue(null, null);
+        DevMode::$enabled = null;
         (new ReflectionProperty(ShapeGuard::class, 'calls'))->setValue(null, []);
         putenv('PURE_COMPILE_GUARD=1');
 

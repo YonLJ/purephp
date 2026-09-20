@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
+use Pure\Core\DevMode;
+
 /**
  * Development guard against building shapes on every request.
  *
  * When enabled, repeated Compile::shape() calls from one call site in a single
  * process trigger one E_USER_WARNING suggesting the static memoization
- * pattern.
+ * pattern. The switch is the shared DevMode switch: one setting and one
+ * environment lookup cover every guard.
  *
  * @internal
  */
@@ -17,15 +20,8 @@ final class ShapeGuard
 {
     private const THRESHOLD = 20;
 
-    private static ?bool $enabled = null;
-
     /** @var array<string, int> */
     private static array $calls = [];
-
-    public static function enable(bool $enabled = true): void
-    {
-        self::$enabled = $enabled;
-    }
 
     public static function check(): void
     {
@@ -49,11 +45,6 @@ final class ShapeGuard
 
     private static function enabled(): bool
     {
-        if (self::$enabled === null) {
-            $env = getenv('PURE_COMPILE_GUARD');
-            self::$enabled = is_string($env) && ($env === '1' || strtolower($env) === 'true');
-        }
-
-        return self::$enabled;
+        return DevMode::$enabled ?? DevMode::resolve();
     }
 }

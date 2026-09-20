@@ -1475,15 +1475,7 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('does not exist', $result['stderr']);
     }
 
-    private function unitFile(string $name, string $code): string
-    {
-        $path = $this->dir . '/' . $name;
-        file_put_contents($path, $code);
-
-        return $path;
-    }
-
-    private function shapeFile(string $name, string $code): string
+    private function writeFile(string $name, string $code): string
     {
         $path = $this->dir . '/' . $name;
         file_put_contents($path, $code);

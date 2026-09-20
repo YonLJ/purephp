@@ -304,29 +304,41 @@ final class Registry
     }
 
     /**
+     * The compiled artifact of a source file when it is at least as new as the
+     * file, null when the artifact is missing or stale. An artifact that does
+     * not return a Renderer is an error, not a stale artifact: the file was
+     * compiled by another version of the code.
+     */
+    private static function freshArtifact(string $file): ?Renderer
+    {
+        $artifact = ArtifactCompiler::artifactPath($file);
+        $artifactTime = is_file($artifact) ? filemtime($artifact) : false;
+        $sourceTime = filemtime($file);
+
+        if ($artifactTime === false || $sourceTime === false || $artifactTime < $sourceTime) {
+            return null;
+        }
+
+        $renderer = require $artifact;
+
+        if (!$renderer instanceof Renderer) {
+            throw new RuntimeException(
+                "component artifact '{$artifact}' must return a Renderer; run `pure compile`."
+            );
+        }
+
+        return $renderer;
+    }
+
+    /**
      * The compiled renderer of a unit: the precompiled artifact when fresh,
      * the compiled shape otherwise.
      */
     private static function unitRenderer(string $name): Renderer
     {
         $unit = self::$units[$name];
-        $artifact = ArtifactCompiler::artifactPath($unit['file']);
-        $artifactTime = is_file($artifact) ? filemtime($artifact) : false;
-        $unitTime = filemtime($unit['file']);
 
-        if ($artifactTime !== false && $unitTime !== false && $artifactTime >= $unitTime) {
-            $renderer = require $artifact;
-
-            if (!$renderer instanceof Renderer) {
-                throw new RuntimeException(
-                    "component artifact '{$artifact}' must return a Renderer; run `pure compile`."
-                );
-            }
-
-            return $renderer;
-        }
-
-        return self::shape($name)->compile();
+        return self::freshArtifact($unit['file']) ?? self::shape($name)->compile();
     }
 
     /**
@@ -360,19 +372,9 @@ final class Registry
             throw new RuntimeException("component template '{$shapeFile}' does not exist; " . self::hint() . '.');
         }
 
-        $artifact = ArtifactCompiler::artifactPath($shapeFile);
-        $artifactTime = is_file($artifact) ? filemtime($artifact) : false;
-        $shapeTime = filemtime($shapeFile);
+        $renderer = self::freshArtifact($shapeFile);
 
-        if ($artifactTime !== false && $shapeTime !== false && $artifactTime >= $shapeTime) {
-            $renderer = require $artifact;
-
-            if (!$renderer instanceof Renderer) {
-                throw new RuntimeException(
-                    "component artifact '{$artifact}' must return a Renderer; run `pure compile`."
-                );
-            }
-
+        if ($renderer !== null) {
             return $renderer;
         }
 
