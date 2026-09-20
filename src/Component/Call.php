@@ -28,8 +28,8 @@ use TypeError;
  *
  *     div(Card(h2('Pro'))->type('Free')->price('0')->text('Sign up'))
  *
- * Rendering resolves the unit (or template path) through the same binder
- * `render()` uses, so artifacts, caching, slot errors and the development
+ * Rendering resolves the unit (or template path) through the unit's binder,
+ * so artifacts, caching, slot errors and the development
  * guard behave identically. A prop named after a slot binds that slot;
  * `null` leaves a prop unset, exactly like `Tag::setAttr()`; `class()` and
  * `style()` join their arguments like the tag setters do. Children always bind
@@ -251,7 +251,7 @@ final class Call implements Markup
         if ($value instanceof Slot) {
             throw new InvalidArgumentException(
                 "component '{$this->name}': prop '{$prop}' cannot be a Slot; "
-                . 'a component call binds values, use render() to defer a slot to the caller.'
+                . 'a component call binds values, so read the slot in the template and pass the value.'
             );
         }
 

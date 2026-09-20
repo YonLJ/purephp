@@ -5,7 +5,7 @@ use Pure\Compile\Shape;
 
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h1, span};
 
 /**
@@ -42,5 +42,5 @@ register('Counter', __FILE__, static fn () => CounterPageShape());
  */
 function counterPage(array $data): string
 {
-    return '<!DOCTYPE html>' . render('Counter', initial: $data['initial']);
+    return '<!DOCTYPE html>' . component('Counter')->initial($data['initial'])->render();
 }

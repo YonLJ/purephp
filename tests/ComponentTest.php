@@ -5,10 +5,10 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
+
+use function Pure\Component\component;
+
 use Pure\Component\Registry;
-
-use function Pure\Component\render;
-
 use Pure\Core\MissingSlotException;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
@@ -132,28 +132,18 @@ class ComponentTest extends TestCase
         $this->assertSame('<span>b</span>', $shape);
     }
 
-    public function testRenderPassesNamedArgumentsAsSlots(): void
+    public function testPropsPassValuesToSlots(): void
     {
         $file = $this->shapeFile('badge.shape.php', 'div');
 
-        $this->assertSame('<div>a &amp; b</div>', render($file, title: 'a & b'));
+        $this->assertSame('<div>a &amp; b</div>', $this->renderUnit($file, ['title' => 'a & b']));
     }
 
-    public function testRenderAcceptsAnUnpackedBindingsArray(): void
+    public function testPropsAcceptAnUnpackedBindingsArray(): void
     {
         $file = $this->shapeFile('badge.shape.php', 'div');
 
-        $this->assertSame('<div>b</div>', render($file, ...['title' => 'b']));
-    }
-
-    public function testRenderRejectsPositionalData(): void
-    {
-        $file = $this->shapeFile('badge.shape.php', 'div');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('passed by name');
-
-        render($file, ['title' => 'b']);
+        $this->assertSame('<div>b</div>', $this->renderUnit($file, ['title' => 'b']));
     }
 
     public function testRenderDoesNotPrependTheDocumentHeader(): void
@@ -172,11 +162,11 @@ class ComponentTest extends TestCase
             return Compile::shape(html(body(Slot::value('title'))));
             PHP);
 
-        // render() emits the tree as written; the document header is the
+        // The call emits the tree as written; the document header is the
         // caller's to prepend.
         $this->assertSame(
             '<html><body>a</body></html>',
-            render($file, title: 'a')
+            $this->renderUnit($file, ['title' => 'a'])
         );
     }
 
@@ -202,7 +192,7 @@ class ComponentTest extends TestCase
         $this->expectException(MissingSlotException::class);
         $this->expectExceptionMessage("component 'Card': slot 'title' is required but was not provided; did you mean 'titel'?");
 
-        render('Card', titel: 'typo');
+        $this->renderUnit('Card', ['titel' => 'typo']);
     }
 
     public function testTemplateSlotErrorsNameTheTemplatePath(): void
@@ -212,7 +202,7 @@ class ComponentTest extends TestCase
         $this->expectException(MissingSlotException::class);
         $this->expectExceptionMessage("template '{$file}': slot 'title' is required but was not provided; provided keys: 'other'.");
 
-        render($file, other: 'x');
+        $this->renderUnit($file, ['other' => 'x']);
     }
 
     public function testMissingTemplateThrows(): void
@@ -220,7 +210,7 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('does not exist');
 
-        render($this->dir . '/missing.shape.php');
+        $this->renderUnit($this->dir . '/missing.shape.php');
     }
 
     public function testTemplateThatDoesNotReturnAShapeThrows(): void
@@ -231,7 +221,7 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('must return a tag tree or Pure\\Compile\\Shape');
 
-        render($file);
+        $this->renderUnit($file);
     }
 
     public function testArtifactThatDoesNotReturnARendererThrows(): void
@@ -246,7 +236,18 @@ class ComponentTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('must return a Renderer');
 
-        render($file);
+        $this->renderUnit($file);
+    }
+
+    /**
+     * Render one registered unit or template path through a fluent call: the
+     * bindings are set as props.
+     *
+     * @param array<string, mixed> $props
+     */
+    private function renderUnit(string $nameOrPath, array $props = []): string
+    {
+        return component($nameOrPath)->props($props)->render();
     }
 
     private function shapeFile(string $name, string $tag): string

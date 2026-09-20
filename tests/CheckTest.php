@@ -36,7 +36,7 @@ class CheckTest extends TestCase
 
     public function testCleanUnitPasses(): void
     {
-        $file = $this->unitFile('clean.cmp.php', <<<'PHP'
+        $file = $this->writeFile('clean.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -44,19 +44,19 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\{div, li, ul};
 
             $item = Compile::shape(li(Slot::value('label')));
 
-            register('CleanBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'), ul(Slot::each('items', $item)))
-            ));
-
-            function CleanBox(string $title, array $items): string
-            {
-                return render('CleanBox', title: $title, items: $items);
-            }
+            register('CleanBox', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), ul(Slot::each('items', $item)))
+                ),
+                prepare: static function (string $title, array $items): array {
+                    return ['title' => $title, 'items' => $items];
+                }
+            );
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
@@ -66,45 +66,9 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('checked 1 unit(s): 0 error(s), 0 warning(s).', $result['stdout']);
     }
 
-    public function testBindingTypoIsAnErrorWithASuggestion(): void
-    {
-        $file = $this->unitFile('typo.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{register, render};
-            use function Pure\HTML\div;
-
-            register('TypoCard', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            function TypoCard(string $title): string
-            {
-                return render('TypoCard', titel: $title);
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(1, $result['code']);
-        $this->assertStringContainsString(
-            "error: component 'TypoCard' -> {$file}: render() binds 'titel' but the template does not read it (did you mean 'title'?)",
-            $result['stdout']
-        );
-        $this->assertStringContainsString(
-            "error: component 'TypoCard' -> {$file}: required slot 'title' is not bound by render()",
-            $result['stdout']
-        );
-    }
-
     public function testTypeMismatchBetweenSlotAndParameterIsAnError(): void
     {
-        $file = $this->unitFile('types.cmp.php', <<<'PHP'
+        $file = $this->writeFile('types.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -112,19 +76,19 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\{div, li, ul};
 
             $item = Compile::shape(li(Slot::value('label')));
 
-            register('TypeBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'), ul(Slot::each('items', $item)))
-            ));
-
-            function TypeBox(string $title, string $items): string
-            {
-                return render('TypeBox', title: $title, items: $items);
-            }
+            register('TypeBox', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), ul(Slot::each('items', $item)))
+                ),
+                prepare: static function (string $title, string $items): array {
+                    return ['title' => $title, 'items' => $items];
+                }
+            );
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
@@ -139,7 +103,7 @@ class CheckTest extends TestCase
 
     public function testNullableParameterForARequiredSlotWarns(): void
     {
-        $file = $this->unitFile('nullable.cmp.php', <<<'PHP'
+        $file = $this->writeFile('nullable.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -147,17 +111,17 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('NullBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            function NullBox(?string $title): string
-            {
-                return render('NullBox', title: $title);
-            }
+            register('NullBox', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (?string $title): array {
+                    return ['title' => $title];
+                }
+            );
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
@@ -175,7 +139,7 @@ class CheckTest extends TestCase
 
     public function testUnusedParameterWarns(): void
     {
-        $file = $this->unitFile('unused.cmp.php', <<<'PHP'
+        $file = $this->writeFile('unused.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -183,31 +147,31 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('UnusedBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            function UnusedBox(string $title, string $extra): string
-            {
-                return render('UnusedBox', title: $title);
-            }
+            register('UnusedBox', __FILE__,
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static function (string $title, string $extra): array {
+                    return ['title' => $title];
+                }
+            );
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
 
         $this->assertSame(0, $result['code']);
         $this->assertStringContainsString(
-            'parameter $extra is neither used by the function nor a slot of the template',
+            'parameter $extra is neither used by prepare() nor a slot of the template',
             $result['stdout']
         );
     }
 
-    public function testPageUnitWithoutAComponentFunctionIsCheckedThroughItsBindingsHelper(): void
+    public function testUnitWithoutPrepareOrCallFunctionPointsAtTheCallSites(): void
     {
-        $file = $this->unitFile('page.cmp.php', <<<'PHP'
+        $file = $this->writeFile('page.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -215,38 +179,27 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\div;
 
             register('PageBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
-
-            function pageBoxBindings(): array
-            {
-                return ['title' => 'hello'];
-            }
-
-            function pageBoxPage(): string
-            {
-                return render('PageBox', ...pageBoxBindings());
-            }
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
 
         $this->assertSame(0, $result['code']);
         $this->assertStringContainsString(
-            "no function named 'PageBox' is defined in this file; parameter types are not checked",
+            "no prepare() and no function named 'PageBox'; the props are the template slots, so the call sites are checked instead",
             $result['stdout']
         );
-        $this->assertStringNotContainsString('slots are not compared', $result['stdout']);
         $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
     }
 
-    public function testBindingsHelperTypoIsAnError(): void
+    public function testFunctionThatDoesNotReturnACallIsAnError(): void
     {
-        $file = $this->unitFile('page-typo.cmp.php', <<<'PHP'
+        $file = $this->writeFile('plain-function.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -254,21 +207,16 @@ class CheckTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('TypoPageBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            register('PlainFunctionBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
-            function typoPageBindings(): array
+            function PlainFunctionBox(string $title): string
             {
-                return ['titel' => 'hello'];
-            }
-
-            function typoPagePage(): string
-            {
-                return render('TypoPageBox', ...typoPageBindings());
+                return $title;
             }
             PHP);
 
@@ -276,75 +224,14 @@ class CheckTest extends TestCase
 
         $this->assertSame(1, $result['code']);
         $this->assertStringContainsString(
-            "render() binds 'titel' but the template does not read it (did you mean 'title'?)",
-            $result['stdout']
-        );
-    }
-
-    public function testDynamicBindingsAreNotCompared(): void
-    {
-        $file = $this->unitFile('dynamic.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{register, render};
-            use function Pure\HTML\div;
-
-            register('DynamicBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            function DynamicBox(array $data): string
-            {
-                return render('DynamicBox', ...$data);
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(0, $result['code']);
-        $this->assertStringContainsString('slots are not compared: render() unpacks its bindings', $result['stdout']);
-    }
-
-    public function testPositionalDataIsAnError(): void
-    {
-        $file = $this->unitFile('positional.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{register, render};
-            use function Pure\HTML\div;
-
-            register('PositionalBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            function PositionalBox(string $title): string
-            {
-                return render('PositionalBox', $title);
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(1, $result['code']);
-        $this->assertStringContainsString(
-            'render() passes data by position; slot values must be named',
+            "'PlainFunctionBox()' must return Pure\\Component\\Call (it returns string); register a prepare() contract or return component(...) from it",
             $result['stdout']
         );
     }
 
     public function testShapeFileWithConflictingSlotKindsIsAnError(): void
     {
-        $file = $this->shapeFile('conflict.shape.php', <<<'PHP'
+        $file = $this->writeFile('conflict.shape.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -372,7 +259,7 @@ class CheckTest extends TestCase
 
     public function testCleanShapeFilePasses(): void
     {
-        $file = $this->shapeFile('clean.shape.php', <<<'PHP'
+        $file = $this->writeFile('clean.shape.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -394,7 +281,7 @@ class CheckTest extends TestCase
     public function testDirectoryIsSearchedRecursively(): void
     {
         mkdir($this->dir . '/views', 0o700);
-        $this->shapeFile('views/one.shape.php', "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('x'));\n");
+        $this->writeFile('views/one.shape.php', "<?php\n\ndeclare(strict_types=1);\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div('x'));\n");
 
         $result = $this->runCheck(['pure', 'check', $this->dir]);
 
@@ -402,9 +289,9 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('checked 1 unit(s)', $result['stdout']);
     }
 
-    public function testRenderByFilePathAndNamespacedFunctionsAreResolved(): void
+    public function testCallFunctionCanResolveTheUnitByFilePath(): void
     {
-        $file = $this->unitFile('namespaced.cmp.php', <<<'PHP'
+        $file = $this->writeFile('namespaced.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -412,31 +299,35 @@ class CheckTest extends TestCase
             namespace App\Blocks;
 
             use Pure\Compile\Compile;
+            use Pure\Component\Call;
             use Pure\Core\Slot;
 
-            use function Pure\Component\{register, render};
+            use function Pure\Component\{component, register};
             use function Pure\HTML\div;
 
             register('NamespacedBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
-            function NamespacedBox(string $title): string
+            function NamespacedBox(): Call
             {
-                return render(__FILE__, title: $title);
+                return component(__FILE__);
             }
             PHP);
 
         $result = $this->runCheck(['pure', 'check', $file]);
 
         $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString(
+            'fluent unit: its props are the template slots, so the call sites are checked instead',
+            $result['stdout']
+        );
         $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
-        $this->assertStringNotContainsString('slots are not compared', $result['stdout']);
     }
 
     public function testFluentUnitChecksPrepareAgainstTheSlots(): void
     {
-        $file = $this->unitFile('fluent.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -465,7 +356,7 @@ class CheckTest extends TestCase
 
     public function testFluentUnitPrepareMismatchIsReported(): void
     {
-        $file = $this->unitFile('fluent-typo.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-typo.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -501,7 +392,7 @@ class CheckTest extends TestCase
 
     public function testFluentUnitWithAComputedPrepareResultIsNotCompared(): void
     {
-        $file = $this->unitFile('fluent-computed.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-computed.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -532,7 +423,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredSlotsCarryTheBindingsOfAComputedPrepare(): void
     {
-        $file = $this->unitFile('fluent-declared.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -568,7 +459,7 @@ class CheckTest extends TestCase
 
     public function testUndeclaredRequiredSlotIsAnErrorWhenPrepareIsComputed(): void
     {
-        $file = $this->unitFile('fluent-undeclared.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-undeclared.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -606,7 +497,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredSlotMustBeReturnedByAPrepareLiteral(): void
     {
-        $file = $this->unitFile('fluent-declared-literal.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared-literal.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -639,7 +530,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredSlotMustBeReadByTheTemplate(): void
     {
-        $file = $this->unitFile('fluent-declared-typo.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared-typo.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -672,7 +563,7 @@ class CheckTest extends TestCase
 
     public function testTwoPropsDeclaringOneSlotAreAnError(): void
     {
-        $file = $this->unitFile('fluent-declared-duplicate.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared-duplicate.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -708,7 +599,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredRequiredMustMatchTheSignature(): void
     {
-        $file = $this->unitFile('fluent-declared-required.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared-required.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -748,7 +639,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredItemIsCheckedAgainstTheItemShape(): void
     {
-        $file = $this->unitFile('fluent-declared-item.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-declared-item.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -780,7 +671,7 @@ class CheckTest extends TestCase
 
     public function testDeclaredItemMismatchesAreReported(): void
     {
-        $this->unitFile('item-wrong.cmp.php', <<<'PHP'
+        $this->writeFile('item-wrong.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -802,7 +693,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('item-multi.cmp.php', <<<'PHP'
+        $this->writeFile('item-multi.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -824,7 +715,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('item-text.cmp.php', <<<'PHP'
+        $this->writeFile('item-text.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -846,7 +737,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('item-static.cmp.php', <<<'PHP'
+        $this->writeFile('item-static.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -891,7 +782,7 @@ class CheckTest extends TestCase
 
     public function testDeprecatedPropIsReportedAtCallSites(): void
     {
-        $this->unitFile('deprecated-target.cmp.php', <<<'PHP'
+        $this->writeFile('deprecated-target.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -916,7 +807,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('deprecated-calls.cmp.php', <<<'PHP'
+        $this->writeFile('deprecated-calls.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -947,7 +838,7 @@ class CheckTest extends TestCase
 
     public function testTrustedPropMustBindARawSlot(): void
     {
-        $this->unitFile('trusted-text.cmp.php', <<<'PHP'
+        $this->writeFile('trusted-text.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -969,7 +860,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('trusted-raw.cmp.php', <<<'PHP'
+        $this->writeFile('trusted-raw.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -992,7 +883,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('trusted-mixed.cmp.php', <<<'PHP'
+        $this->writeFile('trusted-mixed.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1014,7 +905,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('trusted-unread.cmp.php', <<<'PHP'
+        $this->writeFile('trusted-unread.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1060,7 +951,7 @@ class CheckTest extends TestCase
 
     public function testBindsDeclaresTheKeysOfAComputedPrepare(): void
     {
-        $this->unitFile('binds-covered.cmp.php', <<<'PHP'
+        $this->writeFile('binds-covered.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1084,7 +975,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('binds-uncovered.cmp.php', <<<'PHP'
+        $this->writeFile('binds-uncovered.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1123,7 +1014,7 @@ class CheckTest extends TestCase
 
     public function testBindsMustMatchAReadableLiteral(): void
     {
-        $file = $this->unitFile('binds-literal.cmp.php', <<<'PHP'
+        $file = $this->writeFile('binds-literal.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1151,48 +1042,9 @@ class CheckTest extends TestCase
         $this->assertStringContainsString("#[Binds] declares 'titel', which prepare() does not return", $result['stdout']);
     }
 
-    public function testBindsOnABindingsHelperIsRead(): void
-    {
-        $file = $this->unitFile('binds-helper.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Component\Binds;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{register, render};
-            use function Pure\HTML\div;
-
-            register('CheckBindsPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'), Slot::value('desc'))
-            ));
-
-            #[Binds('title', 'desc')]
-            function checkBindsPageBindings(): array
-            {
-                $data = ['title' => 'Pricing', 'desc' => 'Plans'];
-
-                return $data;
-            }
-
-            function checkBindsPage(): string
-            {
-                return render('CheckBindsPage', ...checkBindsPageBindings());
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(0, $result['code']);
-        $this->assertStringNotContainsString('slots are not compared', $result['stdout']);
-        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
-    }
-
     public function testCallSiteItemKeysAreCheckedAgainstTheItemShape(): void
     {
-        $this->unitFile('items-target.cmp.php', <<<'PHP'
+        $this->writeFile('items-target.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1208,7 +1060,7 @@ class CheckTest extends TestCase
             ));
             PHP);
 
-        $this->unitFile('items-declared.cmp.php', <<<'PHP'
+        $this->writeFile('items-declared.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1230,7 +1082,7 @@ class CheckTest extends TestCase
             );
             PHP);
 
-        $this->unitFile('items-calls.cmp.php', <<<'PHP'
+        $this->writeFile('items-calls.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1275,7 +1127,7 @@ class CheckTest extends TestCase
 
     public function testFluentCallSitePropsAreCheckedAgainstTheTarget(): void
     {
-        $this->unitFile('target.cmp.php', <<<'PHP'
+        $this->writeFile('target.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1291,7 +1143,7 @@ class CheckTest extends TestCase
             ));
             PHP);
 
-        $page = $this->unitFile('page-calls.cmp.php', <<<'PHP'
+        $page = $this->writeFile('page-calls.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1338,7 +1190,7 @@ class CheckTest extends TestCase
 
     public function testPrepareKeysAreReadFromAnInterpolatedLiteral(): void
     {
-        $file = $this->unitFile('fluent-interpolated.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-interpolated.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1371,7 +1223,7 @@ class CheckTest extends TestCase
 
     public function testFluentUnitWithoutPreparePointsAtTheCallSites(): void
     {
-        $file = $this->unitFile('fluent-plain.cmp.php', <<<'PHP'
+        $file = $this->writeFile('fluent-plain.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1401,7 +1253,7 @@ class CheckTest extends TestCase
 
     public function testCallMethodsAreNotReportedAsUnknownProps(): void
     {
-        $this->unitFile('target-methods.cmp.php', <<<'PHP'
+        $this->writeFile('target-methods.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);
@@ -1423,7 +1275,7 @@ class CheckTest extends TestCase
             }
             PHP);
 
-        $page = $this->unitFile('page-methods.cmp.php', <<<'PHP'
+        $page = $this->writeFile('page-methods.cmp.php', <<<'PHP'
             <?php
 
             declare(strict_types=1);

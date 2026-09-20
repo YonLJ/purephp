@@ -24,9 +24,9 @@ use Throwable;
  *         svgUse()->href(Slot::value('href'))
  *     ));
  *
- *     function Icon(string $href): string
+ *     function Icon(mixed ...$children): Call
  *     {
- *         return render('Icon', href: $href);
+ *         return component('Icon', ...$children);
  *     }
  *
  * Registration stores the closure only: no I/O, no tree building. At render
@@ -66,7 +66,7 @@ final class Registry
      * owned by another file or a file that already owns another name throws
      * unless `$override` is true.
      *
-     * @param string $name The component name used by render().
+     * @param string $name The component name used by component().
      * @param string $file The unit file, normally `__FILE__`.
      * @param Closure(): mixed $factory Builds the template; called lazily, may return a tag tree or a Shape.
      * @param bool $override Replace an existing registration.

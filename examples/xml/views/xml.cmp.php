@@ -6,7 +6,7 @@ use Pure\Compile\Shape;
 use Pure\Core\Slot;
 use Pure\Core\XML;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 
 /**
  * Address shape: fields follow the data key order; `city` is optional and
@@ -56,5 +56,5 @@ register('Xml', __FILE__, static fn () => XmlPageShape());
  */
 function xmlPage(array $data): string
 {
-    return '<?xml version="1.0"?>' . render('Xml', addresses: $data['addresses']);
+    return '<?xml version="1.0"?>' . component('Xml')->addresses($data['addresses'])->render();
 }

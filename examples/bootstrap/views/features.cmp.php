@@ -1,11 +1,12 @@
 <?php declare(strict_types=1);
 
 
+use Pure\Component\Binds;
 use Pure\Component\Call;
 use Pure\Core\Raw;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{body, h1, head, html, link, main, meta, title};
 
 require_once __DIR__ . '/../components/IconSheet.cmp.php';
@@ -67,7 +68,7 @@ register('Features', __FILE__, static function () {
             )
         )
     );
-});
+}, prepare: #[Binds('title', 'columns', 'hanging', 'cards', 'grid', 'features')] static fn (): array => featuresBindings());
 
 /**
  * The rendered blocks of the features page: every section component fetches
@@ -107,11 +108,11 @@ function featuresBindings(): array
 
 /**
  * The features page: the document skeleton is the registered template
- * (precompiled with `pure compile`), the blocks are composed from the
- * component functions. The document header is not part of the tree, so it is
+ * (precompiled with `pure compile`), the blocks come from the unit's own
+ * prepare() hook. The document header is not part of the tree, so it is
  * prepended manually.
  */
 function featuresPage(): string
 {
-    return '<!DOCTYPE html>' . render('Features', ...featuresBindings());
+    return '<!DOCTYPE html>' . component('Features')->render();
 }

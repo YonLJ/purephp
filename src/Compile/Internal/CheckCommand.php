@@ -19,11 +19,12 @@ use Throwable;
 /**
  * The `pure check` command: validates component contracts statically.
  *
- * For every `*.cmp.php` unit it compares the slots its template reads, the
- * bindings its component function passes to `render()` and the typed
- * parameters of that function; `*.shape.php` templates are checked for slots
- * bound to incompatible kinds. This is not `pure compile --check`, which
- * reports stale or missing artifacts.
+ * For every `*.cmp.php` unit it compares the slots its template reads with the
+ * bindings its prepare() hook returns (or with the props its call sites bind,
+ * for a unit without prepare()), and checks the typed parameters of the hook
+ * against the slot kinds; `*.shape.php` templates are checked for slots bound
+ * to incompatible kinds. This is not `pure compile --check`, which reports
+ * stale or missing artifacts.
  *
  * @internal
  */
@@ -42,15 +43,13 @@ final class CheckCommand
           pure check <path>... [--strict]
 
         Checks every *.cmp.php unit: the slots its template reads against the
-        named bindings of its component function's render() call (a binding the
-        template does not read, a required slot the call does not bind), or
-        against the prepare() parameters and returned keys of a fluent unit,
-        where the declarations on a parameter (#[Prop]: slot, item, required,
-        deprecated; #[Trusted]: markup) and on a hook or bindings helper
-        (#[Binds]: the returned keys) are verified against the signature and the
-        template; the function's parameter types against the slot kinds (a list
-        slot needs an iterable, a child scope an array, a text slot a
-        stringable).
+        keys its prepare() hook returns — with the declarations on a parameter
+        (#[Prop]: slot, item, required, deprecated; #[Trusted]: markup) and on
+        the hook (#[Binds]: the returned keys) verified against the signature
+        and the template — or, for a unit without prepare(), against the props
+        its call sites bind. The hook's parameter types are checked against the
+        slot kinds (a list slot needs an iterable, a child scope an array, a
+        text slot a stringable).
         Also checks the fluent calls in every file: a `->prop(...)` the target
         does not accept is an error. Reports a slot that one template uses as
         both a scalar and a scope, and checks *.shape.php templates for the
@@ -171,7 +170,7 @@ final class CheckCommand
                 if ($units === null) {
                     $checked++;
                     $shape = ArtifactCompiler::load($file);
-                    self::report($stdout, $file, null, $this->checker->check($file, null, $shape->tree(), null), $errors, $warnings);
+                    self::report($stdout, $file, null, $this->checker->check(null, $shape->tree(), null), $errors, $warnings);
                 } else {
                     if ($units === []) {
                         throw new RuntimeException('no component unit is registered here; `pure check` skips the file.');
@@ -181,7 +180,6 @@ final class CheckCommand
                         $checked++;
                         $prepare = Registry::prepare($name);
                         $findings = $this->checker->check(
-                            $file,
                             $name,
                             $trees[$name],
                             $prepare === null ? FunctionFinder::of($name, $file) : null,

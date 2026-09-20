@@ -7,12 +7,10 @@ use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
 use Pure\Compile\Shape;
 
+use function Pure\Component\component;
 use function Pure\Component\register;
 
 use Pure\Component\Registry;
-
-use function Pure\Component\render;
-
 use Pure\Core\Slot;
 
 use function Pure\HTML\body;
@@ -51,8 +49,8 @@ class RegistryTest extends TestCase
         $file = $this->unitFile();
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
-        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
-        $this->assertSame('<span>y</span>', render('Badge', label: 'y'));
+        $this->assertSame('<span>x</span>', $this->renderUnit('Badge', ['label' => 'x']));
+        $this->assertSame('<span>y</span>', $this->renderUnit('Badge', ['label' => 'y']));
     }
 
     public function testFactoryReturningABareTagTreeIsWrapped(): void
@@ -60,7 +58,7 @@ class RegistryTest extends TestCase
         $file = $this->unitFile();
         register('Badge', $file, fn () => span(Slot::value('label')));
 
-        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit('Badge', ['label' => 'x']));
     }
 
     public function testShapeFileReturningABareTagTreeIsWrapped(): void
@@ -68,7 +66,7 @@ class RegistryTest extends TestCase
         $file = $this->dir . '/bare.shape.php';
         file_put_contents($file, "<?php\n\nreturn Pure\\HTML\\span(Pure\\Core\\Slot::value('label'));\n");
 
-        $this->assertSame('<span>x</span>', render($file, label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit($file, ['label' => 'x']));
     }
 
     public function testNameAndPathResolveToTheSameBinder(): void
@@ -77,7 +75,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
         $this->assertSame(Registry::component('Badge'), Registry::component($file));
-        $this->assertSame('<span>x</span>', render($file, label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit($file, ['label' => 'x']));
     }
 
     public function testFactoryIsLazyWhenTheArtifactIsFresh(): void
@@ -93,7 +91,7 @@ class RegistryTest extends TestCase
         ArtifactCompiler::writeUnit($file, $this->badgeShape());
         clearstatcache();
 
-        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit('Badge', ['label' => 'x']));
         $this->assertSame(0, $calls);
     }
 
@@ -107,13 +105,13 @@ class RegistryTest extends TestCase
             return $this->badgeShape();
         });
 
-        render('Badge', label: 'a');
-        render('Badge', label: 'b');
+        $this->renderUnit('Badge', ['label' => 'a']);
+        $this->renderUnit('Badge', ['label' => 'b']);
         $this->assertSame(1, $calls);
 
         Compile::flush();
 
-        render('Badge', label: 'c');
+        $this->renderUnit('Badge', ['label' => 'c']);
         $this->assertSame(2, $calls);
     }
 
@@ -126,7 +124,7 @@ class RegistryTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('must return a tag tree or Pure\\Compile\\Shape');
 
-        render('Badge', label: 'x');
+        $this->renderUnit('Badge', ['label' => 'x']);
     }
 
     public function testRegisteringTheSameNameForTheSameFileIsIdempotent(): void
@@ -135,7 +133,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
         register('Badge', $file, fn (): Shape => Compile::shape(span('other')));
 
-        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit('Badge', ['label' => 'x']));
     }
 
     public function testDuplicateNameThrowsUnlessOverridden(): void
@@ -153,7 +151,7 @@ class RegistryTest extends TestCase
 
         register('Badge', $second, fn (): Shape => Compile::shape(span('override')), override: true);
 
-        $this->assertSame('<span>override</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>override</span>', $this->renderUnit('Badge', ['label' => 'x']));
         $this->assertSame([], Registry::unitsFor($first));
     }
 
@@ -174,7 +172,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
         try {
-            render('Nope');
+            $this->renderUnit('Nope');
             $this->fail('Expected RuntimeException to be thrown.');
         } catch (RuntimeException $e) {
             $this->assertStringContainsString("unknown component 'Nope'", $e->getMessage());
@@ -187,7 +185,7 @@ class RegistryTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('no components are registered');
 
-        render('Nope');
+        $this->renderUnit('Nope');
     }
 
     public function testRenderDoesNotPrependTheDocumentHeader(): void
@@ -197,7 +195,7 @@ class RegistryTest extends TestCase
 
         // No page concept: the tree renders as written, the header is the
         // caller's to prepend.
-        $body = render('Page', title: 'a');
+        $body = $this->renderUnit('Page', ['title' => 'a']);
         $this->assertSame('<html><body>a</body></html>', $body);
         $this->assertSame('<!DOCTYPE html><html><body>a</body></html>', '<!DOCTYPE html>' . $body);
     }
@@ -225,7 +223,7 @@ class RegistryTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("unknown component 'Badge'");
 
-        render('Badge');
+        $this->renderUnit('Badge');
     }
 
     public function testBareShapePathStillRenders(): void
@@ -236,7 +234,7 @@ class RegistryTest extends TestCase
             "<?php\n\nreturn Pure\\Compile\\Compile::shape(Pure\\HTML\\div(Pure\\Core\\Slot::value('title')));\n"
         );
 
-        $this->assertSame('<div>x</div>', render($file, title: 'x'));
+        $this->assertSame('<div>x</div>', $this->renderUnit($file, ['title' => 'x']));
     }
 
     public function testAnUnregisteredUnitPathIsNotLoadedAsATemplate(): void
@@ -253,7 +251,7 @@ class RegistryTest extends TestCase
         // allowed to fail with "must return a Shape" and then succeed.
         for ($attempt = 0; $attempt < 2; $attempt++) {
             try {
-                render($file, label: 'x');
+                $this->renderUnit($file, ['label' => 'x']);
                 $this->fail('Expected RuntimeException to be thrown.');
             } catch (RuntimeException $e) {
                 $this->assertStringContainsString('is a component unit and has no fresh artifact', $e->getMessage());
@@ -265,7 +263,7 @@ class RegistryTest extends TestCase
         require_once $file;
 
         $this->assertSame(['Loose'], Registry::names());
-        $this->assertSame('<em>l</em>', render('Loose'));
+        $this->assertSame('<em>l</em>', $this->renderUnit('Loose'));
     }
 
     public function testAPathLikeTypoListsKnownComponents(): void
@@ -274,7 +272,7 @@ class RegistryTest extends TestCase
         register('Badge', $file, fn (): Shape => $this->badgeShape());
 
         try {
-            render('ui/Bdge');
+            $this->renderUnit('ui/Bdge');
             $this->fail('Expected RuntimeException to be thrown.');
         } catch (RuntimeException $e) {
             $this->assertStringContainsString("component template 'ui/Bdge' does not exist", $e->getMessage());
@@ -300,14 +298,14 @@ class RegistryTest extends TestCase
         clearstatcache();
         $this->assertSame(filemtime($file), filemtime(ArtifactCompiler::artifactPath($file)));
 
-        $this->assertSame('<span>x</span>', render('Badge', label: 'x'));
+        $this->assertSame('<span>x</span>', $this->renderUnit('Badge', ['label' => 'x']));
         $this->assertSame(0, $calls);
 
         touch($file, (int) filemtime($file) + 1);
         clearstatcache();
         Compile::flush();
 
-        $this->assertSame('<div>x</div>', render('Badge', label: 'x'));
+        $this->assertSame('<div>x</div>', $this->renderUnit('Badge', ['label' => 'x']));
         $this->assertSame(1, $calls);
     }
 
@@ -338,14 +336,25 @@ class RegistryTest extends TestCase
         // One file registers one component: the replaced name is gone entirely.
         $this->assertSame(['Label'], Registry::names());
         $this->assertSame(['Label'], array_keys(Registry::unitsFor($file)));
-        $this->assertSame('<div>x</div>', render('Label', label: 'x'));
+        $this->assertSame('<div>x</div>', $this->renderUnit('Label', ['label' => 'x']));
 
         try {
-            render('Badge', label: 'x');
+            $this->renderUnit('Badge', ['label' => 'x']);
             $this->fail('Expected RuntimeException to be thrown.');
         } catch (RuntimeException $e) {
             $this->assertStringContainsString("unknown component 'Badge'", $e->getMessage());
         }
+    }
+
+    /**
+     * Render one registered unit or template path through a fluent call: the
+     * bindings are set as props.
+     *
+     * @param array<string, mixed> $props
+     */
+    private function renderUnit(string $nameOrPath, array $props = []): string
+    {
+        return component($nameOrPath)->props($props)->render();
     }
 
     private function unitFile(string $name = 'Badge.cmp.php'): string

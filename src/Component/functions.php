@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Pure\Component;
 
 use Closure;
-use RuntimeException;
 
 /**
  * Register a component unit under a name.
@@ -33,7 +32,7 @@ use RuntimeException;
  *             return ['title' => ..., 'contents' => ..., 'class' => $class];
  *         });
  *
- * @param string $name The component name used by render() and component().
+ * @param string $name The component name used by component().
  * @param string $file The unit file, normally `__FILE__`.
  * @param Closure(): mixed $factory Builds the template lazily; may return a tag tree or a Shape.
  * @param bool $override Replace an existing registration of the name or file.
@@ -59,8 +58,7 @@ function register(string $name, string $file, Closure $factory, bool $override =
  * The call implements Pure\Core\Markup, so it nests like a tag:
  * `div(Card(...)->type('Free'))`. A prop named after a slot binds that slot;
  * children bind the reserved `children` slot, which the template reads with
- * `Slot::raw('children')`. `render('Card', ...)` remains the low-level entry
- * and behaves identically.
+ * `Slot::raw('children')`.
  *
  * @param string $name A registered component name or a template path.
  * @param mixed ...$children The children of the call, as tag children.
@@ -69,40 +67,4 @@ function register(string $name, string $file, Closure $factory, bool $override =
 function component(string $name, mixed ...$children): Call
 {
     return new Call($name, array_values($children));
-}
-
-/**
- * Render a component template in one expression: the binder is cached per name
- * or path, so a component function is a single return statement.
- *
- *     function Section(string $title, iterable|string $contents, string $class): string
- *     {
- *         return render('Section', title: $title, contents: $contents, class: $class);
- *     }
- *
- * Slot values are passed as named arguments, or as an unpacked array with
- * string keys: `render($file, ...$bindings)`. A slot value may be a string or
- * any Stringable: it is coerced to a string at render time.
- *
- * A slot error is prefixed with the component name or template path
- * (`component 'Card': slot 'title' is required ...`), so the failing unit is
- * identifiable from the message alone.
- *
- * The rendered markup is the tree as written, with no document header. To
- * emit a full document, prepend the header of the root tag yourself, e.g.
- * `$html->documentHeader() . render('Page', ...$data)`.
- *
- * @param string $source A registered name or the path of a `*.shape.php` file.
- * @param mixed ...$data The slot values, by slot name.
- * @return string The rendered markup.
- */
-function render(string $source, mixed ...$data): string
-{
-    if ($data !== [] && array_is_list($data)) {
-        throw new RuntimeException(
-            "component '{$source}': slot values must be passed by name, e.g. render(\$file, title: \$title)."
-        );
-    }
-
-    return Registry::component($source)($data);
 }

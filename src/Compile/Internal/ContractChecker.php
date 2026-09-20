@@ -22,11 +22,12 @@ use Traversable;
 /**
  * The contract checks behind `pure check`.
  *
- * A unit's contract is three things that must agree: the slots its template
- * reads, the bindings its component function passes to `render()`, and the
- * typed parameters of that function. The checker compares them statically and
- * reports errors (a mismatch that fails at runtime), warnings (a latent or
- * suspicious pairing) and info notes (what could not be read statically).
+ * A unit's contract is two things that must agree: the slots its template
+ * reads and the bindings its prepare() hook returns, so the checker compares
+ * them statically and reports errors (a mismatch that fails at runtime),
+ * warnings (a latent or suspicious pairing) and info notes (what could not be
+ * read statically). A unit without prepare() is checked at its call sites
+ * instead, where the props are the template slots.
  *
  * @internal
  */
@@ -35,14 +36,13 @@ final class ContractChecker
     /**
      * Check one unit (or one shape file, with $name and $function null).
      *
-     * @param string $file The unit file path, for messages.
      * @param ?string $name The registered component name.
      * @param Tag $tree The shape tree the unit builds.
      * @param ?ReflectionFunction $function The component function, when the file defines one.
      * @param ?ReflectionFunction $prepare The registered prepare() hook of a fluent unit.
      * @return list<Finding> The findings, in report order.
      */
-    public function check(string $file, ?string $name, Tag $tree, ?ReflectionFunction $function, ?ReflectionFunction $prepare = null): array
+    public function check(?string $name, Tag $tree, ?ReflectionFunction $function, ?ReflectionFunction $prepare = null): array
     {
         $findings = [];
         $contract = RootSlots::manifest($tree);
@@ -60,7 +60,7 @@ final class ContractChecker
         }
 
         if ($prepare !== null) {
-            return array_merge($findings, self::checkPrepare($file, $name, $contract, $prepare, $tree));
+            return array_merge($findings, self::checkPrepare($contract, $prepare, $tree));
         }
 
         if ($function !== null && self::returnsCall($function)) {
@@ -73,73 +73,47 @@ final class ContractChecker
             return $findings;
         }
 
-        $parameters = [];
-
         if ($function === null) {
             $findings[] = Finding::info(
-                "no function named '{$name}' is defined in this file; parameter types are not checked"
+                "no prepare() and no function named '{$name}'; the props are the template slots, so the call sites are checked instead"
             );
-        } else {
-            foreach ($function->getParameters() as $parameter) {
-                $parameters[$parameter->getName()] = $parameter;
-            }
 
-            foreach ($contract as $slot => $info) {
-                if (self::conflicting($info['kinds'])) {
-                    continue;
-                }
-
-                $parameter = $parameters[$slot] ?? null;
-
-                if ($parameter === null) {
-                    continue;
-                }
-
-                foreach (self::typeFindings($slot, $info, $parameter) as $finding) {
-                    $findings[] = $finding;
-                }
-            }
+            return $findings;
         }
 
-        $bindings = $function === null
-            ? Bindings::inFile($file, $name)
-            : Bindings::of($function, $name, $file);
+        $return = $function->getReturnType();
 
-        if (!$bindings['found'] || $bindings['dynamic']) {
-            $findings[] = Finding::info(
-                'slots are not compared: '
-                . ($bindings['found'] ? 'render() unpacks its bindings' : 'no render() call targets this component')
-            );
-        } else {
-            foreach (array_keys($bindings['keys']) as $key) {
-                if (isset($contract[$key])) {
-                    continue;
-                }
+        $findings[] = Finding::error(
+            "'{$name}()' must return Pure\\Component\\Call" . ($return === null ? '' : " (it returns {$return})")
+            . '; register a prepare() contract or return component(...) from it'
+        );
 
-                $nearest = Suggestion::nearest($key, array_keys($contract));
-                $hint = $nearest === null ? '' : " (did you mean '{$nearest}'?)";
+        return $findings;
+    }
 
-                $findings[] = Finding::error("render() binds '{$key}' but the template does not read it{$hint}");
-            }
-
-            foreach ($contract as $slot => $info) {
-                if ($info['required'] && !isset($bindings['keys'][$slot])) {
-                    $findings[] = Finding::error("required slot '{$slot}' is not bound by render()");
-                }
-            }
-
-            if ($bindings['positional']) {
-                $findings[] = Finding::error('render() passes data by position; slot values must be named');
-            }
+    /**
+     * Parameters the function never reads and the template never binds: a
+     * leftover argument the contract no longer needs.
+     *
+     * @param array<string, ReflectionParameter> $parameters
+     * @param array<string, true>|null $variables The variables the body reads, or null when unreadable.
+     * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
+     * @param string $subject The reader the message names.
+     * @return list<Finding>
+     */
+    private static function unusedParameterFindings(array $parameters, ?array $variables, array $contract, string $subject): array
+    {
+        if ($variables === null) {
+            return [];
         }
 
-        if ($bindings['scanned']) {
-            foreach (array_keys($parameters) as $parameterName) {
-                if (!isset($bindings['variables'][$parameterName]) && !isset($contract[$parameterName])) {
-                    $findings[] = Finding::warning(
-                        "parameter \${$parameterName} is neither used by the function nor a slot of the template"
-                    );
-                }
+        $findings = [];
+
+        foreach (array_keys($parameters) as $parameterName) {
+            if (!isset($variables[$parameterName]) && !isset($contract[$parameterName])) {
+                $findings[] = Finding::warning(
+                    "parameter \${$parameterName} is neither used by {$subject} nor a slot of the template"
+                );
             }
         }
 
@@ -163,7 +137,7 @@ final class ContractChecker
      * @param array<string, array{required: bool, kinds: array<string, true>}> $contract
      * @return list<Finding>
      */
-    private static function checkPrepare(string $file, string $name, array $contract, ReflectionFunction $prepare, Tag $tree): array
+    private static function checkPrepare(array $contract, ReflectionFunction $prepare, Tag $tree): array
     {
         $findings = [];
         $parameters = [];
@@ -293,16 +267,8 @@ final class ContractChecker
             }
         }
 
-        $bindings = Bindings::of($prepare, $name, $file);
-
-        if ($bindings['scanned']) {
-            foreach (array_keys($parameters) as $parameterName) {
-                if (!isset($bindings['variables'][$parameterName]) && !isset($contract[$parameterName])) {
-                    $findings[] = Finding::warning(
-                        "parameter \${$parameterName} is neither used by prepare() nor a slot of the template"
-                    );
-                }
-            }
+        foreach (self::unusedParameterFindings($parameters, Bindings::variables($prepare), $contract, 'prepare()') as $finding) {
+            $findings[] = $finding;
         }
 
         return $findings;

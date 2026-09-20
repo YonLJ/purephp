@@ -1,10 +1,11 @@
 <?php declare(strict_types=1);
 
 
+use Pure\Component\Binds;
 use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{body, div, head, html, link, meta, title};
 
 require_once __DIR__ . '/PageHeader.cmp.php';
@@ -42,7 +43,7 @@ register('Pricing', __FILE__, static function () {
             )
         )->lang('en')
     );
-});
+}, prepare: #[Binds('header', 'pricing', 'deck', 'footer')] static fn (): array => pricingBindings());
 
 /**
  * The rendered blocks of the pricing page: every component fetches its own
@@ -68,11 +69,11 @@ function pricingBindings(): array
 
 /**
  * The pricing page: the document skeleton comes from views/pricing.cmp.php
- * (precompiled with `pure compile`), the blocks are composed from the
- * component functions. The document header is not part of the tree, so it is
+ * (precompiled with `pure compile`), the blocks come from the unit's own
+ * prepare() hook. The document header is not part of the tree, so it is
  * prepended manually.
  */
 function pricingPage(): string
 {
-    return '<!DOCTYPE html>' . render('Pricing', ...pricingBindings());
+    return '<!DOCTYPE html>' . component('Pricing')->render();
 }
