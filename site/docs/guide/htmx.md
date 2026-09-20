@@ -26,26 +26,29 @@ Then include HTMX in your HTML:
 
 ### 2. Create Dynamic Components
 
-The counter text is a bound slot; the endpoint renders the same `CounterValue()`
-component with the new count. Each component is its own unit:
+The counter text is a bound slot; the endpoint renders the same `CounterValue`
+unit with the new count. Each component is its own unit:
 
 ```php
 <?php
 
 // components/CounterValue.cmp.php
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\p;
 
-register('CounterValue', __FILE__, static fn () =>
-    p('Current count: ', Slot::value('count'))->id('counter')
+register('CounterValue', __FILE__,
+    factory: static fn () => p('Current count: ', Slot::value('count'))->id('counter'),
+    prepare: static function (int $count): array {
+        return ['count' => $count];
+    }
 );
 
-function CounterValue(int $count): string
+function CounterValue(mixed ...$children): Call
 {
-    return render('CounterValue', count: $count);
+    return component('CounterValue', ...$children);
 }
 ```
 
@@ -55,25 +58,29 @@ function CounterValue(int $count): string
 // components/Counter.cmp.php
 require_once __DIR__ . '/CounterValue.cmp.php';
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div};
 
-register('Counter', __FILE__, static fn () =>
-    div(
-        Slot::raw('counter'),
-        button('Increment')
-            ->hxPost('/increment')
-            ->hxTarget('#counter')
-            ->hxSwap('innerHTML')
-    )->class('counter')
+register('Counter', __FILE__,
+    factory: static fn () =>
+        div(
+            Slot::raw('counter'),
+            button('Increment')
+                ->hx_post('/increment')
+                ->hx_target('#counter')
+                ->hx_swap('innerHTML')
+        )->class('counter'),
+    prepare: static function (int $count): array {
+        return ['counter' => CounterValue()->count($count)];
+    }
 );
 
-function Counter(int $count): string
+function Counter(mixed ...$children): Call
 {
-    return render('Counter', counter: CounterValue($count));
+    return component('Counter', ...$children);
 }
 ```
 
@@ -81,16 +88,17 @@ function Counter(int $count): string
 <?php
 
 // index.php
+require __DIR__ . '/components/Counter.cmp.php';
 
 // Render the page
-echo Counter(0);
+echo Counter()->count(0);
 
 // Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['REQUEST_URI'] === '/increment') {
     $count = (int)($_COOKIE['count'] ?? 0) + 1;
     setcookie('count', $count);
 
-    echo CounterValue($count);
+    echo CounterValue()->count($count);
     exit;
 }
 ```
@@ -100,15 +108,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_SERVER['REQUEST_URI'] === '/incre
 ```php
 <?php
 
-use function Pure\HTML\{div, ul, li};
+use function Pure\HTML\{button, div, li, ul};
 
 function TodoList() {
     return div(
         ul()->id('todos'),
         button('Load More')
-            ->hxGet('/todos?page=1')
-            ->hxTarget('#todos')
-            ->hxSwap('beforeend')
+            ->hx_get('/todos?page=1')
+            ->hx_target('#todos')
+            ->hx_swap('beforeend')
     )->class('todo-list');
 }
 
@@ -133,19 +141,22 @@ and the endpoint renders the list component with the search results:
 <?php
 
 // components/SearchResult.cmp.php
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\div;
 
-register('SearchResult', __FILE__, static fn () =>
-    div(Slot::value('title'))->class('search-result')
+register('SearchResult', __FILE__,
+    factory: static fn () => div(Slot::value('title'))->class('search-result'),
+    prepare: static function (string $title): array {
+        return ['title' => $title];
+    }
 );
 
-function SearchResult(string $title): string
+function SearchResult(mixed ...$children): Call
 {
-    return render('SearchResult', title: $title);
+    return component('SearchResult', ...$children);
 }
 ```
 
@@ -155,23 +166,28 @@ function SearchResult(string $title): string
 // components/ResultList.cmp.php
 require_once __DIR__ . '/SearchResult.cmp.php';
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\div;
 
-register('ResultList', __FILE__, static fn () => div(Slot::raw('results')));
+register('ResultList', __FILE__,
+    factory: static fn () => div(Slot::raw('results')),
+    prepare: static function (array $results): array {
+        $items = [];
 
-function ResultList(array $results): string
-{
-    $items = [];
+        foreach ($results as $result) {
+            $items[] = SearchResult()->title($result['title']);
+        }
 
-    foreach ($results as $result) {
-        $items[] = SearchResult($result['title']);
+        return ['results' => $items];
     }
+);
 
-    return render('ResultList', results: implode('', $items));
+function ResultList(mixed ...$children): Call
+{
+    return component('ResultList', ...$children);
 }
 ```
 
@@ -181,27 +197,31 @@ function ResultList(array $results): string
 // components/SearchBox.cmp.php
 require_once __DIR__ . '/ResultList.cmp.php';
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, input};
 
-register('SearchBox', __FILE__, static fn () =>
-    div(
-        input()
-            ->type('text')
-            ->placeholder('Search...')
-            ->hxGet('/search')
-            ->hxTrigger('keyup changed delay:500ms')
-            ->hxTarget('#results'),
-        div(Slot::raw('list'))->id('results')
-    )->class('search-box')
+register('SearchBox', __FILE__,
+    factory: static fn () =>
+        div(
+            input()
+                ->type('text')
+                ->placeholder('Search...')
+                ->hx_get('/search')
+                ->hx_trigger('keyup changed delay:500ms')
+                ->hx_target('#results'),
+            div(Slot::raw('list'))->id('results')
+        )->class('search-box'),
+    prepare: static function (iterable|string|Stringable $list): array {
+        return ['list' => $list];
+    }
 );
 
-function SearchBox(iterable|string $list): string
+function SearchBox(mixed ...$children): Call
 {
-    return render('SearchBox', list: $list);
+    return component('SearchBox', ...$children);
 }
 ```
 
@@ -209,16 +229,17 @@ function SearchBox(iterable|string $list): string
 <?php
 
 // index.php
+require __DIR__ . '/components/SearchBox.cmp.php';
 
 // Render the page with an empty result list
-echo SearchBox(ResultList([]));
+echo SearchBox()->list(ResultList()->results([]));
 
 // Handle HTMX request
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_SERVER['REQUEST_URI'] === '/search') {
     $query = $_GET['q'] ?? '';
     $results = searchItems($query); // Search items
 
-    echo ResultList($results);
+    echo ResultList()->results($results);
     exit;
 }
 ```

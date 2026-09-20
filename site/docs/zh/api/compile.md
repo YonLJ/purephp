@@ -41,43 +41,45 @@ echo $shape([
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
 ## 函数组件
-组件单元把惰性模板工厂注册到一个名字下，紧挨着的组件函数渲染这个名字。
-`Pure\Component\render()` 在一个表达式里返回渲染好的 string：
+组件单元把惰性模板工厂注册到一个名字下，紧挨着的调用函数发起一次链式调用；单元的类型化
+prop 契约放在 `prepare()` 钩子里：
 
 ```php
 <?php
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(h2(Slot::value('title')), p(Slot::value('content')))->class('card')
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(h2(Slot::value('title')), p(Slot::value('content')))->class('card'),
+    prepare: static function (string $title, string $content): array {
+        return ['title' => $title, 'content' => $content];
+    }
 );
 
-function Card(string $title, string $content): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content);
+    return component('Card', ...$children);
 }
 ```
 
 | 函数 | 行为 |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的 props→bindings 类型钩子 |
-| `render(string $source, mixed ...$data): string` | 按名渲染单元或按路径渲染模板；绑定器带缓存 |
+| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的类型化 prop 契约（props→bindings 钩子） |
 | `component(string $name, mixed ...$children): Call` | 开始一次链式调用：props 像标签属性一样设置，返回值是 `Markup`，可像标签一样嵌套 |
 
-`render()` 按原样输出树，**不带文档头**；整份文档的文档头由调用方
+链式调用按原样产出树，**不带文档头**；整份文档的文档头由调用方
 自己拼接（`$root->documentHeader()`，或字面量 `<!DOCTYPE html>` /
 `<?xml version="1.0"?>`）。
 
-`render()` 的槽位值按名字传入（`render('Card', title: $title)`），也可以传解包的字符串键
-数组；位置参数会被 `RuntimeException` 拒绝。需要自己持有或传递绑定器时，用
-`Registry::component($source)`，它返回 `Closure(array $data): string`。
+需要自己持有或传递绑定器时，用 `Registry::component($source)`，它返回
+`Closure(array $data): string`，接受字符串键的数据数组。
 
-链式调用以同样方式绑定：`Card($children)->title($title)` 每个 prop 对应一个槽位，`null`
+链式调用绑定 props：`Card($children)->title($title)` 每个 prop 对应一个槽位，`null`
 表示不设置该 prop，children 绑定保留槽位 `children`（模板用 `Slot::raw('children')`）。
 `Call` 与 `Raw` 都实现 `Pure\Core\Markup`：Markup 子节点原样输出、随树延迟渲染，其他
 子节点则冻结为文本并转义。组件调用不能出现在数据无关的形状树里——请把它的 markup 放进
@@ -97,19 +99,19 @@ raw 槽位。
 ## 形状与数据
 
 形状就是普通标签树，只是把动态值替换为 `Slot` 占位符。形状里不能包含请求数据，并且必须
-**每进程只构建一次**——文件形式由 `render()` 的路径缓存保证，内联树放进组件函数内的
-`static` 变量中，绝不能放在请求处理器里。
+**每进程只构建一次**——文件形式由 `Registry::component()` 的按名或按路径缓存保证，内联树
+放进调用函数内的 `static` 变量中，绝不能放在请求处理器里。
 标准 PHP-FPM 下 `static` 每个请求都会重置，因此请启用 `Compile::cachePath()`，让请求加载
 已编译的渲染器而不是重新生成。
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): string` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
+| `function Card(array $props): HTML` | `function Card(string $title): Call` 加一个 `Card.cmp.php` 单元（调用函数 + 模板） |
 | `h2($title)` | `h2(Slot::value('title'))` |
 | `->class($classList)` | 静态值用 `->class($classList)`，动态值用 `->class(Slot::value('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，把拼接好的标记经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | 调用 `Child(...)`，把返回的标记经 `Slot::raw()` 注入 |
+| `<Child($props)>` | 调用 `Child(...)`，把产出的标记经 `Slot::raw()` 注入 |
 
 子组件的标记就是普通字符串，因此要经 raw 槽位进入模板——直接作为字符串子节点会被转义成文本：
 
@@ -163,8 +165,9 @@ $shape = Compile::shape(div(
 
 `Shape::id()` 是形状结构的 sha1 指纹：标签名、属性名与属性值、槽位种类与名称、默认值、
 嵌套形状以及库缓存版本。它无需编译即可计算，并被用作磁盘渲染器缓存的键：生成的源码以它为
-键存放，因此结构任何一处不同的两个形状不可能共用同一个缓存的渲染器。`*.pure.php` 产物会在
-源码旁记下它，`pure compile --check` 正是据此识别过期产物。它并不是 `Pure\Component\render()`
+键存放，因此结构任何一处不同的两个形状不可能共用同一个缓存的渲染器。`*.pure.php` 产物把指纹
+记在头部注释里，而 `pure compile --check` 是通过把产物与现场生成的源码逐字节比对来识别过期的。
+它并不是 `component()`
 解析组件所依据的东西——那是注册名或单元文件——而且只有*数据*变化时它不会改变。真正用得上它
 的是那种为每个变体组装不同形状的应用：指纹就是存放它们的记忆表的一个廉价而稳定的键：
 
@@ -224,7 +227,7 @@ Compile::cachePath(__DIR__ . '/var/cache/purephp');
 Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 ```
 
-- 当同一调用点在单个进程内调用 `Compile::shape()` 超过 20 次时，会触发
+- 当同一调用点在单个进程内第 20 次调用 `Compile::shape()` 时，会触发
   `E_USER_WARNING`，建议改用 `static $shape ??=` 模式。
 - 模板从未读取的数据键会被报告，并给出 `did you mean` 建议，因此拼错的 binding 会
   显式失败，而不是像值不存在一样照常渲染。
@@ -238,7 +241,7 @@ Compile::guard(true); // 或设置 PURE_COMPILE_GUARD=1
 - 必填槽位缺失：`Pure\Core\MissingSlotException`，带完整路径，例如
   `slot 'items[].title' is required but was not provided.`。当作用域中还有其他键时，
   信息会建议最接近的键名（拼写错误）或把它们列出。必填的值槽与 raw 槽显式传入 `null`
-  时抛出 `slot 'items[].title' is required but was null.`；通过 `render()` 渲染时，
+  时抛出 `slot 'items[].title' is required but was null.`；通过 `component()` 调用渲染时，
   信息会加上组件名或模板路径前缀（`component 'Card': slot 'title' is required ...`）。
 - 位置错误（raw 槽用作属性值）或缺少形状：编译期抛 `LogicException`。
 - 列表不可迭代、item 或作用域不是数组、值不可字符串化：渲染期抛

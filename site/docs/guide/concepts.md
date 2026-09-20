@@ -101,18 +101,20 @@ $shape([
 Key properties:
 
 - **Compiled once per process** — memoize shapes in `static` variables inside
-  component functions, never build them inside a request handler. Under
+  the function that builds them, never build them inside a request handler. Under
   standard PHP-FPM statics reset every request, so enable
   `Compile::cachePath()` to load compiled renderers instead of regenerating
   them.
-- **Byte-identical output** — the compiled path and `render()` share the same
-  escaping implementation.
+- **Byte-identical output** — the compiled path and `Tag::render()` share the
+  same escaping implementation.
 - **Optional disk cache** — `Compile::cachePath($dir)` stores compiled
   renderers so warm workers load code instead of generating it.
 
 `Shape::id()` is a structural fingerprint (tags, attributes, slots and nested
-shapes) that is available without compiling; it names the on-disk cache file, and
-a precompiled artifact records it so `pure compile --check` can tell a stale one.
+shapes) that is available without compiling; it names the on-disk cache file and
+keys the in-memory memo of generated code. A precompiled artifact carries it in
+its header, while `pure compile --check` recognises a stale artifact by
+comparing its content with the freshly generated source byte for byte.
 Components are resolved by their registered name or unit file, not by it.
 
 ## Data Binding and Scope
@@ -138,30 +140,37 @@ required value or raw slot bound to an explicit `null` fails with
 
 ## Components
 
-A component is one `*.cmp.php` unit: a function with typed parameters returning
-`string`, plus the lazy factory registered next to it:
+A component is one `*.cmp.php` unit: a call function that returns a
+`Pure\Component\Call`, plus the lazy factory registered next to it and the
+`prepare()` hook that types its props:
 
 ```php
 <?php
 
 // components/Card.cmp.php
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class(Slot::value('class'))
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class(Slot::value('class')),
+    prepare: static function (string $title, string $content, string $class = 'card'): array {
+        return ['title' => $title, 'content' => $content, 'class' => $class];
+    }
 );
 
-function Card(string $title, string $content, string $class = 'card'): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content, class: $class);
+    return component('Card', ...$children);
 }
+
+echo Card()->title('Title')->content('Content');
 ```
 
 See [Components](/guide/components) for composition and
@@ -177,13 +186,23 @@ State is plain PHP: values are passed into the shape as data.
 ```php
 <?php
 
+// components/Counter.cmp.php
+use Pure\Component\Call;
+use Pure\Core\Slot;
 
-use function Pure\HTML\{button, div, p};
-use function Pure\Component\render;
+use function Pure\Component\{component, register};
+use function Pure\HTML\span;
 
-function Counter(int $count): string
+register('Counter', __FILE__,
+    factory: static fn () => span(Slot::value('count'))->id('counter'),
+    prepare: static function (int $count): array {
+        return ['count' => $count];
+    }
+);
+
+function Counter(int $count): Call
 {
-    return render('Counter', count: $count);
+    return component('Counter')->count($count);
 }
 
 echo Counter(0);
@@ -191,7 +210,7 @@ echo Counter(0);
 
 ### Global State
 
-Any PHP store works; assemble the data array and render:
+Any PHP store works; assemble the data array and pass it to the template:
 
 ```php
 <?php
@@ -219,7 +238,7 @@ $user = Store::get('user');
 
 The main table above covers the everyday slots. A list whose items need
 different markup is dispatched in the data layer: render each item through the
-component function that fits it and pass the joined markup into a raw slot.
+call function that fits it and pass the joined markup into a raw slot.
 
 ```php
 function Blocks(array $blocks): string
@@ -235,8 +254,13 @@ function Blocks(array $blocks): string
     return $html;
 }
 
-$blocks = Compile::shape(div(Slot::raw('blocks')));
-$blocks(['blocks' => Blocks($blocks)]);
+$blocks = [
+    ['kind' => 'link', 'value' => 'Docs', 'href' => '/docs'],
+    ['kind' => 'text', 'value' => 'Hello'],
+];
+
+$shape = Compile::shape(div(Slot::raw('blocks')));
+$shape(['blocks' => Blocks($blocks)]);
 ```
 
 See [Mixed lists](/guide/compiled#mixed-lists) in the compiled guide for the

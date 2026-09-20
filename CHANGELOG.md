@@ -12,8 +12,8 @@ First public version. No tag has been cut yet.
 ### Added
 
 - Component units: a `*.cmp.php` file registers a lazy template factory with
-  `Pure\Component\register()` and defines the component function next to it.
-  `render()` accepts the registered name next to a file path; a name
+  `Pure\Component\register()` and defines the call function next to it.
+  `component()` accepts the registered name next to a file path; a name
   and the path of its unit file resolve to the same renderer, the factory is only
   called when no fresh artifact serves the unit (and then once per compile
   generation), and duplicate registrations throw unless `override: true` is
@@ -36,10 +36,10 @@ First public version. No tag has been cut yet.
   is written, and the command fails, so discovery order cannot decide which
   template owns `a.pure.php`.
 
-- `Pure\Component\render()` renders a `*.shape.php` template in one expression
-  (`render($file, title: $title)`), caching the renderer per path; it returns a
-  string fragment, and the document header of a full document is the caller's to
-  prepend.
+- `Pure\Component\component()` renders a unit or a `*.shape.php` template in one
+  expression (`component($file)->title($title)`), caching the binder per name or
+  path; the rendered markup is the tree as written, and the document header of a
+  full document is the caller's to prepend.
 - Compiled rendering: `Pure\Compile\Compile::shape()` compiles a data-free shape
   tree with `Pure\Core\Slot` placeholders into a flat PHP renderer
   (`Shape`, `Renderer`). Static markup is escaped once at compile time and
@@ -110,19 +110,17 @@ First public version. No tag has been cut yet.
   `documentHeader()` / `save()`.
 - Missing-slot errors are actionable: `MissingSlotException` suggests the closest
   provided key (`slot 'title' is required but was not provided; did you mean
-  'titel'?`) or lists the keys the scope did provide, and rendering through
-  `render()` prefixes the component name or template path
+  'titel'?`) or lists the keys the scope did provide, and rendering through a
+  call prefixes the component name or template path
   (`component 'Card': slot 'title' is required ...`).
 - `pure check <path>...` validates the component contract statically: the slots
-  a template reads against the named bindings of its component function's
-  `render()` call (a binding the template does not read is an error with a
-  `did you mean` suggestion, a required slot the call does not bind is an
-  error), the function's parameter types against the slot kinds (a list slot
+  a template reads against the keys its `prepare()` hook returns (a returned key
+  the template does not read is an error with a `did you mean` suggestion, a
+  required slot the hook does not return is an error), the hook's parameter types
+  against the slot kinds (a list slot
   needs an iterable, a child scope an array, a text slot a stringable, a raw
-  slot either), and a slot name one template uses as both a scalar and a scope.
-  An unpacked bindings array is resolved when its helper returns a single array
-  literal (`...featuresBindings()`), and a unit without a component function (a
-  page) is checked through the `render()` calls in its file. `--strict` fails on
+  slot either), a unit without `prepare()` against the props its call sites bind,
+  and a slot name one template uses as both a scalar and a scope. `--strict` fails on
   warnings; `pure compile --check` remains the artifact freshness check.
 - Fluent component calls: `component('Card', ...$children)` returns a
   `Pure\Component\Call` whose props are set like tag attributes
@@ -131,8 +129,8 @@ First public version. No tag has been cut yet.
   prop unset. `class()` and `style()` join their arguments exactly like the tag
   setters, an unknown prop is reported by the development guard with a
   `did you mean`, and children on a template without a `children` slot throw.
-  `render('Card', ...)` stays the low-level entry; both resolve the same binder,
-  artifacts and cache.
+  A call function may type its props itself and return a `Call`
+  (`function Badge(string $label): Call`), so the call site is checked by PHP.
 - `Pure\Core\Markup`: trusted markup emitted verbatim in child position.
   `Raw` implements it, and so does `Call`, so `div(Card(...))` nests like a tag
   and renders lazily with the tree; every other child is still frozen to text
@@ -391,6 +389,16 @@ First public version. No tag has been cut yet.
 
 ### Removed
 
+- **Breaking** — The classic component form (a typed function returning the
+  rendered `string` through `Pure\Component\render()`) is removed, together with
+  the function itself. A unit is called fluently: its call function returns
+  `Pure\Component\Call` (`function Card(mixed ...$children): Call`) and its typed
+  prop contract is the `prepare()` hook of `register()`. A page unit owns its
+  bindings through that hook, `#[Binds]` declares the keys of a hook that returns
+  a helper's array instead of a literal, and a unit without `prepare()` is
+  checked at its call sites; a same-named function that returns neither `Call`
+  nor comes with a hook is reported by `pure check` as an error. The docs and the
+  examples use the fluent form throughout.
 - **Breaking** — `Pure\Component\bind()` is removed. Inline trees bind through
   `Compile::shape($tree)` (invokable) or `Compile::shape($tree)->compile()->render($data)`;
   file-backed templates bind through `Registry::component($nameOrPath)`, which
@@ -444,7 +452,7 @@ First public version. No tag has been cut yet.
   with `Compile::cachePath()` enabled the second shape was served the first
   one's cached renderer and printed the wrong attribute. The attribute name is
   now part of the fingerprint and `Compile::CACHE_VERSION` is 8.
-- `Pure\Component\render()` with the path of a `*.cmp.php` unit that has no
+- `Pure\Component\component()` with the path of a `*.cmp.php` unit that has no
   artifact required the unit and then reported that the file "must return a
   Shape", which is what a `*.shape.php` template must do. It now says the file is
   a component unit and how to render it, and an unregistered unit path is no

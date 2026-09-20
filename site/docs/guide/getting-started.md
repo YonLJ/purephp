@@ -54,50 +54,62 @@ cd my-purephp-app
 composer require yonld/purephp
 ```
 
-### 2. Create Entry File
+### 2. Create the Unit and the Entry File
 
-Create `index.php`, the entry file: a component unit (a registered template plus
-the view function) and its output:
+Create `views/page.cmp.php`, the component unit — the registered template, its
+typed props in `prepare()` and the call function:
 
 ```php
 <?php
 
-use Pure\Compile\Compile;
+// views/page.cmp.php
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h1, p};
 
-register('Page', __FILE__, static fn () =>
-    div(
-        h1(Slot::value('heading')),
-        p(Slot::value('lead')),
-        p(Slot::value('body'))
-    )->class('container')
+register('Page', __FILE__,
+    factory: static fn () =>
+        div(
+            h1(Slot::value('heading')),
+            p(Slot::value('lead')),
+            p(Slot::value('body'))
+        )->class('container'),
+    prepare: static function (string $heading, string $lead, string $body): array {
+        return ['heading' => $heading, 'lead' => $lead, 'body' => $body];
+    }
 );
 
-function pageView(array $data): string
+function Page(mixed ...$children): Call
 {
-    // The engine emits the tree as written; prepend the document header here.
-    return '<!DOCTYPE html>' . render(
-        'Page',
-        heading: $data['heading'],
-        lead: $data['lead'],
-        body: $data['body'],
-    );
+    return component('Page', ...$children);
 }
-
-echo pageView([
-    'heading' => 'My First PurePHP Application',
-    'lead' => 'Welcome to PurePHP!',
-    'body' => 'This is a simple yet powerful PHP template engine.',
-]);
 ```
 
-`render()` loads the template once per process; the document header is the
-caller's to prepend. Under standard PHP-FPM, enable `Compile::cachePath()` so
-requests load the compiled renderer instead of rebuilding it, or precompile the
-template with `vendor/bin/pure compile .` so the binder loads the artifact.
+Then `index.php`, the entry file, loads the unit and renders it:
+
+```php
+<?php
+
+// index.php
+require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/views/page.cmp.php';
+
+echo '<!DOCTYPE html>' . Page()
+    ->heading('My First PurePHP Application')
+    ->lead('Welcome to PurePHP!')
+    ->body('This is a simple yet powerful PHP template engine.')
+    ->render();
+```
+
+A unit lives in its own `*.cmp.php` file — `pure compile` discovers those files,
+and the registered name resolves to the file it was registered from. The binder
+loads the template once per process and caches it per name or path;
+the document header is the caller's to prepend. Under standard PHP-FPM, enable
+`Compile::cachePath()` so requests load the compiled renderer instead of
+rebuilding it, or precompile the template with `vendor/bin/pure compile .` so
+the binder loads the artifact.
 
 ### 3. Run the Application
 
@@ -121,10 +133,11 @@ Compile::guard(true);           // or set PURE_COMPILE_GUARD=1
 
 It emits one `E_USER_WARNING` per subject per process:
 
-- a shape rebuilt per request: the same call site calls `Compile::shape()` more
-  than 20 times in one process, for example an inline `Compile::shape(...)`
-  rebuilt on every call. File-backed components go through `render()`, which
-  caches the binder per template path;
+- a shape rebuilt per request: the same call site calls `Compile::shape()` 20
+  times in one process (the 20th call warns), for example an inline
+  `Compile::shape(...)`
+  rebuilt on every call. File-backed components resolve through
+  `Registry::component()`, which caches the binder per name or path;
 - a binding the template never reads, with a `did you mean` suggestion, so a
   misspelled key (`titel`) is not silently ignored;
 - an attribute setter whose name is one edit away from a standard attribute
@@ -135,8 +148,8 @@ It emits one `E_USER_WARNING` per subject per process:
 
 ### Using Components
 
-A component is a function with typed parameters returning `string`, backed by
-its own template:
+A component is a call function returning a `Call`, backed by its own template
+and the typed props of its `prepare()` hook:
 
 ```php
 <?php
@@ -145,26 +158,30 @@ its own template:
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class(Slot::value('class'))
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class(Slot::value('class')),
+    prepare: static function (string $title, string $content, string $class = 'card'): array {
+        return ['title' => $title, 'content' => $content, 'class' => $class];
+    }
 );
 
-function Card(string $title, string $content, string $class = 'card'): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content, class: $class);
+    return component('Card', ...$children);
 }
 
 // Render the component with data
-echo Card('Card Title', 'This is the card content');
+echo Card()->title('Card Title')->content('This is the card content');
 ```
 
 ### Setting Attributes

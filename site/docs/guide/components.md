@@ -1,78 +1,90 @@
 # Components
 
-A component is one file: a PHP function with typed parameters that returns
-`string`, next to the template it renders. The file registers a lazy
-factory, so `pure compile` can precompile the template while a request only
-loads the artifact.
+A component is one file: a PHP function that returns a `Pure\Component\Call`,
+next to the template it renders and the typed props it accepts. The file
+registers a lazy factory, so `pure compile` can precompile the template while a
+request only loads the artifact.
 
 ## Your First Component
 
 ```php
 <?php
 
-// components/Card.cmp.php — the component unit: function + template
-use Pure\Compile\Compile;
+// components/Card.cmp.php — the component unit: call function + template
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
+register('Card', __FILE__,
+    factory: static fn () => div(
         h2(Slot::value('title')),
         p(Slot::value('content'))
-    )->class('card')
+    )->class('card'),
+    prepare: static function (string $title, string $content): array {
+        return ['title' => $title, 'content' => $content];
+    }
 );
 
-function Card(string $title, string $content): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content);
+    return component('Card', ...$children);
 }
 
-echo Card('Title', 'Content');
+echo Card()->title('Title')->content('Content');
 ```
 
 - `register()` stores the factory and the file; it builds nothing. A request
   that has a fresh artifact never calls the factory.
-- `render('Card', ...)` renders the registered template, passing slot values by
-  name (or as an unpacked string-keyed array: `render('Card', ...$bindings)`).
+- `prepare()` is the typed prop contract: its parameters are the props, PHP
+  enforces their types, and the array it returns is what binds the template.
+- `Card()` returns a `Call`; props are set like tag attributes and the markup is
+  produced on string conversion.
 - Run `vendor/bin/pure compile components` to build `Card.pure.php` and (with
   `--plain`) `Card.plain.php` next to the unit. `pure compile --list` prints
   every unit it finds.
 
 The registered name and the path of the unit file are interchangeable:
-`render(__DIR__ . '/Card.cmp.php', ...)` resolves to the same binder, so a
-component can be rendered by name or by file.
+`component(__DIR__ . '/Card.cmp.php')` resolves to the same binder, so a
+component can be called by name or by file.
 
 ## Props
 
-Props are function parameters: type them, give them defaults, and pass them
-into the template's slots. Values that never change can be baked into the
-template; anything that changes per render belongs in the bindings.
+Props are the parameters of the unit's `prepare()` hook: type them, give them
+defaults, and return them into the template's slots. Values that never change
+can be baked into the template; anything that changes per render belongs in the
+bindings.
 
 ```php
 <?php
 
 // components/Badge.cmp.php
-register('Badge', __FILE__, static fn () =>
-    span(Slot::value('label'))->class(Slot::value('class'))
+use Pure\Component\Call;
+use Pure\Core\Slot;
+
+use function Pure\Component\{component, register};
+use function Pure\HTML\span;
+
+register('Badge', __FILE__,
+    factory: static fn () => span(Slot::value('label'))->class(Slot::value('class')),
+    prepare: static function (string $label, string $class = 'badge'): array {
+        return ['label' => $label, 'class' => $class];
+    }
 );
 
-function Badge(string $label, string $class = 'badge'): string
+function Badge(mixed ...$children): Call
 {
-    return render('Badge', label: $label, class: $class);
+    return component('Badge', ...$children);
 }
-```
 
-[Fluent calls](#fluent-calls) carry the same props as setters instead
-(`Badge('Save')->label('Save')->class('badge')`), with a `prepare()` closure as
-the typed contract.
+Badge()->label('Save')->class('badge');
+```
 
 ## Fluent Calls
 
-A component call can read like a tag: props are set with the same fluent
-setters, children are passed to the call, and the result nests wherever a tag
-does.
+A component call reads like a tag: props are set with the same fluent setters,
+children are passed to the call, and the result nests wherever a tag does.
 
 ```php
 <?php
@@ -85,12 +97,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
-register('Card', __FILE__, static fn () => div(
-    Slot::raw('children'),
-    h2(Slot::value('type'))->class('card-title'),
-    ul(Slot::each('features', li(Slot::value('value')))),
-    button(Slot::value('text'))->class(Slot::value('class'))
-)->class('card'));
+register('Card', __FILE__,
+    factory: static fn () => div(
+        Slot::raw('children'),
+        h2(Slot::value('type'))->class('card-title'),
+        ul(Slot::each('features', li(Slot::value('value')))),
+        button(Slot::value('text'))->class(Slot::value('class'))
+    )->class('card'),
+    prepare: static function (string $type, array $features, string $text, string $class): array {
+        return ['type' => $type, 'features' => $features, 'text' => $text, 'class' => $class];
+    }
+);
 
 function Card(mixed ...$children): Call
 {
@@ -119,8 +136,9 @@ echo div(
   children on a template that has no `children` slot throws.
 - A prop the template does not read is reported by the development guard with a
   `did you mean` suggestion, and by `pure check` statically.
-- `render('Card', ...)` stays the low-level entry point; both forms resolve the
-  same binder, artifacts, cache and errors.
+- A call function may type its props itself and return a `Call` — the call site
+  is then checked by PHP, at the cost of writing the setters once:
+  `function Badge(string $label): Call { return component('Badge')->label($label); }`
 
 ### Typed Props with prepare()
 
@@ -211,7 +229,9 @@ prepare: #[Binds('title', 'desc')] static function (): array
 }
 ```
 
-The same attribute works on a `...bindings()` helper function of a page unit.
+A page unit whose hook returns a `...bindings()` helper result declares the
+keys the same way, on the hook itself:
+`prepare: #[Binds('header', 'pricing')] static fn (): array => pricingBindings()`.
 When a list prop is bound to an array literal at the call site, its item keys
 are compared with the item shape of the slot — `->links([['txet' => '...']])` is
 reported where it is written. An item shape that reads several slots needs no
@@ -221,9 +241,9 @@ Declarations are read by `pure check` and by the development guard; they are
 never consulted while rendering, and a unit without them behaves exactly as
 before.
 
-A fluent call costs about two microseconds more than `render()` per component:
-the call object, the prop setters and the `prepare()` invocation. The compiled
-artifact and the plain view are unaffected, and the benchmark in
+A component call costs about two microseconds more than rendering a compiled
+tree directly: the call object, the prop setters and the `prepare()` invocation.
+The compiled artifact and the plain view are unaffected, and the benchmark in
 `examples/bootstrap/bench.php` reports both paths.
 
 ## Composing Components
@@ -257,34 +277,37 @@ logic.
 ## Pages
 
 A page is a component unit whose root tag is a document root (`html`, `svg`,
-`xml`, …). There is no separate page API: register it with `register()` and
-render it with `render()`, then prepend the document header of the root tag
-yourself — `<!DOCTYPE html>` for an HTML root, the XML declaration for an XML
-or SVG one:
+`xml`, …). There is no separate page API: register it with `register()`, let its
+`prepare()` hook supply the blocks, and render it with `component()`, then
+prepend the document header of the root tag yourself — `<!DOCTYPE html>` for an
+HTML root, the XML declaration for an XML or SVG one:
 
 ```php
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__, static fn () =>
-    html(
-        head(title(Slot::value('title'))),
-        body(Slot::raw('content'))
-    )
+register('Features', __FILE__,
+    factory: static fn () =>
+        html(
+            head(title(Slot::value('title'))),
+            body(Slot::raw('content'))
+        ),
+    prepare: #[Binds('title', 'content')] static fn (): array => [
+        // The page decides which blocks exist; each block fetches its own
+        // records.
+        'title' => FeaturesService::pageTitle(),
+        'content' => FeaturesBody(),
+    ]
 );
 
 function featuresPage(): string
 {
     // The engine emits the tree as written; prepend the document header here.
-    // The page decides which blocks exist, each block fetches its own records.
-    return '<!DOCTYPE html>' . render('Features',
-        title: FeaturesService::pageTitle(),
-        content: FeaturesBody(),
-    );
+    return '<!DOCTYPE html>' . component('Features')->render();
 }
 ```
 
-`render()` emits the tree as written, without a header, so a full page is the
+The call emits the tree as written, without a header, so a full page is the
 document header of its root tag plus the rendered fragment.
 
 `pure compile --plain` writes the same page as a dependency-free view file, so a
@@ -293,7 +316,7 @@ bindings either way.
 
 ## The Binder API
 
-`render()` is a convenience over the lower-level helpers:
+`component()` is a convenience over the lower-level helpers:
 
 - `register($name, $file, $factory)` registers a unit under a name.
 - `Registry::component($nameOrPath)` returns the `Closure(array $data): string`
@@ -318,14 +341,14 @@ function Tag(string $label): string
 }
 ```
 
-`render()` caches the binder per name or path, so you never need a `static`
-variable for a registered unit.
+`Registry::component()` caches the binder per name or path, so you never need a
+`static` variable for a registered unit.
 
 ## Caching
 
 - A unit is served by its `*.pure.php` artifact when it is at least as new as
   the unit file; the factory and the shape tree are then never touched.
-- `render()` caches the binder per name or path for the compile
+- `Registry::component()` caches the binder per name or path for the compile
   generation.
 - `Compile::cachePath($dir)` — requests load generated renderers instead of
   regenerating them.

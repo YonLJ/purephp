@@ -4,7 +4,9 @@
 
 ## 创建 HTML 元素
 
-标准标签来自 `Pure\HTML` 函数；没有对应函数的标签使用 `HTML::customTag()`：
+标准标签来自 `Pure\HTML` 函数。其他标签名走魔术静态方法，且**方法名就是标签名**：
+`HTML::myWidget('x')` 会创建 `<myWidget>x</myWidget>`；带连字符的自定义元素使用动态
+形式 `HTML::{'user-card'}('x')`。
 
 ### 1. 函数（标准标签）
 
@@ -30,9 +32,12 @@ $span = span('文本')->class('highlight');
 
 use Pure\Core\HTML;
 
-// 适用于任何标签名
-$element = HTML::customTag('内容')->class('custom');
+// 适用于任何标签名：方法名就是标签名
+$element = HTML::customTag('内容')->class('custom'); // <customTag class="custom">内容</customTag>
 $component = HTML::myWebComponent(HTML::header('Header'));
+
+// 带连字符的自定义元素使用动态形式
+$webComponent = HTML::{'user-card'}('内容'); // <user-card>内容</user-card>
 ```
 
 **使用场景：**
@@ -114,15 +119,15 @@ use function Pure\HTML\{form, div, label, input, textarea, button};
 $contactForm = form(
     div(
         label('姓名:')->for('name'),
-        input()->type('text')->id('name')->name('name')->required()
+        input()->type('text')->id('name')->name('name')->required(true)
     )->class('form-group'),
     div(
         label('邮箱:')->for('email'),
-        input()->type('email')->id('email')->name('email')->required()
+        input()->type('email')->id('email')->name('email')->required(true)
     )->class('form-group'),
     div(
         label('消息:')->for('message'),
-        textarea('')->id('message')->name('message')->rows('5')->required()
+        textarea('')->id('message')->name('message')->rows('5')->required(true)
     )->class('form-group'),
     button('发送消息')->type('submit')
 )->method('POST')->action('/contact');

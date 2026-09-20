@@ -4,8 +4,10 @@
 
 ## Creating HTML Elements
 
-Standard tags come from the `Pure\HTML` functions; tags without a function come
-from `HTML::customTag()`:
+Standard tags come from the `Pure\HTML` functions. Any other tag name works as a
+magic static call whose *method name is the tag name*: `HTML::myWidget('x')`
+builds `<myWidget>x</myWidget>`, and a hyphenated custom element goes through the
+dynamic form, `HTML::{'user-card'}('x')`.
 
 ### 1. Functions (Standard tags)
 
@@ -31,9 +33,12 @@ for `<switch>`; the magic static surface (`HTML::var()`) covers the element too.
 
 use Pure\Core\HTML;
 
-// Works with any tag name
-$element = HTML::customTag('Content')->class('custom');
+// Works with any tag name: the method name is the tag name
+$element = HTML::customTag('Content')->class('custom'); // <customTag class="custom">Content</customTag>
 $component = HTML::myWebComponent(HTML::header('Header'));
+
+// A hyphenated custom element goes through the dynamic form
+$webComponent = HTML::{'user-card'}('Content'); // <user-card>Content</user-card>
 ```
 
 **Use cases:**
@@ -116,15 +121,15 @@ use function Pure\HTML\{form, div, label, input, textarea, button};
 $contactForm = form(
     div(
         label('Name:')->for('name'),
-        input()->type('text')->id('name')->name('name')->required()
+        input()->type('text')->id('name')->name('name')->required(true)
     )->class('form-group'),
     div(
         label('Email:')->for('email'),
-        input()->type('email')->id('email')->name('email')->required()
+        input()->type('email')->id('email')->name('email')->required(true)
     )->class('form-group'),
     div(
         label('Message:')->for('message'),
-        textarea('')->id('message')->name('message')->rows('5')->required()
+        textarea('')->id('message')->name('message')->rows('5')->required(true)
     )->class('form-group'),
     button('Send Message')->type('submit')
 )->method('POST')->action('/contact');

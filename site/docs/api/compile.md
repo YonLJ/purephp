@@ -44,48 +44,51 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 
 ## Function Components
 
-A component unit registers a lazy template factory under a name; the component
-function next to it renders that name. `Pure\Component\render()` returns the
-rendered markup as a string in one expression:
+A component unit registers a lazy template factory under a name; the call
+function next to it returns a `Call`, and the unit's `prepare()` hook is the
+typed prop contract. A call produces the markup on string conversion:
 
 ```php
 <?php
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(h2(Slot::value('title')), p(Slot::value('content')))->class('card')
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(h2(Slot::value('title')), p(Slot::value('content')))->class('card'),
+    prepare: static function (string $title, string $content): array {
+        return ['title' => $title, 'content' => $content];
+    }
 );
 
-function Card(string $title, string $content): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content);
+    return component('Card', ...$children);
 }
+
+echo Card()->title('Title')->content('Content');
 ```
 
 | Function | Behavior |
 | --- | --- |
 | `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | Registers a component unit; the factory must be lazy and may return a tag tree or a `Shape`, and `$prepare` is the optional typed props-to-bindings hook of a fluent call |
-| `render(string $source, mixed ...$data): string` | Renders a unit by name or a template by path; the binder is cached |
-| `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes and the result is `Markup`, so it nests like a tag |
+| `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes, children bind the reserved `children` slot, and the result is `Markup`, so it nests like a tag; `$name` is a registered name or a template path |
+| `Registry::component(string $nameOrPath): Closure(array $data): string` | Returns the binder of a unit or shape file, to hold or pass around yourself |
 
 There is no page flavour: to emit a full document, prepend the header of the
 root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
 `<?xml version="1.0"?>`).
 
-`render()` takes slot values as named arguments (`render('Card', title: $title)`)
-or as an unpacked array with string keys; positional data is rejected with a
-`RuntimeException`. To hold or pass around the binder yourself, use
-`Registry::component($source)`, which returns a `Closure(array $data): string`.
-
-A fluent call binds the same way: `Card($children)->title($title)` sets a prop
-per slot, `null` leaves a prop unset, and children bind the reserved `children`
-slot (`Slot::raw('children')`). `Call` implements `Pure\Core\Markup`, and so
-does `Raw`; a `Markup` child is emitted verbatim and renders lazily with the
+A fluent call binds one prop per setter (`Card($children)->title($title)`);
+`null` leaves a prop unset, and children bind the reserved `children`
+slot (`Slot::raw('children')`). To hold or pass around the binder yourself, use
+`Registry::component($source)`, which returns a `Closure(array $data): string`
+taking the slot values as an associative array. `Call` implements
+`Pure\Core\Markup`, and so does `Raw`; a `Markup` child is emitted verbatim and renders lazily with the
 tree, while every other child is frozen to text and escaped. A component call
 cannot be part of a data-free shape — render it into a raw slot instead.
 
@@ -112,20 +115,20 @@ without writing anything.
 A shape is a normal tag tree in which dynamic values are replaced by `Slot`
 placeholders. Shapes must not contain request data, and must be built **once
 per process** — file-backed templates get that from the per-path binder cache
-in `render()`, inline trees from a `static` variable inside the component
-function, never inside a request handler.
+in `Registry::component()`, inline trees from a `static` variable inside the
+function that builds them, never inside a request handler.
 
 | Classic component | PurePHP component |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): string` with a `Card.cmp.php` unit (function + template) |
+| `function Card(array $props): HTML` | `function Card(string $title): Call` with a `Card.cmp.php` unit (call function + template) and a `prepare()` hook |
 | `h2($title)` | `h2(Slot::value('title'))` |
 | `->class($classList)` | `->class($classList)` for static values, `->class(Slot::value('classList'))` for dynamic ones |
-| `array_map(fn ($row) => Row($row), $rows)` | loop in the component function and inject the joined markup through `Slot::raw()` |
+| `array_map(fn ($row) => Row($row), $rows)` | loop in `prepare()` (or at the call site) and bind the joined markup to a raw slot |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
 | `<Child($props)>` | call `Child(...)` and inject the returned markup through `Slot::raw()` |
 
-A child component's markup is a plain string, so it enters a template through a
-raw slot — a bare string child would be escaped as text:
+A child component's markup enters a template through a raw slot — a bare string
+child would be escaped as text:
 
 ```php
 $shape = Compile::shape(div(Slot::raw('header'), Slot::each('rows', $row))->class('page'));
@@ -184,9 +187,10 @@ attribute names and values, slot kinds and names, defaults, nested shapes and a
 library cache version. It is computed without compiling, and it keys the
 on-disk renderer cache: the generated source is stored under it, so two shapes
 that differ anywhere in the structure cannot share a cached renderer. A
-`*.pure.php` artifact records it next to its source, which is how
-`pure compile --check` recognizes a stale artifact. It is not what
-`Pure\Component\render()` resolves a component by — that is the registered name
+`*.pure.php` artifact records it in its header; `pure compile --check` recognises
+a stale artifact by comparing the artifact with the freshly generated source byte
+for byte. It is not what
+`Registry::component()` resolves a component by — that is the registered name
 or the unit file — and it does not change when only the *data* changes. Where it
 does help is an application that assembles a different shape per variant: the
 fingerprint is a cheap, stable key for the memo it keeps them in:
@@ -255,8 +259,8 @@ not show up in the output:
 Compile::guard(true); // or PURE_COMPILE_GUARD=1
 ```
 
-- When the same call site calls `Compile::shape()` more than 20 times in one
-  process, an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
+- When the same call site calls `Compile::shape()` 20 times in one process (the
+  20th call warns), an `E_USER_WARNING` suggests the `static $shape ??=` pattern.
 - Data keys the rendered template never reads are reported with a `did you
   mean` suggestion, so a misspelled binding fails visibly instead of rendering
   as if the value were absent.
@@ -273,8 +277,8 @@ default), the checks cost one property read per render.
   for example `slot 'items[].title' is required but was not provided.` When the
   scope holds other keys, the message suggests the closest one (a typo) or lists
   them. A required value or raw slot bound to an explicit `null` fails with
-  `slot 'items[].title' is required but was null.`; rendering through
-  `render()` prefixes the component name or template path
+  `slot 'items[].title' is required but was null.`; rendering through a
+  component call prefixes the component name or template path
   (`component 'Card': slot 'title' is required ...`).
 - Wrong placement (raw slot as an attribute value)
   or a missing shape: `LogicException` at compile time.
@@ -284,7 +288,7 @@ default), the checks cost one property read per render.
 
 ## Trees with Slots Cannot Use Other Output Paths
 
-`render()`, `print()` and `save()` throw a `LogicException` for trees that
+`Tag::render()`, `print()` and `save()` throw a `LogicException` for trees that
 contain slots, because there is no data to bind. `toJSON()` describes slots as
 `['slot' => 'name']`.
 
@@ -310,8 +314,8 @@ php examples/bootstrap/bench.php
 - Shapes only persist for the lifetime of a PHP process. In long-running
   workers (or with `opcache.preload`) that is once per worker; under standard
   PHP-FPM the shape tree is rebuilt and the renderer regenerated on every
-  request, which is slower than `render()`. Enable `cachePath()` so requests
-  load the generated renderer instead of regenerating it.
+  request, which is slower than `Tag::render()`. Enable `cachePath()` so
+  requests load the generated renderer instead of regenerating it.
 - Compiled renderers trade compilation for speed: compiling a shape that is
-  rendered once per process is slower than `render()`. Compile pages and
+  rendered once per process is slower than `Tag::render()`. Compile pages and
   components that are rendered repeatedly.

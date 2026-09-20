@@ -115,7 +115,7 @@ function FormEvents() {
                     ->id('username')
                     ->name('username')
                     ->onchange('handleChange(event)')
-                    ->required()
+                    ->required(true)
             )->class('form-group'),
             div(
                 label('Email:')->for('email'),
@@ -124,7 +124,7 @@ function FormEvents() {
                     ->id('email')
                     ->name('email')
                     ->onchange('handleChange(event)')
-                    ->required()
+                    ->required(true)
             )->class('form-group'),
             button('Submit')
                 ->type('submit')

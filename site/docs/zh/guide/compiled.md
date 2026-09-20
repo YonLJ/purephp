@@ -78,29 +78,34 @@ $item = Compile::shape(
 
 ## 组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性工厂
+组件是一个 `*.cmp.php` 单元：返回 `Pure\Component\Call` 的调用函数，紧挨着它渲染的模板，
+以及放在 `prepare()` 钩子里的类型化 prop 契约
 （参见[组件](/zh/guide/components)与[缓存](#缓存)中的 PHP-FPM 场景）：
 
 ```php
 <?php
 
 // Card.cmp.php
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class(Slot::value('class'))
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class(Slot::value('class')),
+    prepare: static function (string $title, string $content, string $class = 'card'): array {
+        return ['title' => $title, 'content' => $content, 'class' => $class];
+    }
 );
 
-function Card(string $title, string $content, string $class = 'card'): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content, class: $class);
+    return component('Card', ...$children);
 }
 ```
 
@@ -115,36 +120,6 @@ $row = Compile::shape(li(Slot::value('label')));
 $shape = Compile::shape(ul(Slot::each('rows', $row)));
 $shape(['rows' => [['label' => 'a'], ['label' => 'b']]]);
 ```
-
-### 混合列表
-
-一个形状只有一种结构，因此列表项需要不同标记时，在数据层分派：逐项调用合适的组件函数，
-把拼好的标记交给 raw 槽位。
-
-```php
-function Blocks(array $blocks): string
-{
-    $html = '';
-
-    foreach ($blocks as $block) {
-        $html .= $block['kind'] === 'link'
-            ? LinkBlock($block['value'], $block['href'])
-            : TextBlock($block['value']);
-    }
-
-    return $html;
-}
-
-$shape = Compile::shape(div(Slot::raw('blocks')));
-$shape(['blocks' => Blocks($blocks)]);
-```
-
-同构列表用 `Slot::each()`；变体只是单个 item 内部的细节时，可以用预置的布尔键配合
-`Slot::if()` 把分派留在模板里。
-
-开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 10µs，见
-`bench/registry.php`），因此「产物 + opcache」就是生产路径。单文件 bundle 曾按该数据做过原型
-并被否决：冷启动比全部可读模板加起来更慢，热路径打平，因此库不再提供 bundle。
 
 ## 缓存
 
@@ -228,26 +203,33 @@ $pureBody = static function (array $v): string {
 `examples/bootstrap` 的组件都是建立在其上的单元：
 
 ```php
-// components/Icon.cmp.php：类型化 props，背后是预编译模板
-register('Icon', __FILE__, static fn () =>
-    svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class'))
+// components/Icon.cmp.php：类型化 prop 契约在 prepare() 钩子里，背后是预编译模板
+register('Icon', __FILE__,
+    factory: static fn () =>
+        svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class')),
+    prepare: static function (string $href, string $class = 'bi'): array {
+        return ['href' => $href, 'class' => $class];
+    }
 );
 
-function Icon(string $href, string $class = 'bi'): string
+function Icon(mixed ...$children): Call
 {
-    return render('Icon', href: $href, class: $class);
+    return component('Icon', ...$children);
 }
 
-// views/features.cmp.php：页面骨架加已渲染的正文
-register('Features', __FILE__, static fn () => html(/* ... */));
+// views/features.cmp.php：页面数据由 prepare() 提供
+register('Features', __FILE__,
+    factory: static fn () => html(/* ... */),
+    prepare: static fn (): array => [
+        'title' => FeaturesService::pageTitle(),
+        'content' => FeaturesBody(),
+    ]
+);
 
 function featuresPage(): string
 {
     // 手动补上文档声明；树本身不带文档声明。
-    return '<!DOCTYPE html>' . render('Features',
-        title: FeaturesService::pageTitle(),
-        content: FeaturesBody(),
-    );
+    return '<!DOCTYPE html>' . component('Features')->render();
 }
 ```
 
@@ -256,9 +238,9 @@ function featuresPage(): string
 
 子组件渲染出的字符串直接进入 raw 槽——无需 `(string)` 强制转换——它们组成的列表按顺序拼接。
 
-`Pure\Component\render()` 会在 shape 文件旁边存在产物、且产物不早于 shape 文件时直接加载产物，
-否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件（磁盘缓存仍然生效）。它只
-返回片段——要文档声明就由调用方自己拼接。
+`component()`（以及它背后的绑定器）会在单元或 shape 文件旁边存在产物、且产物不早于源
+文件时直接加载产物，否则调用注册的工厂（每个编译 generation 一次）或编译 shape 文件
+（磁盘缓存仍然生效）。它只产出片段——要文档声明就由调用方自己拼接。
 
 它的 `PlainFeaturesController` 把同一份 bindings 交给示例自带的 `plain()` 助手（一个应用
 函数：它 require 视图文件并展开数据）；单一入口
@@ -287,10 +269,10 @@ function featuresPage(): string
 vendor/bin/pure check src
 ```
 
-- 模板读取的**槽位**与组件函数 `render()` 调用的**具名绑定**：绑定了一个模板不读取的键
-  是错误（并给出 `did you mean` 建议），必填槽位没有被绑定也是错误。展开的绑定数组在
-  辅助函数只返回一个字面量数组时会被解析（`render('Features', ...featuresBindings())`），
-  运行时计算的则报告为 `info`。
+- 模板读取的**槽位**与调用点设置的 **props**：设置了一个模板不读取的 prop 是错误（并给出
+  `did you mean` 建议），必填槽位没有被绑定也是错误。`prepare()` 钩子把 props 变成绑定：
+  它返回字面量数组时，这些键会被解析；返回的是 `...bindings()` 助手的结果、读不出字面量
+  时，用 `#[Binds(...)]` 声明键名，运行时计算的绑定则报告为 `info`。
 - 组件函数的**参数类型**与槽位种类：列表槽需要可迭代值、child 作用域需要数组、值槽需要
   可字符串化值、raw 槽两者皆可。必填槽对应的可空参数是警告（绑定 `null` 会抛出
   `MissingSlotException`）；既未被函数使用、也不是模板槽位的参数同样是警告。
@@ -328,9 +310,13 @@ vendor/bin/pure check src
   ~260 µs（磁盘缓存命中，`bench/cache.php`）。产物把这段降为一个 `require`，而在开启
   opcache 时一次 require 远低于 1 µs。
 - **长驻 worker**（RoadRunner、Swoole、FrankenPHP）——开启 `Compile::cachePath()` 并保留
-  绑定器的路径缓存（`render()` 内置，内联树用 `static $render`）；renderer 常驻内存，产物可选。
+  绑定器的路径缓存（`Registry::component()` 内置，内联树用 `static $render`）；renderer 常驻内存，产物可选。
 - **`opcache.preload`**——preload 只把代码常驻内存，不会让 static 变量跨请求保留（PHP preload
   RFC 已明确说明），因此不能替代上面两种做法。
+
+开启 opcache 后，一页里每个组件产物的 require 约 0.5µs（22 个产物约 10µs，见
+`bench/registry.php`），因此「产物 + opcache」就是生产路径。单文件 bundle 曾按该数据做过原型
+并被否决：冷启动比全部可读模板加起来更慢，热路径打平，因此库不再提供 bundle。
 
 ### 无依赖导出（可选）
 
@@ -387,12 +373,12 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 
 | 经典组件 | PurePHP 组件 |
 | --- | --- |
-| `function Card(array $props): HTML` | `function Card(string $title): string` 加一个 `Card.cmp.php` 单元（函数 + 模板） |
+| `function Card(array $props): HTML` | `function Card(string $title): Call` 加一个 `Card.cmp.php` 单元（调用函数 + 模板） |
 | `h2($title)` | `h2(Slot::value('title'))` |
 | `->class($classList)` | 静态值直接 `->class($classList)`，动态值用 `->class(Slot::value('classList'))` |
 | `array_map(fn ($row) => Row($row), $rows)` | 在组件函数里循环，经 `Slot::raw()` 注入 |
 | `if ($show) { ... }` | `Slot::if('show', Shape)` |
-| `<Child($props)>` | 调用 `Child(...)` 并把它返回的 `string` 经 `Slot::raw()` 注入 |
+| `<Child($props)>` | 调用 `Child(...)` 并把它产出的标记经 `Slot::raw()` 注入 |
 
 即时（`render()`）标签树仍然可用于代码片段与调试；参见[基本用法](/zh/guide/basic-usage)。
 
@@ -408,7 +394,7 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 - `Compile::flush()` 使内存中的渲染器失效（部署后的长驻 worker 中很有用）。
 - 要发现每个请求都重新构建（而不是被记忆化）的形状，请启用开发守卫：
   `Compile::guard(true)` 或设置 `PURE_COMPILE_GUARD=1`。当同一个调用点在一个进程中
-  调用 `Compile::shape()` 次数过多时，PHP 会发出 `E_USER_WARNING`，建议采用
+  第 20 次调用 `Compile::shape()` 时，PHP 会发出 `E_USER_WARNING`，建议采用
   `static $shape ??=` 模式。同一个开关也会打开渲染期检查：模板从未读取的数据键会被报告
   （并给出 `did you mean` 建议），与标准属性名只差一个字符的属性方法会发出警告，而不是
   静默变成自定义属性；每条警告在单个进程内每个对象只触发一次。
@@ -427,8 +413,8 @@ require 它的产物只需 ~25–67 µs（`php bench/artifact.php --write && php
 - 文档根的视图会带上 `<!DOCTYPE html>` / XML 声明，而片段视图以标记开头；
 - `null` 属性输出为空值，而不是整个属性消失；
 - 列表槽不再校验可迭代性，值的字符串化交给 PHP 而不是 `SlotRuntime`；
-- raw 槽只输出单个值：可字符串化值的可迭代集合不会被拼接。请由控制器传入
-  `implode('', $rows)`，或者绑定字符串。
+- raw 槽与产物一样用 `implode('')` 拼接可字符串化值的可迭代集合；PHP 无法字符串化的元素
+  会被强转（警告 + `Array`），而不是像产物那样抛 `InvalidArgumentException`。
 
 顶层槽读取为普通变量，嵌套槽读取为它所在的数组，转义直接内联，因此它和手写
 模板一样可移植。
@@ -443,5 +429,35 @@ array shape 及它们的 iterable；特殊槽名声明在加载器的 `$data` �
 只是注释，不增加任何输出字节。唯一仍会告警的是没有数组默认值的可选容器槽：
 生成的读取会回退到 `null`，注解如实反映这一点。
 
-视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件，那是
-无依赖视图唯一比产物更快的场景。
+视图是 include，请在生产开启 opcache：关闭时每次渲染都会重新解析文件。
+
+## 混合列表
+
+一个形状只有一种结构，因此列表项需要不同标记时，在数据层分派：逐项调用合适的组件函数，
+把拼好的标记交给 raw 槽位。
+
+```php
+function Blocks(array $blocks): string
+{
+    $html = '';
+
+    foreach ($blocks as $block) {
+        $html .= $block['kind'] === 'link'
+            ? LinkBlock($block['value'], $block['href'])
+            : TextBlock($block['value']);
+    }
+
+    return $html;
+}
+
+$blocks = [
+    ['kind' => 'link', 'value' => '文档', 'href' => '/docs'],
+    ['kind' => 'text', 'value' => '你好'],
+];
+
+$shape = Compile::shape(div(Slot::raw('blocks')));
+$shape(['blocks' => Blocks($blocks)]);
+```
+
+同构列表用 `Slot::each()`；变体只是单个 item 内部的细节时，可以用预置的布尔键配合
+`Slot::if()` 把分派留在模板里。

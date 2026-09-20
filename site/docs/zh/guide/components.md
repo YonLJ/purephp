@@ -1,65 +1,78 @@
 # 组件
 
-一个组件就是一个文件：带类型化参数、返回 `string` 标记的 PHP 函数，紧挨着它渲染的模板。文件
-里注册一个惰性工厂，因此 `pure compile` 可以预编译模板，而请求只加载产物。
+一个组件就是一个文件：一个返回 `Pure\Component\Call` 的 PHP 函数，紧挨着它渲染的模板与它
+接受的类型化 props。文件里注册一个惰性工厂，因此 `pure compile` 可以预编译模板，而请求只
+加载产物。
 
 ## 第一个组件
 
 ```php
 <?php
 
-// components/Card.cmp.php——组件单元：函数 + 模板
-use Pure\Compile\Compile;
+// components/Card.cmp.php——组件单元：调用函数 + 模板
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
+register('Card', __FILE__,
+    factory: static fn () => div(
         h2(Slot::value('title')),
         p(Slot::value('content'))
-    )->class('card')
+    )->class('card'),
+    prepare: static function (string $title, string $content): array {
+        return ['title' => $title, 'content' => $content];
+    }
 );
 
-function Card(string $title, string $content): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content);
+    return component('Card', ...$children);
 }
 
-echo Card('Title', 'Content');
+echo Card()->title('Title')->content('Content');
 ```
 
 - `register()` 只保存工厂与文件，不构建任何东西；产物较新的请求永远不会调用工厂。
-- `render('Card', ...)` 渲染注册的模板，槽位值按名字传入（也可以传解包的字符串键数组：
-  `render('Card', ...$bindings)`）。
+- `prepare()` 是类型化 prop 契约：它的参数就是 props，PHP 强制它们的类型，返回的数组就是
+  绑定模板的数据。
+- `Card()` 返回 `Call`；props 像标签属性一样链式设置，标记在字符串转换时产出。
 - 用 `vendor/bin/pure compile components` 在单元旁生成 `Card.pure.php`（加 `--plain` 还会
   生成 `Card.plain.php`）。`pure compile --list` 会打印发现的所有单元。
 
-注册名与单元文件路径可以互换：`render(__DIR__ . '/Card.cmp.php', ...)` 解析到同一个绑定器，
-所以组件既能按名渲染，也能按文件渲染。
+注册名与单元文件路径可以互换：`component(__DIR__ . '/Card.cmp.php')` 解析到同一个绑定器，
+所以组件既能按名调用，也能按文件调用。
 
 ## Props
 
-props 就是函数参数：给它们类型和默认值，然后传进模板的槽位。永不变化的值可以直接写死在
-模板里，每次渲染都可能变化的值放进 bindings。
+props 就是单元 `prepare()` 钩子的参数：给它们类型和默认值，然后返回进模板的槽位。永不变化
+的值可以直接写死在模板里，每次渲染都可能变化的值放进 bindings。
 
 ```php
 <?php
 
 // components/Badge.cmp.php
-register('Badge', __FILE__, static fn () =>
-    span(Slot::value('label'))->class(Slot::value('class'))
+use Pure\Component\Call;
+use Pure\Core\Slot;
+
+use function Pure\Component\{component, register};
+use function Pure\HTML\span;
+
+register('Badge', __FILE__,
+    factory: static fn () => span(Slot::value('label'))->class(Slot::value('class')),
+    prepare: static function (string $label, string $class = 'badge'): array {
+        return ['label' => $label, 'class' => $class];
+    }
 );
 
-function Badge(string $label, string $class = 'badge'): string
+function Badge(mixed ...$children): Call
 {
-    return render('Badge', label: $label, class: $class);
+    return component('Badge', ...$children);
 }
-```
 
-[链式调用](#链式调用) 则把同样的 props 写成 setter
-（`Badge('Save')->label('Save')->class('badge')`），类型契约交给 `prepare()` 闭包。
+Badge()->label('Save')->class('badge');
+```
 
 ## 链式调用
 
@@ -77,12 +90,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
-register('Card', __FILE__, static fn () => div(
-    Slot::raw('children'),
-    h2(Slot::value('type'))->class('card-title'),
-    ul(Slot::each('features', li(Slot::value('value')))),
-    button(Slot::value('text'))->class(Slot::value('class'))
-)->class('card'));
+register('Card', __FILE__,
+    factory: static fn () => div(
+        Slot::raw('children'),
+        h2(Slot::value('type'))->class('card-title'),
+        ul(Slot::each('features', li(Slot::value('value')))),
+        button(Slot::value('text'))->class(Slot::value('class'))
+    )->class('card'),
+    prepare: static function (string $type, array $features, string $text, string $class): array {
+        return ['type' => $type, 'features' => $features, 'text' => $text, 'class' => $class];
+    }
+);
 
 function Card(mixed ...$children): Call
 {
@@ -106,7 +124,8 @@ echo div(
 - children 绑定保留槽位 `children`，模板用 `Slot::raw('children')` 读取。不传 children
   时渲染为空；模板没有 `children` 槽位却传了 children 会抛出异常。
 - 模板不读取的 prop 会由开发守卫给出 `did you mean` 提示，`pure check` 也能静态发现。
-- `render('Card', ...)` 仍是低层入口；两种写法共用同一个绑定器、产物、缓存与错误。
+- 调用函数也可以自己给 props 加类型并返回 `Call`——调用点由 PHP 检查，代价是把 setter 写
+  一遍：`function Badge(string $label): Call { return component('Badge')->label($label); }`
 
 ### 用 prepare() 给 props 加类型
 
@@ -190,13 +209,15 @@ prepare: #[Binds('title', 'desc')] static function (): array
 }
 ```
 
-它同样可以用在页面单元的 `...bindings()` 辅助函数上。当列表 prop 在调用点被绑定为一个数组
-字面量时，每一项的键会与槽位的 item 形状比对——`->links([['txet' => '...']])` 会在写下的
-地方被报出来。读取多个槽位的 item 形状不需要额外声明：嵌套形状本身就是契约。
+页面单元的钩子若返回 `...bindings()` 助手的结果，用同样的方式在钩子本身上声明键名：
+`prepare: #[Binds('header', 'pricing')] static fn (): array => pricingBindings()`。
+当列表 prop 在调用点被绑定为一个数组字面量时，每一项的键会与槽位的 item 形状比对——
+`->links([['txet' => '...']])` 会在写下的地方被报出来。读取多个槽位的 item 形状不需要额外
+声明：嵌套形状本身就是契约。
 
 注解由 `pure check` 与开发守卫读取，渲染时完全不会查询；没有注解的单元行为与之前完全一致。
 
-每次链式调用比 `render()` 多花约 2 微秒：调用对象、prop setter 与 `prepare()` 调用各占
+一次组件调用比直接渲染已编译的树多花约 2 微秒：调用对象、prop setter 与 `prepare()` 调用各占
 一部分。产物与无依赖视图路径不受影响，`examples/bootstrap/bench.php` 会分别报告两条路径。
 
 ## 组合组件
@@ -228,39 +249,41 @@ Button(Icon()->href('#plus'))->label('Add');
 ## 页面
 
 页面就是根标签为文档根（`html`、`svg`、`xml`…）的组件单元。没有单独的页面 API：
-用 `register()` 注册、用 `render()` 渲染，然后自己补上根标签的文档声明（HTML 根是
-`<!DOCTYPE html>`，XML/SVG 根是 XML 声明）：
+用 `register()` 注册、让它的 `prepare()` 钩子提供区块、用 `component()` 渲染，然后自己补上
+根标签的文档声明（HTML 根是 `<!DOCTYPE html>`，XML/SVG 根是 XML 声明）：
 
 ```php
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__, static fn () =>
-    html(
-        head(title(Slot::value('title'))),
-        body(Slot::raw('content'))
-    )
+register('Features', __FILE__,
+    factory: static fn () =>
+        html(
+            head(title(Slot::value('title'))),
+            body(Slot::raw('content'))
+        ),
+    prepare: #[Binds('title', 'content')] static fn (): array => [
+        // 页面决定有哪些区块，每个区块自己取数据。
+        'title' => FeaturesService::pageTitle(),
+        'content' => FeaturesBody(),
+    ]
 );
 
 function featuresPage(): string
 {
     // 引擎按原样输出树，文档声明在这里手动拼接。
-    // 页面决定有哪些区块，每个区块自己取数据。
-    return '<!DOCTYPE html>' . render('Features',
-        title: FeaturesService::pageTitle(),
-        content: FeaturesBody(),
-    );
+    return '<!DOCTYPE html>' . component('Features')->render();
 }
 ```
 
-`render()` 按原样输出（不带文档声明），所以完整页面 = 根标签的文档声明 + 渲染出的片段。
+调用按原样输出（不带文档声明），所以完整页面 = 根标签的文档声明 + 渲染出的片段。
 
 `pure compile --plain` 会把同一个页面写成无依赖视图文件，因此没有安装 purephp 的部署也能
 渲染；两种形态下控制器传入同一份 bindings。
 
 ## 绑定器 API
 
-`render()` 是底层助手的便捷形式：
+`component()` 是底层助手的便捷形式：
 
 - `register($name, $file, $factory)` 把单元注册到一个名字下。
 - `Registry::component($nameOrPath)` 返回单元或 shape 文件的
@@ -285,14 +308,14 @@ function Tag(string $label): string
 }
 ```
 
-`render()` 按名字或路径缓存绑定器，因此注册过的单元永远不需要自己写
+`Registry::component()` 按名字或路径缓存绑定器，因此注册过的单元永远不需要自己写
 `static` 变量。
 
 ## 缓存
 
 - 单元文件旁存在不早于它的 `*.pure.php` 产物时，直接由产物提供服务；工厂与形状树完全不
   会被触碰。
-- `render()` 在同一个编译 generation 内按名字或路径缓存绑定器。
+- `Registry::component()` 在同一个编译 generation 内按名字或路径缓存绑定器。
 - `Compile::cachePath($dir)`——请求加载已生成的 renderer，而不是重新生成。
 - `pure compile --check` 让 CI 把过期产物拦下来；长驻 worker 会把已加载的 renderer 留在
   内存里，产物在那里是可选项。

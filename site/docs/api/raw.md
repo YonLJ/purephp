@@ -7,10 +7,10 @@ being escaped.
 
 `Raw` lives in `Pure\Core` and is useful for verbatim children inside a shape
 tree (e.g. `div(Raw::of('<b>x</b>'))`) and for passing already-rendered markup
-into a `Slot::raw()` slot. The component layer itself (`render()`, component
-functions) returns plain `string`; there is no `Raw` type at the component API.
+into a `Slot::raw()` slot. The component layer itself (a `Call`, a call function)
+renders to a plain `string`; there is no `Raw` type at the component API.
 
-> **Trust boundary** — once `render()` returns a `string`, the type system can
+> **Trust boundary** — once a call renders to a `string`, the type system can
 > no longer tell whether that string is trusted markup or ordinary text. Trust
 > is now carried by the raw slot contract: values passed into a raw slot are
 > emitted verbatim; values passed into a value slot are always escaped.

@@ -52,48 +52,60 @@ cd my-purephp-app
 composer require yonld/purephp
 ```
 
-### 2. 创建入口文件
+### 2. 创建单元与入口文件
 
-创建 `index.php` 入口文件：一个组件单元（注册的模板加视图函数）及其输出：
+创建 `views/page.cmp.php`，即组件单元——注册的模板、`prepare()` 钩子里的类型化 prop
+契约，加上调用函数：
 
 ```php
 <?php
 
-use Pure\Compile\Compile;
+// views/page.cmp.php
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h1, p};
 
-register('Page', __FILE__, static fn () =>
-    div(
-        h1(Slot::value('heading')),
-        p(Slot::value('lead')),
-        p(Slot::value('body'))
-    )->class('container')
+register('Page', __FILE__,
+    factory: static fn () =>
+        div(
+            h1(Slot::value('heading')),
+            p(Slot::value('lead')),
+            p(Slot::value('body'))
+        )->class('container'),
+    prepare: static function (string $heading, string $lead, string $body): array {
+        return ['heading' => $heading, 'lead' => $lead, 'body' => $body];
+    }
 );
 
-function pageView(array $data): string
+function Page(mixed ...$children): Call
 {
-    // 引擎按原样输出树，文档声明在这里手动拼接。
-    return '<!DOCTYPE html>' . render(
-        'Page',
-        heading: $data['heading'],
-        lead: $data['lead'],
-        body: $data['body'],
-    );
+    return component('Page', ...$children);
 }
-
-echo pageView([
-    'heading' => 'My First PurePHP Application',
-    'lead' => 'Welcome to PurePHP!',
-    'body' => 'This is a simple yet powerful PHP template engine.',
-]);
 ```
 
-`render()` 每进程只加载一次模板；文档声明由调用方拼接。标准 PHP-FPM 下请启用
-`Compile::cachePath()`，让请求加载已编译的渲染器而不是重新构建；或者用
-`vendor/bin/pure compile .` 预编译，让绑定器直接加载产物。
+再创建 `index.php`，即入口文件，它加载单元并渲染：
+
+```php
+<?php
+
+// index.php
+require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/views/page.cmp.php';
+
+echo '<!DOCTYPE html>' . Page()
+    ->heading('My First PurePHP Application')
+    ->lead('Welcome to PurePHP!')
+    ->body('This is a simple yet powerful PHP template engine.')
+    ->render();
+```
+
+单元必须有自己的 `*.cmp.php` 文件——`pure compile` 只发现这类文件，注册名解析到的正是
+注册它的文件。`component()` 通过按名字或路径缓存的绑定器解析单元，模板每进程只加载一次；
+文档声明由调用方
+拼接。标准 PHP-FPM 下请启用 `Compile::cachePath()`，让请求加载已编译的渲染器而不是重新构建；
+或者用 `vendor/bin/pure compile .` 预编译，让绑定器直接加载产物。
 
 ### 3. 运行应用
 
@@ -116,9 +128,9 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 它在单个进程内每个对象只发出一次 `E_USER_WARNING`：
 
-- 每请求重建形状：同一调用点在一个进程内调用 `Compile::shape()` 超过 20 次，
-  例如每次调用都重建的内联 `Compile::shape(...)`。文件形式的组件走 `render()`，
-  绑定器按模板路径缓存，不会反复编译；
+- 每请求重建形状：同一调用点在一个进程内第 20 次调用 `Compile::shape()` 时就会警告，
+  例如每次调用都重建的内联 `Compile::shape(...)`。文件形式的组件走 `component()`，
+  绑定器按名字或路径缓存，不会反复编译；
 - 模板从未读取的 binding：会给出 `did you mean` 建议，因此拼错的键名（`titel`）
   不会被静默忽略；
 - 与标准属性名只差一个字符的属性方法（`->clas(...)`、`->hreff(...)`），否则它们会
@@ -128,7 +140,8 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 ### 使用组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性模板工厂：
+组件是一个 `*.cmp.php` 单元：返回 `Pure\Component\Call` 的调用函数，紧挨着它渲染的模板，
+以及放在 `prepare()` 钩子里的类型化 prop 契约：
 
 ```php
 <?php
@@ -137,26 +150,30 @@ Compile::guard(true);           // 或设置 PURE_COMPILE_GUARD=1
 
 require 'vendor/autoload.php';
 
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class(Slot::value('class'))
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class(Slot::value('class')),
+    prepare: static function (string $title, string $content, string $class = 'card'): array {
+        return ['title' => $title, 'content' => $content, 'class' => $class];
+    }
 );
 
-function Card(string $title, string $content, string $class = 'card'): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content, class: $class);
+    return component('Card', ...$children);
 }
 
-// 使用数据渲染组件
-echo Card('Card Title', 'This is the card content');
+// 用数据渲染组件
+echo Card()->title('Card Title')->content('This is the card content');
 ```
 
 ### 设置属性

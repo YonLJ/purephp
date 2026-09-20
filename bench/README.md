@@ -47,7 +47,7 @@ one run, not a promise about yours.
 
 | Path | no opcache | opcache | opcache + JIT |
 | --- | --- | --- | --- |
-| build tree + `render()` | 631.0 µs | 608.3 µs | 433.8 µs |
+| build tree + `Tag::render()` | 631.0 µs | 608.3 µs | 433.8 µs |
 | compiled shape + data | 141.7 µs | 135.2 µs | 107.9 µs |
 | render only (tree reused) | 224.2 µs | 212.4 µs | 163.5 µs |
 | compiled static tree (literal) | 0.1 µs | 0.1 µs | 0.2 µs |
@@ -79,7 +79,7 @@ function-component example:
 
 | Path | no opcache |
 | --- | --- |
-| classic build + `render()` | 339.3 µs |
+| classic build + `Tag::render()` | 339.3 µs |
 | page function (components + artifact) | 104 µs |
 | plain view + bindings | 20 µs |
 | page vs classic | 2.8–3.3× |
@@ -150,7 +150,7 @@ load the artifact with opcache: validating content costs more than compiling it.
   PHP-FPM with `Compile::cachePath()` loading a warm cache. A fresh process
   pays the shape build plus compile cost on every request — which is exactly
   what precompiled artifacts avoid.
-- The compiled path is byte-identical to `render()`; `compare.php` and the
+- The compiled path is byte-identical to `Tag::render()`; `compare.php` and the
   example benchmark assert it.
 - Subtrees without slots are folded into literals at compile time, which is
   why fully static trees render in well under a microsecond.

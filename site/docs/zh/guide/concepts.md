@@ -89,7 +89,8 @@ $shape([
 - **可选的磁盘缓存**——`Compile::cachePath($dir)` 会存储编译后的渲染器，让已预热的 worker 直接加载代码而不是生成代码。
 
 `Shape::id()` 是结构性指纹（标签、属性、槽位与嵌套形状），无需编译即可获得；它决定磁盘缓存
-的文件名，预编译产物也会记录它，`pure compile --check` 据此识别过期产物。组件的解析依据是
+的文件名，也是生成代码在内存中记忆化时的键。预编译产物把指纹记在头部注释里，而
+`pure compile --check` 是通过把产物与现场生成的源码逐字节比对来识别过期的。组件的解析依据是
 注册名或单元文件，而不是它。
 
 ## 数据绑定与作用域
@@ -108,31 +109,41 @@ $list(['items' => [['title' => 'a'], ['title' => 'b']]]);
 
 ## 组件
 
-组件是一个 `*.cmp.php` 单元：带类型化参数、返回 `string` 的函数，加上紧挨着注册的惰性模板
-工厂：
+组件是一个 `*.cmp.php` 单元：返回 `Pure\Component\Call` 的调用函数，紧挨着它渲染的模板，
+以及放在 `prepare()` 钩子里的类型化 prop 契约。单元注册一个惰性工厂，因此 `pure compile`
+可以预编译模板，而请求只加载产物：
 
 ```php
 <?php
 
 // components/Card.cmp.php
-use Pure\Compile\Compile;
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class(Slot::value('class'))
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class(Slot::value('class')),
+    prepare: static function (string $title, string $content, string $class = 'card'): array {
+        return ['title' => $title, 'content' => $content, 'class' => $class];
+    }
 );
 
-function Card(string $title, string $content, string $class = 'card'): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content, class: $class);
+    return component('Card', ...$children);
 }
+
+echo Card()->title('Title')->content('Content');
 ```
+
+props 在调用上像标签属性一样链式设置，children 传给调用本身，`->render()`（或字符串转换）
+产出标记；`prepare()` 的参数就是类型化 prop 契约，PHP 会强制它们的类型。
 
 组合方式见[组件](/zh/guide/components)，产物、缓存与每请求守卫见[编译组件](/zh/guide/compiled)。
 
@@ -145,13 +156,23 @@ function Card(string $title, string $content, string $class = 'card'): string
 ```php
 <?php
 
+// components/Counter.cmp.php
+use Pure\Component\Call;
+use Pure\Core\Slot;
 
-use function Pure\HTML\{button, div, p};
-use function Pure\Component\render;
+use function Pure\Component\{component, register};
+use function Pure\HTML\span;
 
-function Counter(int $count): string
+register('Counter', __FILE__,
+    factory: static fn () => span(Slot::value('count'))->id('counter'),
+    prepare: static function (int $count): array {
+        return ['count' => $count];
+    }
+);
+
+function Counter(int $count): Call
 {
-    return render('Counter', count: $count);
+    return component('Counter')->count($count);
 }
 
 echo Counter(0);
@@ -202,8 +223,13 @@ function Blocks(array $blocks): string
     return $html;
 }
 
-$blocks = Compile::shape(div(Slot::raw('blocks')));
-$blocks(['blocks' => Blocks($blocks)]);
+$blocks = [
+    ['kind' => 'link', 'value' => '文档', 'href' => '/docs'],
+    ['kind' => 'text', 'value' => '你好'],
+];
+
+$shape = Compile::shape(div(Slot::raw('blocks')));
+$shape(['blocks' => Blocks($blocks)]);
 ```
 
 完整处理见编译组件指南的[混合列表](/zh/guide/compiled#混合列表)。

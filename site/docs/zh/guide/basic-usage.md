@@ -39,6 +39,7 @@ div(
 use Pure\Core\HTML;
 
 // 使用魔术方法创建自定义 HTML 元素
+// （方法名就是标签名：这里会输出 <customTag class="custom">）
 HTML::customTag('Custom content')->class('custom')->print();
 
 // 非常适合 Web 组件或非标准标签
@@ -391,6 +392,9 @@ div('Content')
 
 ### 2. 类名处理
 
+一次 `class()` 调用会把所有参数拼接起来，而第二次 `class()` 调用会覆盖第一次的值，
+所以请把类名都放进同一次调用：
+
 ```php
 <?php
 
@@ -399,8 +403,7 @@ use function Pure\HTML\div;
 $isActive = true;
 
 div('Content')
-    ->class('container')
-    ->class($isActive ? 'active' : 'inactive')
+    ->class('container', $isActive ? 'active' : 'inactive')
     ->print();
 ```
 

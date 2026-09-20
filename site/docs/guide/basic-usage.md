@@ -39,6 +39,7 @@ div(
 use Pure\Core\HTML;
 
 // Create custom HTML elements using magic methods
+// (the method name is the tag name: this renders <customTag class="custom">)
 HTML::customTag('Custom content')->class('custom')->print();
 
 // Perfect for web components or non-standard tags
@@ -399,6 +400,9 @@ div('Content')
 
 ### 2. Class Name Handling
 
+One `class()` call joins all of its arguments, and a second `class()` call
+replaces the value of the first, so pass every class in a single call:
+
 ```php
 <?php
 
@@ -407,8 +411,7 @@ use function Pure\HTML\div;
 $isActive = true;
 
 div('Content')
-    ->class('container')
-    ->class($isActive ? 'active' : 'inactive')
+    ->class('container', $isActive ? 'active' : 'inactive')
     ->print();
 ```
 

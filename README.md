@@ -29,44 +29,50 @@ However, with Purephp:
 
 ## Quick start
 
-A component is one file: a function with typed props that returns `string`, plus
-the template it renders, registered lazily so `pure compile` can precompile it:
+A component is one file: a call function that returns a `Pure\Component\Call`,
+plus the template it renders and the typed props of its `prepare()` hook,
+registered lazily so `pure compile` can precompile it:
 
 ```php
 <?php
 
 // components/Card.cmp.php
 
+use Pure\Component\Call;
 use Pure\Core\Slot;
 
-use function Pure\Component\{register, render};
+use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__, static fn () =>
-    div(
-        h2(Slot::value('title')),
-        p(Slot::value('content'))
-    )->class('card')
+register('Card', __FILE__,
+    factory: static fn () =>
+        div(
+            h2(Slot::value('title')),
+            p(Slot::value('content'))
+        )->class('card'),
+    prepare: static function (string $title, string $content): array {
+        return ['title' => $title, 'content' => $content];
+    }
 );
 
-function Card(string $title, string $content): string
+function Card(mixed ...$children): Call
 {
-    return render('Card', title: $title, content: $content);
+    return component('Card', ...$children);
 }
 
-echo Card('Card Title', 'Card Content');
+echo Card()->title('Card Title')->content('Card Content');
 ```
 
-A component can also be called like a tag — props as fluent setters, children
-passed to the call, and the result nests wherever a tag does:
+Children are passed to the call, props are set as fluent setters, and the
+result nests wherever a tag does:
 
 ```php
 <?php
 
-use function Pure\Component\component;
+use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
-// the same unit, with a children slot and a Call function
+// a unit with a children slot, its props as plain bindings
 register('Card', __FILE__, static fn () => div(
     Slot::raw('children'),
     h2(Slot::value('type'))->class('card-title'),
@@ -88,9 +94,9 @@ echo div(
 );
 ```
 
-`render('Card', ...)` stays the low-level entry; both forms resolve the same
-binder, artifacts, cache and errors, and `pure check` validates the fluent props
-against the template's slots: a `#[Prop]` declaration on a `prepare()` parameter
+A call resolves the registered binder, artifacts, cache and errors, and
+`pure check` validates the fluent props against the template's slots: a `#[Prop]`
+declaration on a `prepare()` parameter
 (`slot`, `item`, `required`, `deprecated`) is verified against the signature and
 the template, `#[Trusted]` marks a prop that carries markup (it must bind a raw
 slot, and the development guard warns when a call passes a value that is not
@@ -105,8 +111,8 @@ The above code will output:
 
 `register()` only stores the factory; a request that finds a fresh artifact
 never builds the template. Run `vendor/bin/pure compile components` to
-precompile, and `pure compile --list` to see the units found. `render()`
-returns the fragment; a full document's header is the caller's to prepend
+precompile, and `pure compile --list` to see the units found. A call renders the
+fragment; a full document's header is the caller's to prepend
 (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` / `<?xml version="1.0"?>`).
 
 Under standard PHP-FPM every request starts fresh, so enable
@@ -141,9 +147,9 @@ The above code will output:
 <div class="container" style="background: #fff;" data-key="primary">Hello <a href="https://www.php.net">PHP</a></div>
 ```
 
-`render()` and `print()` are the debug/snippet outlet. Production pages
-should compile shapes, because a shape is compiled and static markup is escaped
-once instead of on every render.
+The tag tree's `render()` and `print()` are the debug/snippet outlet. Production
+pages should compile shapes, because a shape is compiled and static markup is
+escaped once instead of on every render.
 
 ## Compiled components
 
@@ -151,7 +157,7 @@ Inside a template, nested shapes use `Slot::child()`, lists use `Slot::each()`,
 and conditionals use `Slot::if()`. Everything else is plain PHP.
 
 A parent takes its children's markup as an ordinary value and passes it through
-a raw slot: `div(Slot::raw('body'))` bound as `render('Page', body: Card(...))`.
+a raw slot: `div(Slot::raw('body'))` bound as `component('Page')->body(Card(...))`.
 Pre-rendered markup passed into a raw slot needs no `(string)` cast, and an array of them is concatenated in order.
 
 For production, `pure compile` precompiles every `*.cmp.php` unit (and every
@@ -185,7 +191,7 @@ $html = (string)ob_get_clean();
 `pure compile --check` reports stale or missing artifacts for CI
 (`--check --plain` covers both flavors), and `pure check` validates the
 component contract — the slots a template reads against the bindings and typed
-parameters of its component function. See
+props of its unit (`prepare()` hook or typed call function). See
 [Compiled Components](https://yonld.github.io/purephp/guide/compiled#precompiled-artifacts)
 for the artifact contract, the freshness rules and the plain-view caveats.
 
@@ -196,7 +202,7 @@ controllers stay thin, `app/dao/` reads the records, `app/services/` turns them
 into the props of one component, and each component fetches its own slice there
 — the page function carries no page data. `views/features.cmp.php` and
 `views/pricing.cmp.php` are component units that compile
-into a strict artifact (`*.pure.php`, loaded by `render()`) and a
+into a strict artifact (`*.pure.php`, loaded by the unit's binder) and a
 dependency-free view (`*.plain.php`, required by the example's `plain()`
 helper); the two controllers of a page share the bindings its fluent component
 calls produce (`featuresBindings()` / `pricingBindings()`), which the plain
