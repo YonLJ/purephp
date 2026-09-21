@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -37,6 +38,7 @@ register('PageFooter', __FILE__,
  * The page footer: it fetches the logo and the link columns from the service
  * and renders its own children. `PageFooter()`.
  */
+#[Component]
 function PageFooter(mixed ...$children): Call
 {
     return component('PageFooter', ...$children);

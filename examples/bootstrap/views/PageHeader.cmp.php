@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -33,6 +34,7 @@ register('PageHeader', __FILE__,
  * The page header: it fetches the company name, the nav links and the sign-up
  * link from the service and renders its own children. `PageHeader()`.
  */
+#[Component]
 function PageHeader(mixed ...$children): Call
 {
     return component('PageHeader', ...$children);

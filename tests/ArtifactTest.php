@@ -983,6 +983,38 @@ class ArtifactTest extends TestCase
         $this->assertStringContainsString("{$file} (shape)", $list['stdout']);
     }
 
+    public function testListReportsTemplateFunctions(): void
+    {
+        $file = $this->shapeFile('tpl.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Compile\Template;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\span;
+
+            #[Template]
+            function tplBadgeShape(): \Pure\Compile\Shape
+            {
+                static $shape;
+
+                return $shape ??= Compile::shape(span(Slot::value('label')));
+            }
+
+            register('TplBadge', __FILE__, static fn (): \Pure\Compile\Shape => tplBadgeShape());
+            PHP);
+
+        $list = $this->runCommand($this->registryCommand(), ['pure', 'compile', '--list', $file]);
+
+        $this->assertSame(0, $list['code']);
+        $this->assertStringContainsString("TplBadge -> {$file} (component)", $list['stdout']);
+        $this->assertStringContainsString("tplBadgeShape -> {$file} (template)", $list['stdout']);
+    }
+
     public function testCompilesDirectoriesRecursively(): void
     {
         mkdir($this->dir . '/nested');

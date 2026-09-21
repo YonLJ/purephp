@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 use Pure\Component\Binds;
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -25,6 +26,7 @@ register('PricingHeader', __FILE__,
  * The pricing page heading: it fetches the title and the description from the
  * service. `PricingHeader()`.
  */
+#[Component]
 function PricingHeader(mixed ...$children): Call
 {
     return component('PricingHeader', ...$children);

@@ -7,12 +7,18 @@ namespace Pure\Compile\Internal;
 use Closure;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Compile\Template;
+use Pure\Component\Component;
 use Pure\Component\Prop;
 use Pure\Component\Registry;
 use Pure\Core\Suggestion;
 use Pure\Core\Tag;
 use ReflectionFunction;
+use ReflectionIntersectionType;
+use ReflectionNamedType;
 use ReflectionParameter;
+use ReflectionType;
+use ReflectionUnionType;
 use RuntimeException;
 use Throwable;
 
@@ -176,14 +182,21 @@ final class CheckCommand
                         throw new RuntimeException('no component unit is registered here; `pure check` skips the file.');
                     }
 
+                    $attributeFindings = count($units) === 1
+                        ? self::attributeFindings($file, (string) array_key_first($units))
+                        : [];
+
                     foreach ($units as $name => $unit) {
                         $checked++;
                         $prepare = Registry::prepare($name);
-                        $findings = $this->checker->check(
-                            $name,
-                            $trees[$name],
-                            $prepare === null ? FunctionFinder::of($name, $file) : null,
-                            $prepare === null ? null : new ReflectionFunction($prepare)
+                        $findings = array_merge(
+                            $this->checker->check(
+                                $name,
+                                $trees[$name],
+                                $prepare === null ? FunctionFinder::of($name, $file) : null,
+                                $prepare === null ? null : new ReflectionFunction($prepare)
+                            ),
+                            $attributeFindings
                         );
                         self::report($stdout, $file, $name, $findings, $errors, $warnings);
                     }
@@ -389,6 +402,82 @@ final class CheckCommand
         }
 
         return $deprecated;
+    }
+
+    /**
+     * The findings of a unit file's `#[Component]` and `#[Template]`
+     * functions: a unit file marks one call function, a named mark must match
+     * the registered component, and a template builder that declares a return
+     * type must return a Shape or a tag. The file must already be loaded,
+     * which the loader guarantees for every unit file.
+     *
+     * @param string $file The unit file.
+     * @param string $name The component the file registers (one per file).
+     * @return list<Finding>
+     */
+    private static function attributeFindings(string $file, string $name): array
+    {
+        $components = FunctionFinder::attributed($file, Component::class);
+        $templates = FunctionFinder::attributed($file, Template::class);
+        $findings = [];
+
+        if (count($components) > 1) {
+            $functions = array_map(
+                static fn (ReflectionFunction $function): string => $function->getName() . '()',
+                $components
+            );
+
+            $findings[] = Finding::error(
+                'more than one #[Component] function (' . implode(', ', $functions) . '); a unit file marks one call function'
+            );
+        } elseif ($components !== []) {
+            foreach ($components[0]->getAttributes(Component::class) as $attribute) {
+                $declared = $attribute->newInstance()->name;
+
+                if ($declared !== null && strcasecmp($declared, $name) !== 0) {
+                    $findings[] = Finding::error(
+                        "#[Component('{$declared}')] on {$components[0]->getName()}() does not match the registered component '{$name}'"
+                    );
+                }
+            }
+        }
+
+        foreach ($templates as $template) {
+            $return = $template->getReturnType();
+
+            if ($return === null || self::returnsShapeOrTag($return)) {
+                continue;
+            }
+
+            $findings[] = Finding::error(
+                "#[Template] function {$template->getName()}() must declare a return type of Pure\\Compile\\Shape or a tag, got {$return}"
+            );
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Whether a declared return type accepts a Shape or a tag tree: the type
+     * itself, a union containing one, or an intersection including one.
+     */
+    private static function returnsShapeOrTag(ReflectionType $type): bool
+    {
+        if ($type instanceof ReflectionUnionType || $type instanceof ReflectionIntersectionType) {
+            foreach ($type->getTypes() as $part) {
+                if (self::returnsShapeOrTag($part)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+            return false;
+        }
+
+        return $type->getName() === Shape::class || is_a($type->getName(), Tag::class, true);
     }
 
     /**

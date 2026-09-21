@@ -8,6 +8,7 @@ use Closure;
 use InvalidArgumentException;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Compile\Template;
 use Throwable;
 
 /**
@@ -308,12 +309,14 @@ final class ArtifactCommand
     {
         if ($units === null) {
             fwrite($stdout, "{$file} (shape)\n");
-
-            return;
+        } else {
+            foreach (array_keys($units) as $name) {
+                fwrite($stdout, "{$name} -> {$file} (component)\n");
+            }
         }
 
-        foreach (array_keys($units) as $name) {
-            fwrite($stdout, "{$name} -> {$file} (component)\n");
+        foreach (FunctionFinder::attributed($file, Template::class) as $template) {
+            fwrite($stdout, "{$template->getName()} -> {$file} (template)\n");
         }
     }
 

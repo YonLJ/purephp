@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Component\Prop;
 use Pure\Core\Slot;
 
@@ -46,6 +47,7 @@ register('CustomCard', __FILE__,
  * One "custom cards" item: the cover image is the card background, the icon is
  * the avatar. `CustomCard()->title(...)->icon(...)->location(...)->date(...)->bgImg(...)`.
  */
+#[Component]
 function CustomCard(mixed ...$children): Call
 {
     return component('CustomCard', ...$children);

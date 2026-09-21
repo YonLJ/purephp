@@ -2,6 +2,7 @@
 
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Compile\Template;
 
 use Pure\Core\Slot;
 use Pure\Core\XML;
@@ -14,6 +15,7 @@ use function Pure\Utils\renderXML;
  * Address shape: fields follow the data key order; `city` is optional and
  * rendered only when the record provides it.
  */
+#[Template]
 function AddressShape(): Shape
 {
     static $shape;
@@ -33,6 +35,7 @@ function AddressShape(): Shape
  * views/xml.pure.php, and app/controllers render the same shape without
  * precompiling.
  */
+#[Template]
 function XmlPageShape(): Shape
 {
     static $shape;

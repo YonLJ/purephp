@@ -2,6 +2,7 @@
 
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
+use Pure\Compile\Template;
 
 use Pure\Core\Slot;
 
@@ -17,6 +18,7 @@ use function Pure\Utils\renderHTML;
  *
  * `initial` is a slot so the controller can provide a server-random start.
  */
+#[Template]
 function CounterPageShape(): Shape
 {
     static $shape;

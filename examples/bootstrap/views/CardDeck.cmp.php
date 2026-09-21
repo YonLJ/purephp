@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -33,6 +34,7 @@ register('CardDeck', __FILE__,
  * The pricing card deck: it fetches the card records from the service and
  * renders its own children. `CardDeck()`.
  */
+#[Component]
 function CardDeck(mixed ...$children): Call
 {
     return component('CardDeck', ...$children);

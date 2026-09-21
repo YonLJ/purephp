@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -30,6 +31,7 @@ register('FeatureTitle', __FILE__,
 /**
  * One "features with title" item: `FeatureTitle()->icon('bootstrap')->title(...)->content(...)`.
  */
+#[Component]
 function FeatureTitle(mixed ...$children): Call
 {
     return component('FeatureTitle', ...$children);

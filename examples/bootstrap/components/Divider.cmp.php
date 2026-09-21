@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 use Pure\Component\Call;
+use Pure\Component\Component;
 
 use function Pure\Component\{component, register};
 use function Pure\HTML\div;
@@ -15,6 +16,7 @@ register('Divider', __FILE__, static fn () =>
 /**
  * The divider between two page sections: `Divider()`.
  */
+#[Component]
 function Divider(mixed ...$children): Call
 {
     return component('Divider', ...$children);

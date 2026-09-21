@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Component\Prop;
 use Pure\Core\Slot;
 
@@ -41,6 +42,7 @@ register('Card', __FILE__,
  *         ->text('Sign up for free')
  *         ->class('btn btn-lg btn-block btn-outline-primary');
  */
+#[Component]
 function Card(mixed ...$children): Call
 {
     return component('Card', ...$children);

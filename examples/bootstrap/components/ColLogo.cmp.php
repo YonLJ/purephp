@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -18,6 +19,7 @@ register('ColLogo', __FILE__, static fn () =>
 /**
  * The footer logo column: `ColLogo()->src(...)->width('24')->height('24')->text(...)`.
  */
+#[Component]
 function ColLogo(mixed ...$children): Call
 {
     return component('ColLogo', ...$children);

@@ -1327,6 +1327,176 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('does not exist', $result['stderr']);
     }
 
+    public function testComponentAttributeMustMatchTheRegisteredName(): void
+    {
+        $file = $this->writeFile('attr-mismatch.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Component\Component;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            register('AttrMismatch', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            #[Component('WrongName')]
+            function AttrMismatch(mixed ...$children): Call
+            {
+                return component('AttrMismatch', ...$children);
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "#[Component('WrongName')] on AttrMismatch() does not match the registered component 'AttrMismatch'",
+            $result['stdout']
+        );
+    }
+
+    public function testComponentAttributeLetsTheCallFunctionBeRenamed(): void
+    {
+        $file = $this->writeFile('attr-rename.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Component\Component;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            register('AttrRename', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            #[Component]
+            function attrRenamedCard(mixed ...$children): Call
+            {
+                return component('AttrRename', ...$children);
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString('fluent unit: its props are the template slots', $result['stdout']);
+        $this->assertStringNotContainsString("no function named 'AttrRename'", $result['stdout']);
+    }
+
+    public function testComponentAttributeRejectsTwoCallFunctions(): void
+    {
+        $file = $this->writeFile('attr-double.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Component\Component;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            register('AttrDouble', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            #[Component]
+            function AttrDouble(mixed ...$children): Call
+            {
+                return component('AttrDouble', ...$children);
+            }
+
+            #[Component]
+            function attrDoubleHelper(): void
+            {
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString('more than one #[Component] function', $result['stdout']);
+    }
+
+    public function testTemplateFunctionMustDeclareAShapeReturnType(): void
+    {
+        $file = $this->writeFile('attr-template.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Compile\Template;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('TplBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+
+            #[Template]
+            function tplBoxBroken(): string
+            {
+                return 'not a shape';
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            '#[Template] function tplBoxBroken() must declare a return type of Pure\\Compile\\Shape or a tag, got string',
+            $result['stdout']
+        );
+    }
+
+    public function testTemplateMarkedFunctionIsNotTakenForTheCallFunction(): void
+    {
+        $file = $this->writeFile('attr-tpl-skip.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Compile\Template;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register('TplSkip', __FILE__, static fn (): \Pure\Compile\Shape => TplSkip());
+
+            #[Template]
+            function TplSkip(): \Pure\Compile\Shape
+            {
+                static $shape;
+
+                return $shape ??= Compile::shape(div(Slot::value('title')));
+            }
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString("no function named 'TplSkip'", $result['stdout']);
+    }
+
     private function writeFile(string $name, string $code): string
     {
         $path = $this->dir . '/' . $name;

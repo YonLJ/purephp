@@ -1,3 +1,20 @@
+services:
+    -
+        class: Pure\StaticAnalysis\ComponentCallCollector
+        tags:
+            - phpstan.collector
+    -
+        class: Pure\StaticAnalysis\ComponentAttributeCollector
+        tags:
+            - phpstan.collector
+    -
+        class: Pure\StaticAnalysis\RegistryCallCollector
+        tags:
+            - phpstan.collector
+
+rules:
+    - Pure\StaticAnalysis\UnknownComponentRule
+
 parameters:
     level: 9
     paths:
@@ -20,3 +37,9 @@ parameters:
         - '#Call to an undefined method Pure\\Component\\Call::[a-zA-Z0-9_]+\(\)#'
         # Allow mixed to string casting in template engine
         - '#Cannot cast mixed to string#'
+        # The tests register components from heredoc fixtures the analyser
+        # cannot see; component names are validated by pure check there.
+        -
+            identifier: purephp.unknownComponent
+            paths:
+                - tests/*

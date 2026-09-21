@@ -11,6 +11,18 @@ First public version. No tag has been cut yet.
 
 ### Added
 
+- `#[Component]` function attribute: marks a unit file's call function
+  explicitly instead of relying on the name convention. A nameless mark
+  survives renaming the function; `#[Component('X')]` pins the registered
+  name and `pure check` reports a mismatch, a second mark in one file, and
+  a `#[Template]` builder whose declared return type is not a Shape or a
+  tag. `pure compile --list` prints marked builders as `(template)`.
+- `Pure\StaticAnalysis\UnknownComponentRule`: a PHPStan rule (plus its
+  collectors, enabled in phpstan.neon) that reports a literal
+  `component('X')` / `Registry::component('X')` whose name no analysed
+  `register()`, `Registry::register()` or `#[Component('X')]` declares —
+  the typo that otherwise only fails at render time, with a
+  did-you-mean hint.
 - `pure --version` (also `pure version` / `pure -v`) prints the installed
   package version.
 - Component units: a `*.cmp.php` file registers a lazy template factory with

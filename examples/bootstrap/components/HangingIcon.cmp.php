@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
+use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -35,6 +36,7 @@ register('HangingIcon', __FILE__,
 /**
  * One "hanging icons" item: `HangingIcon()->icon('bootstrap')->title(...)->content(...)->link(...)->linkText(...)`.
  */
+#[Component]
 function HangingIcon(mixed ...$children): Call
 {
     return component('HangingIcon', ...$children);
