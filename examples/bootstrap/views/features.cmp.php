@@ -9,6 +9,8 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{body, h1, head, html, link, main, meta, title};
 
+use function Pure\Utils\renderHTML;
+
 require_once __DIR__ . '/../components/IconSheet.cmp.php';
 require_once __DIR__ . '/../components/IconColumn.cmp.php';
 require_once __DIR__ . '/../components/HangingIcon.cmp.php';
@@ -114,5 +116,5 @@ function featuresBindings(): array
  */
 function featuresPage(): string
 {
-    return '<!DOCTYPE html>' . component('Features')->render();
+    return renderHTML(component('Features'));
 }

@@ -8,6 +8,8 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h1, span};
 
+use function Pure\Utils\renderHTML;
+
 /**
  * The counter page as a shape file: `pure compile` precompiles it into
  * views/counter.pure.php, and app/controllers render the same shape without
@@ -42,5 +44,5 @@ register('Counter', __FILE__, static fn () => CounterPageShape());
  */
 function counterPage(array $data): string
 {
-    return '<!DOCTYPE html>' . component('Counter')->initial($data['initial'])->render();
+    return renderHTML(component('Counter')->initial($data['initial']));
 }

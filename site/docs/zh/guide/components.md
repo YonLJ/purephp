@@ -249,8 +249,9 @@ Button(Icon()->href('#plus'))->label('Add');
 ## 页面
 
 页面就是根标签为文档根（`html`、`svg`、`xml`…）的组件单元。没有单独的页面 API：
-用 `register()` 注册、让它的 `prepare()` 钩子提供区块、用 `component()` 渲染，然后自己补上
-根标签的文档声明（HTML 根是 `<!DOCTYPE html>`，XML/SVG 根是 XML 声明）：
+用 `register()` 注册、让它的 `prepare()` 钩子提供区块、用 `component()` 渲染，再把调用交给
+`renderHTML()` / `renderXML()`，由函数按名称拼接文档声明（`renderHTML()` 是
+`<!DOCTYPE html>`，`renderXML()` 是 XML 声明）：
 
 ```php
 <?php
@@ -271,12 +272,13 @@ register('Features', __FILE__,
 
 function featuresPage(): string
 {
-    // 引擎按原样输出树，文档声明在这里手动拼接。
-    return '<!DOCTYPE html>' . component('Features')->render();
+    // 引擎按原样输出树；renderHTML() 负责拼接文档声明。
+    return renderHTML(component('Features'));
 }
 ```
 
-调用按原样输出（不带文档声明），所以完整页面 = 根标签的文档声明 + 渲染出的片段。
+调用按原样输出（不带文档声明）；`renderHTML()` / `renderXML()` 会补上对应文件头，
+所以完整页面 = 该文件头 + 渲染出的片段。
 
 `pure compile --plain` 会把同一个页面写成无依赖视图文件，因此没有安装 purephp 的部署也能
 渲染；两种形态下控制器传入同一份 bindings。

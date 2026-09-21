@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Pure\Utils;
 
+use Pure\Component\Call;
+use Pure\Core\HTML;
+use Pure\Core\Tag;
+use Pure\Core\XML;
+
 /**
  * Join class name arguments into a class attribute value.
  *
@@ -76,4 +81,38 @@ function sty(array|null $list): string|null
     }
 
     return join('; ', $styleList) . ';';
+}
+
+/**
+ * Render a tag tree or a component call as a complete HTML document.
+ *
+ * The `<!DOCTYPE html>` header is prepended to the markup, so the result is
+ * ready to be echoed as a page:
+ *
+ *     echo renderHTML(html(body(h1('Hello'))));
+ *
+ * A fragment gets the same header; use `->render()` when only the markup is
+ * wanted.
+ *
+ * @param Tag|Call $node The tree or call to render.
+ * @return string The header followed by the rendered markup.
+ */
+function renderHTML(Tag|Call $node): string
+{
+    return HTML::DOCUMENT_HEADER . $node->render();
+}
+
+/**
+ * Render a tag tree or a component call as a standalone XML document.
+ *
+ * The `<?xml version="1.0"?>` declaration is prepended to the markup:
+ *
+ *     echo renderXML(XML::customers(XML::customer(XML::name('Charter Group'))));
+ *
+ * @param Tag|Call $node The tree or call to render.
+ * @return string The declaration followed by the rendered markup.
+ */
+function renderXML(Tag|Call $node): string
+{
+    return XML::DOCUMENT_HEADER . $node->render();
 }

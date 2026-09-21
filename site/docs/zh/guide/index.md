@@ -26,6 +26,7 @@ PurePHP 有两条渲染路径：
 <?php
 
 use Pure\Compile\Compile;
+use Pure\Core\HTML;
 use Pure\Core\Slot;
 
 use function Pure\HTML\{div, h1, p};
@@ -41,7 +42,7 @@ function pageView(array $data): string
     );
 
     // 引擎不附加文档声明，在这里手动拼接。
-    return '<!DOCTYPE html>' . $render([
+    return HTML::DOCUMENT_HEADER . $render([
         'heading' => $data['heading'],
         'lead' => $data['lead'],
     ]);

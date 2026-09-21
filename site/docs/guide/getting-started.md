@@ -96,11 +96,12 @@ Then `index.php`, the entry file, loads the unit and renders it:
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/views/page.cmp.php';
 
-echo '<!DOCTYPE html>' . Page()
+use function Pure\Utils\renderHTML;
+
+echo renderHTML(Page()
     ->heading('My First PurePHP Application')
     ->lead('Welcome to PurePHP!')
-    ->body('This is a simple yet powerful PHP template engine.')
-    ->render();
+    ->body('This is a simple yet powerful PHP template engine.'));
 ```
 
 A unit lives in its own `*.cmp.php` file — `pure compile` discovers those files,

@@ -31,6 +31,8 @@ use function Pure\HTML\p;
 use function Pure\HTML\title;
 use function Pure\HTML\ul;
 
+use function Pure\Utils\renderHTML;
+
 // The pages and aliases of this router, for the 404 map below.
 $pages = [
     '/pure' => 'the page function and the artifact',
@@ -101,7 +103,7 @@ function renderNotFound(string $path, array $pages, array $redirects): void
         $items[] = li(a($route)->href($route), ' — redirects to ', code($target));
     }
 
-    echo '<!DOCTYPE html>', html(
+    echo renderHTML(html(
         head(
             meta()->charset('utf-8'),
             title('404 — nothing at ' . $path)
@@ -111,5 +113,5 @@ function renderNotFound(string $path, array $pages, array $redirects): void
             p('Nothing is routed at ', code($path), '. These routes exist:'),
             ul(...$items)
         )
-    )->lang('en');
+    )->lang('en'));
 }

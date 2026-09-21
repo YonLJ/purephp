@@ -26,6 +26,7 @@ Describe the page once, bind data at render time:
 <?php
 
 use Pure\Compile\Compile;
+use Pure\Core\HTML;
 use Pure\Core\Slot;
 
 use function Pure\HTML\{div, h1, p};
@@ -41,7 +42,7 @@ function pageView(array $data): string
     );
 
     // No document header is added by the engine; prepend it here.
-    return '<!DOCTYPE html>' . $render([
+    return HTML::DOCUMENT_HEADER . $render([
         'heading' => $data['heading'],
         'lead' => $data['lead'],
     ]);

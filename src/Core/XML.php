@@ -7,6 +7,11 @@ namespace Pure\Core;
 class XML extends Tag
 {
     /**
+     * The header that belongs before a standalone XML document.
+     */
+    public const DOCUMENT_HEADER = '<?xml version="1.0"?>';
+
+    /**
      * @internal Use the magic static surface, e.g. XML::customer(...).
      *
      * @param string $tagName The XML tag name.
@@ -47,6 +52,6 @@ class XML extends Tag
 
     protected function defaultHeader(): string
     {
-        return '<?xml version="1.0"?>';
+        return self::DOCUMENT_HEADER;
     }
 }

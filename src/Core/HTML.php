@@ -28,6 +28,11 @@ const SELF_CLOSE_HTML_TAGS = [
 class HTML extends Tag
 {
     /**
+     * The header that belongs before an HTML document.
+     */
+    public const DOCUMENT_HEADER = '<!DOCTYPE html>';
+
+    /**
      * @internal Use the Pure\HTML functions or HTML::customTag() instead.
      *
      * @param string $tagName The HTML tag name.
@@ -71,6 +76,6 @@ class HTML extends Tag
 
     protected function defaultHeader(): string
     {
-        return '<!DOCTYPE html>';
+        return self::DOCUMENT_HEADER;
     }
 }

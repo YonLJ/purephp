@@ -79,9 +79,10 @@ echo Card()->title('Title')->content('Content');
 | `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes, children bind the reserved `children` slot, and the result is `Markup`, so it nests like a tag; `$name` is a registered name or a template path |
 | `Registry::component(string $nameOrPath): Closure(array $data): string` | Returns the binder of a unit or shape file, to hold or pass around yourself |
 
-There is no page flavour: to emit a full document, prepend the header of the
-root tag yourself (`$root->documentHeader()`, or a literal `<!DOCTYPE html>` /
-`<?xml version="1.0"?>`).
+There is no page flavour: to emit a full document, pass the tag tree or the
+component call to `Pure\Utils\renderHTML()` / `renderXML()`, or prepend the
+header yourself — the root tag's `documentHeader()`, or the
+`HTML::DOCUMENT_HEADER` / `XML::DOCUMENT_HEADER` constants.
 
 A fluent call binds one prop per setter (`Card($children)->title($title)`);
 `null` leaves a prop unset, and children bind the reserved `children`
@@ -216,7 +217,7 @@ output, prepending the document header of the root tag (for example
 `<!DOCTYPE html>` or the XML declaration) unless you pass your own header.
 `Renderer::save()` instead takes the header as an optional third parameter,
 empty by default, so a handler that wants a whole document prepends it itself:
-`'<!DOCTYPE html>' . $renderer->render($data)`.
+`HTML::DOCUMENT_HEADER . $renderer->render($data)`.
 
 ## On-Disk Cache
 

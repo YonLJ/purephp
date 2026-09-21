@@ -3,9 +3,15 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use Pure\Compile\Compile;
 
-use function Pure\Utils\clx;
-use function Pure\Utils\sty;
+use function Pure\Component\component;
+
+use Pure\Component\Registry;
+use Pure\Core\XML;
+
+use function Pure\HTML\{body, div, html};
+use function Pure\Utils\{clx, renderHTML, renderXML, sty};
 
 class UtilsTest extends TestCase
 {
@@ -77,5 +83,72 @@ class UtilsTest extends TestCase
             'line-height' => false,
             'color' => null,
         ]));
+    }
+
+    public function testRenderHTMLPrependsTheDoctype(): void
+    {
+        $this->assertSame(
+            '<!DOCTYPE html><html lang="en"><body><div>Hello</div></body></html>',
+            renderHTML(html(body(div('Hello')))->lang('en'))
+        );
+    }
+
+    public function testRenderHTMLKeepsFragmentsIntactBehindTheHeader(): void
+    {
+        $this->assertSame('<!DOCTYPE html><div>&lt;b&gt;</div>', renderHTML(div('<b>')));
+    }
+
+    public function testRenderHTMLRendersComponentCalls(): void
+    {
+        self::registerUnit('UtilsPage', static fn (): \Pure\Compile\Shape => Compile::shape(
+            html(body(div('Hi')))
+        ));
+
+        $this->assertSame(
+            '<!DOCTYPE html><html><body><div>Hi</div></body></html>',
+            renderHTML(component('UtilsPage'))
+        );
+    }
+
+    public function testRenderXMLPrependsTheDeclaration(): void
+    {
+        $this->assertSame(
+            '<?xml version="1.0"?><customers><customer id="55000"><name>Charter Group</name></customer></customers>',
+            renderXML(XML::customers(XML::customer(XML::name('Charter Group'))->id('55000')))
+        );
+    }
+
+    public function testRenderXMLRendersComponentCalls(): void
+    {
+        self::registerUnit('UtilsXml', static fn (): \Pure\Compile\Shape => Compile::shape(
+            XML::customers(XML::name('Charter Group'))
+        ));
+
+        $this->assertSame(
+            '<?xml version="1.0"?><customers><name>Charter Group</name></customers>',
+            renderXML(component('UtilsXml'))
+        );
+    }
+
+    /**
+     * Register a unit for this test class. The registry allows one component
+     * per unit file, so every name gets its own anchor file.
+     *
+     * @param \Closure(): \Pure\Compile\Shape $factory
+     */
+    private static function registerUnit(string $name, \Closure $factory): void
+    {
+        if (in_array($name, Registry::names(), true)) {
+            return;
+        }
+
+        $file = sys_get_temp_dir() . '/purephp-utils-' . $name . '.cmp.php';
+
+        if (!is_file($file)) {
+            file_put_contents($file, "<?php\n");
+            register_shutdown_function(static fn () => @unlink($file));
+        }
+
+        Registry::register($name, $file, $factory);
     }
 }

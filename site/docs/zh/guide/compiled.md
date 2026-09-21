@@ -199,7 +199,8 @@ $pureBody = static function (array $v): string {
 ```
 
 没有自动的文档声明：树按原样渲染，整份文档的文档声明（HTML 根是
-`<!DOCTYPE html>`，XML/SVG 根是 XML 声明）由调用方通过根标签的 `documentHeader()` 自己拼接。
+`<!DOCTYPE html>`，XML/SVG 根是 XML 声明）由调用方拼接——标签树或组件调用交给
+`renderHTML()` / `renderXML()`，直接渲染 `Renderer` 时用根标签的 `documentHeader()`。
 `examples/bootstrap` 的组件都是建立在其上的单元：
 
 ```php
@@ -228,8 +229,8 @@ register('Features', __FILE__,
 
 function featuresPage(): string
 {
-    // 手动补上文档声明；树本身不带文档声明。
-    return '<!DOCTYPE html>' . component('Features')->render();
+    // renderHTML() 补上文档声明；树本身不带文档声明。
+    return renderHTML(component('Features'));
 }
 ```
 

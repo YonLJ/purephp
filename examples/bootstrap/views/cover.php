@@ -20,13 +20,12 @@ use function Pure\HTML\style;
 
 /**
  * The cover page: static markup through the string renderer — no slots, no
- * compile step. CoverController echoes it, and it writes its own doctype the
- * way a hand-written page does.
+ * compile step. CoverController echoes it, and renderHTML() prepends the
+ * doctype.
  */
 function coverPage(): string
 {
-    return '<!DOCTYPE html>'
-        . html(
+    return renderHTML(html(
 
     head(
         meta()->charset('utf-8'),
@@ -128,5 +127,5 @@ function coverPage(): string
             )->class('mt-auto text-white-50')
         )->class('cover-container d-flex w-100 h-100 p-3 mx-auto flex-column')
     )->class('d-flex h-100 text-center text-bg-dark')
-        )->lang('en')->class('h-100')->render();
+        )->lang('en')->class('h-100'));
 }

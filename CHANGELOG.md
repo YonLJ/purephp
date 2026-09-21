@@ -195,6 +195,11 @@ First public version. No tag has been cut yet.
   `did you mean` suggestion and a missing-required-key error. Multi-slot item
   shapes therefore need no declaration of their own: the nested shape is the
   contract.
+- `Pure\Utils\renderHTML()` / `renderXML()` render a tag tree or a component
+  call and prepend the document header (`<!DOCTYPE html>` / the XML
+  declaration), so a page no longer concatenates the header by hand. The
+  headers stay available as `HTML::DOCUMENT_HEADER` / `XML::DOCUMENT_HEADER`,
+  which the tag classes and the new functions share.
 
 ### Changed
 

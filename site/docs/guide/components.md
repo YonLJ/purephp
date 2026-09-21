@@ -278,9 +278,10 @@ logic.
 
 A page is a component unit whose root tag is a document root (`html`, `svg`,
 `xml`, …). There is no separate page API: register it with `register()`, let its
-`prepare()` hook supply the blocks, and render it with `component()`, then
-prepend the document header of the root tag yourself — `<!DOCTYPE html>` for an
-HTML root, the XML declaration for an XML or SVG one:
+`prepare()` hook supply the blocks, render it with `component()`, and pass the
+call to `renderHTML()` / `renderXML()`, which prepend the document header of the
+function's flavour — `<!DOCTYPE html>` for `renderHTML()`, the XML declaration
+for `renderXML()`:
 
 ```php
 <?php
@@ -302,13 +303,14 @@ register('Features', __FILE__,
 
 function featuresPage(): string
 {
-    // The engine emits the tree as written; prepend the document header here.
-    return '<!DOCTYPE html>' . component('Features')->render();
+    // The engine emits the tree as written; renderHTML() prepends the header.
+    return renderHTML(component('Features'));
 }
 ```
 
-The call emits the tree as written, without a header, so a full page is the
-document header of its root tag plus the rendered fragment.
+The call emits the tree as written, without a header; `renderHTML()` /
+`renderXML()` add the header of the function's flavour, so a full page is that
+header plus the rendered fragment.
 
 `pure compile --plain` writes the same page as a dependency-free view file, so a
 deployment without purephp can serve it; the controller prints the same

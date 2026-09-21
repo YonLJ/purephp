@@ -94,11 +94,12 @@ function Page(mixed ...$children): Call
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/views/page.cmp.php';
 
-echo '<!DOCTYPE html>' . Page()
+use function Pure\Utils\renderHTML;
+
+echo renderHTML(Page()
     ->heading('My First PurePHP Application')
     ->lead('Welcome to PurePHP!')
-    ->body('This is a simple yet powerful PHP template engine.')
-    ->render();
+    ->body('This is a simple yet powerful PHP template engine.'));
 ```
 
 单元必须有自己的 `*.cmp.php` 文件——`pure compile` 只发现这类文件，注册名解析到的正是

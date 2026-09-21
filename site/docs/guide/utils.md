@@ -1,6 +1,9 @@
 # Utility Functions
 
-PurePHP provides several utility functions to simplify development. These functions are automatically used when setting element attributes.
+PurePHP provides several utility functions to simplify development: `clx()`
+and `sty()` are automatically used when setting element attributes, and
+`renderHTML()` / `renderXML()` prepend the document header to a rendered tree
+or component call.
 
 *`clx()` and `sty()` are unchanged by compiled rendering: use them
 while building static attributes in a shape, and bind dynamic values with
@@ -152,6 +155,35 @@ $styles = sty([
 ]);
 div('Content')->style($styles)->print();
 ```
+
+## renderHTML and renderXML
+
+`renderHTML()` and `renderXML()` render a tag tree or a component call and
+prepend the document header, so the result is a complete document:
+
+```php
+<?php
+
+use Pure\Core\XML;
+
+use function Pure\Component\component;
+use function Pure\HTML\{body, h1, html};
+use function Pure\Utils\{renderHTML, renderXML};
+
+echo renderHTML(html(body(h1('Hello'))));
+// <!DOCTYPE html><html><body><h1>Hello</h1></body></html>
+
+echo renderXML(XML::customers(XML::customer(XML::name('Charter Group'))->id('55000')));
+// <?xml version="1.0"?><customers><customer id="55000"><name>Charter Group</name></customer></customers>
+
+echo renderHTML(component('Cover')); // a component call takes the same header
+```
+
+The function picks the header: `renderHTML()` always prepends `<!DOCTYPE html>`,
+`renderXML()` the XML declaration, whatever the node holds. A component call
+does not expose its tree, so its header can only come from the function name.
+Use `->render()` when only the markup is wanted, such as for a fragment included
+into a page.
 
 ## Raw Markup
 

@@ -72,9 +72,10 @@ function Card(mixed ...$children): Call
 | `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的类型化 prop 契约（props→bindings 钩子） |
 | `component(string $name, mixed ...$children): Call` | 开始一次链式调用：props 像标签属性一样设置，返回值是 `Markup`，可像标签一样嵌套 |
 
-链式调用按原样产出树，**不带文档头**；整份文档的文档头由调用方
-自己拼接（`$root->documentHeader()`，或字面量 `<!DOCTYPE html>` /
-`<?xml version="1.0"?>`）。
+链式调用按原样产出树，**不带文档头**；整份文档的文档头由调用方处理：
+标签树或组件调用交给 `Pure\Utils\renderHTML()` / `renderXML()`，或者自己拼接
+（`$root->documentHeader()`，或常量 `HTML::DOCUMENT_HEADER` /
+`XML::DOCUMENT_HEADER`）。
 
 需要自己持有或传递绑定器时，用 `Registry::component($source)`，它返回
 `Closure(array $data): string`，接受字符串键的数据数组。
@@ -190,7 +191,7 @@ $compiled->id;                               // 结构指纹（与 Shape::id() �
 `Shape::save($path, $data)` 是面向用户的便捷方法：写出渲染结果，并补上根标签的文档声明
 （例如 `<!DOCTYPE html>` 或 XML 声明），除非你传入自己的声明。
 `Renderer::save()` 则把声明作为可选的第三个参数，默认为空，因此需要整份文档的处理器
-自己拼接：`'<!DOCTYPE html>' . $renderer->render($data)`。
+自己拼接：`HTML::DOCUMENT_HEADER . $renderer->render($data)`。
 
 ## 磁盘缓存
 

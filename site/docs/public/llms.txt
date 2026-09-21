@@ -15,7 +15,7 @@
 - [Props and Slots](https://yonld.github.io/purephp/guide/props.html.md): In PurePHP, "props" come in two forms:
 - [SVG and XML Support](https://yonld.github.io/purephp/guide/svg-xml.html.md): PurePHP provides comprehensive support for creating SVG graphics and XML documents with the same elegant syntax as HTML.
 - [PurePHP with TailwindCSS Integration](https://yonld.github.io/purephp/guide/tailwindcss.html.md): The combination of PurePHP and TailwindCSS provides a powerful development experience: component-based PHP templating engine paired with a utility-first CSS framework.
-- [Utility Functions](https://yonld.github.io/purephp/guide/utils.html.md): PurePHP provides several utility functions to simplify development. These functions are automatically used when setting element attributes.
+- [Utility Functions](https://yonld.github.io/purephp/guide/utils.html.md): PurePHP provides several utility functions to simplify development: clx() and sty() are automatically used when setting element attributes, and renderHTML() / renderXML() prepend the document header t…
 
 ## API Reference
 
@@ -40,7 +40,7 @@
 - [Props 与槽位](https://yonld.github.io/purephp/zh/guide/props.html.md): 在 PurePHP 中，“props”有两种形式：
 - [SVG 和 XML 支持](https://yonld.github.io/purephp/zh/guide/svg-xml.html.md): PurePHP 为创建 SVG 图形和 XML 文档提供全面支持，使用与 HTML 相同的优雅语法。
 - [PurePHP 与 TailwindCSS 集成](https://yonld.github.io/purephp/zh/guide/tailwindcss.html.md): PurePHP 与 TailwindCSS 的结合为你提供了强大的开发体验：组件化的 PHP 模板引擎配合实用优先的 CSS 框架。
-- [工具函数](https://yonld.github.io/purephp/zh/guide/utils.html.md): PurePHP 提供了一些实用的工具函数来简化开发，这些函数在设置元素属性时会自动使用。
+- [工具函数](https://yonld.github.io/purephp/zh/guide/utils.html.md): PurePHP 提供了一些实用的工具函数来简化开发：clx() 和 sty() 在设置元素属性时自动使用， renderHTML() / renderXML() 则为标签树或组件调用的渲染结果拼接文档声明。
 
 ## 中文 API 参考 (Chinese API Reference)
 

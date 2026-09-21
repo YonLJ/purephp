@@ -22,6 +22,8 @@ require_once __DIR__ . '/../app/controllers/PlainIndexController.php';
 
 use Pure\Core\XML;
 
+use function Pure\Utils\renderXML;
+
 // The pages and aliases of this router, for the 404 map below.
 $pages = [
     '/pure' => 'the page function and the artifact',
@@ -92,5 +94,5 @@ function renderNotFound(string $path, array $pages, array $redirects): void
         $routes[] = XML::route()->path($route)->redirects_to($target);
     }
 
-    echo '<?xml version="1.0"?>', "\n", XML::routes(...$routes)->request($path), "\n";
+    echo renderXML(XML::routes(...$routes)->request($path)), "\n";
 }

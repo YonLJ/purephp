@@ -68,7 +68,7 @@ $artifactTime = bench('skeleton artifact + rendered blocks', $iters, fn (): stri
 $plainTime = bench('plain view + rendered blocks', $iters, fn (): string => plain('features', $bindings));
 
 // The page function prepends this header itself; artifacts carry no header.
-$header = '<!DOCTYPE html>';
+$header = \Pure\Core\HTML::DOCUMENT_HEADER;
 $document = $header . $renderer->render($bindings);
 printf(
     "\npage identical: %s (%d bytes) | page vs classic: %.2fx\n",

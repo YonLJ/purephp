@@ -1,6 +1,7 @@
 # 工具函数
 
-PurePHP 提供了一些实用的工具函数来简化开发，这些函数在设置元素属性时会自动使用。
+PurePHP 提供了一些实用的工具函数来简化开发：`clx()` 和 `sty()` 在设置元素属性时自动使用，
+`renderHTML()` / `renderXML()` 则为标签树或组件调用的渲染结果拼接文档声明。
 
 *`clx()` 和 `sty()` 不受编译渲染影响：在形状中构建静态属性时照常使用，动态值则通过 `Slot::value()` / `Slot::raw()` 绑定——参见[编译组件](/zh/guide/compiled)。下面的多数示例使用标签 API，它对代码片段和调试依然有效。*
 
@@ -148,6 +149,32 @@ $styles = sty([
 ]);
 div('Content')->style($styles)->print();
 ```
+
+## renderHTML 与 renderXML
+
+`renderHTML()` 和 `renderXML()` 渲染标签树或组件调用，并拼接文件头，返回完整文档：
+
+```php
+<?php
+
+use Pure\Core\XML;
+
+use function Pure\Component\component;
+use function Pure\HTML\{body, h1, html};
+use function Pure\Utils\{renderHTML, renderXML};
+
+echo renderHTML(html(body(h1('Hello'))));
+// <!DOCTYPE html><html><body><h1>Hello</h1></body></html>
+
+echo renderXML(XML::customers(XML::customer(XML::name('Charter Group'))->id('55000')));
+// <?xml version="1.0"?><customers><customer id="55000"><name>Charter Group</name></customer></customers>
+
+echo renderHTML(component('Cover')); // 组件调用同样使用该文件头
+```
+
+文件头由函数决定：无论节点是什么，`renderHTML()` 始终拼接 `<!DOCTYPE html>`，
+`renderXML()` 拼接 XML 声明。组件调用不暴露自身树，文件头只能来自函数名。
+只需要标记本身（例如嵌入页面的片段）时用 `->render()`。
 
 ## raw 标记
 

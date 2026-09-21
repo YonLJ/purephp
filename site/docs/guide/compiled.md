@@ -224,8 +224,10 @@ $pureBody = static function (array $v): string {
 
 There is no automatic document header: the tree renders as written, and a full
 document's header (`<!DOCTYPE html>` for an HTML root, the XML declaration for an
-XML or SVG one) is the caller's to prepend, via the root tag's `documentHeader()`.
-Components in `examples/bootstrap` are units built on that:
+XML or SVG one) is the caller's to prepend — `renderHTML()` / `renderXML()` do it
+for a tag tree or a component call, and the root tag's `documentHeader()` gives
+the header when a `Renderer` is rendered directly. Components in
+`examples/bootstrap` are units built on that:
 
 ```php
 // components/Icon.cmp.php: typed props, backed by its precompiled template
@@ -250,8 +252,8 @@ register('Features', __FILE__,
 
 function featuresPage(): string
 {
-    // Prepend the document header; the tree itself renders without one.
-    return '<!DOCTYPE html>' . component('Features')->render();
+    // renderHTML() prepends the document header; the tree renders without one.
+    return renderHTML(component('Features'));
 }
 ```
 

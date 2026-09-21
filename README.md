@@ -172,10 +172,12 @@ vendor/bin/pure check components              # slots vs. bindings vs. parameter
 ```
 
 ```php
+use Pure\Core\HTML;
+
 $page = require __DIR__ . '/page.pure.php';
 
 echo $page->render(['title' => 'Card Title']);        // the view body
-echo '<!DOCTYPE html>' . $page->render($data);        // a whole document
+echo HTML::DOCUMENT_HEADER . $page->render($data);    // a whole document
 ```
 
 A `*.plain.php` view is markup and native PHP only — load it by extracting the

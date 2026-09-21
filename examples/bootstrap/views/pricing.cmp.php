@@ -8,6 +8,8 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{body, div, head, html, link, meta, title};
 
+use function Pure\Utils\renderHTML;
+
 require_once __DIR__ . '/PageHeader.cmp.php';
 require_once __DIR__ . '/PricingHeader.cmp.php';
 require_once __DIR__ . '/CardDeck.cmp.php';
@@ -75,5 +77,5 @@ function pricingBindings(): array
  */
 function pricingPage(): string
 {
-    return '<!DOCTYPE html>' . component('Pricing')->render();
+    return renderHTML(component('Pricing'));
 }

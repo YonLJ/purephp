@@ -8,6 +8,8 @@ use Pure\Core\XML;
 
 use function Pure\Component\{component, register};
 
+use function Pure\Utils\renderXML;
+
 /**
  * Address shape: fields follow the data key order; `city` is optional and
  * rendered only when the record provides it.
@@ -49,12 +51,12 @@ register('Xml', __FILE__, static fn () => XmlPageShape());
 
 /**
  * The xml page: the document comes from views/xml.shape.php (precompiled with
- * `pure compile`). The XML declaration is not part of the tree, so it is
- * prepended manually.
+ * `pure compile`). The XML declaration is not part of the tree, so renderXML()
+ * prepends it.
  *
  * @param array<string, mixed> $data The page data from the controller.
  */
 function xmlPage(array $data): string
 {
-    return '<?xml version="1.0"?>' . component('Xml')->addresses($data['addresses'])->render();
+    return renderXML(component('Xml')->addresses($data['addresses']));
 }

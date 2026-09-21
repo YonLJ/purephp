@@ -34,6 +34,8 @@ use function Pure\HTML\p;
 use function Pure\HTML\title;
 use function Pure\HTML\ul;
 
+use function Pure\Utils\renderHTML;
+
 // The routes of this router, for the 404 map below.
 $pages = [
     '/cover' => 'the cover page: static markup, no compile step',
@@ -105,7 +107,7 @@ function renderNotFound(string $path, array $pages): void
         $items[] = li(a($route)->href($route), ' — ', $description);
     }
 
-    echo '<!DOCTYPE html>', html(
+    echo renderHTML(html(
         head(
             meta()->charset('utf-8'),
             title('404 — nothing at ' . $path)
@@ -115,5 +117,5 @@ function renderNotFound(string $path, array $pages): void
             p('Nothing is routed at ', code($path), '. These routes exist:'),
             ul(...$items)
         )
-    )->lang('en');
+    )->lang('en'));
 }
