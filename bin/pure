@@ -16,7 +16,14 @@ $argv = $_SERVER['argv'] ?? [];
 
 $units = static fn (string $file): array => Pure\Component\Registry::unitsFor($file);
 
+$version = static function (): int {
+    fwrite(STDOUT, 'pure ' . (Composer\InstalledVersions::getPrettyVersion('yonld/purephp') ?? 'unknown') . PHP_EOL);
+
+    return 0;
+};
+
 exit(match ($argv[1] ?? null) {
+    '--version', 'version', '-v' => $version(),
     'check' => (new Pure\Compile\Internal\CheckCommand($units))->run($argv),
     default => (new Pure\Compile\Internal\ArtifactCommand($units))->run($argv),
 });

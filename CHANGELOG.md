@@ -11,6 +11,8 @@ First public version. No tag has been cut yet.
 
 ### Added
 
+- `pure --version` (also `pure version` / `pure -v`) prints the installed
+  package version.
 - Component units: a `*.cmp.php` file registers a lazy template factory with
   `Pure\Component\register()` and defines the call function next to it.
   `component()` accepts the registered name next to a file path; a name

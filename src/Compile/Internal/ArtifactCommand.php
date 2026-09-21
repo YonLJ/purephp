@@ -23,6 +23,7 @@ final class ArtifactCommand
         Commands:
           pure compile <path>...   write *.pure.php artifacts (and --plain views)
           pure check <path>...     check component contracts (slots, bindings)
+          pure -v, --version       print the version
 
         Run `pure check --help` for the contract checks.
 
