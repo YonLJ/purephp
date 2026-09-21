@@ -1,12 +1,8 @@
 {
   "name": "purephp",
   "version": "1.0.0",
+  "private": true,
   "description": "Purephp is a PHP templating engine inspired by ReactJS functional components.",
-  "main": "index.js",
-  "directories": {
-    "example": "examples",
-    "test": "tests"
-  },
   "scripts": {
     "docs:dev": "node scripts/generate-llms-txt.mjs && vitepress dev docs",
     "docs:build": "node scripts/generate-llms-txt.mjs && vitepress build docs && node scripts/publish-markdown.mjs",
@@ -16,14 +12,7 @@
     "type": "git",
     "url": "git+https://github.com/YonLD/purephp.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/YonLD/purephp/issues"
-  },
-  "homepage": "https://github.com/YonLD/purephp#readme",
+  "license": "MIT",
   "devDependencies": {
     "postcss": "^8.5.28",
     "vue": "^3.4.21",

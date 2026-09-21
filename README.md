@@ -239,6 +239,20 @@ artifact, preceded by the document header only when the view's root heads a
 document (`<html>` or an XML tree; a fragment view starts with its markup). See
 [the examples](examples).
 
+## Development
+
+```bash
+composer quality    # syntax-check + cs-check + phpstan + tests: run this before committing
+composer test       # PHPUnit only
+composer cs-fix     # apply the PHP CS Fixer rules
+composer phpstan    # static analysis (level 9)
+composer bench      # benchmarks
+```
+
+The documentation site lives in `site/` (VitePress):
+`npm run docs:dev` to preview locally, `npm run docs:build` to build it
+(this also regenerates `llms.txt` and verifies its links).
+
 ## License
 
 MIT © YonLD
