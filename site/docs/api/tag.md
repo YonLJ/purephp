@@ -95,24 +95,6 @@ Values must be scalar, `Stringable`, `Slot` or `null`; arrays raise an
 normalized like the chained setters: `className` → `class`, `data_id` →
 `data-id`.
 
-### `setAttrByCb(string $key, callable $callback): self`
-
-Modifies an attribute value using a callback function. If the callback returns null, the attribute is removed.
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-$element = div('Content')->class('btn primary');
-
-// Append a new class
-$element->setAttrByCb('class', fn($val) => $val . ' active');
-
-// Remove attribute
-$element->setAttrByCb('class', fn($val) => null);
-```
-
 ## Getter Methods
 
 ### `getTagName(): string`

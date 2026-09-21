@@ -321,31 +321,6 @@ abstract class Tag implements ShapeContract
         return $this;
     }
 
-    /**
-     * Transform an attribute value with a callback. A null result removes the
-     * attribute, a Slot result stores the slot, anything else is stringified.
-     * A missing attribute passes null to the callback.
-     *
-     * @param string $key The attribute name.
-     * @param callable(mixed|null): (string|Slot|null) $callback
-     * @return self
-     */
-    public function setAttrByCb(string $key, callable $callback): self
-    {
-        $key = self::normalizeAttrKey($key);
-        $this->guardAttributeName($key);
-        $value = $callback($this->attrs[$key] ?? null);
-        if (is_null($value)) {
-            unset($this->attrs[$key]);
-        } elseif ($value instanceof Slot) {
-            $this->attrs[$key] = $value;
-        } else {
-            $this->attrs[$key] = self::stringifyAttrValue($this->tagName, $key, $value);
-        }
-
-        return $this;
-    }
-
     private function setAttr(string|int $key, mixed $value): self
     {
         if (is_null($value)) {

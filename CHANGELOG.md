@@ -443,6 +443,10 @@ First public version. No tag has been cut yet.
 - `Pure\Core\RawType`, `Raw::toJSON()`, and the `Pure\Utils\rawHtml()` /
   `rawXml()` / `raw()` helpers; trusted markup is created with
   `Pure\Core\Raw::of($value)`.
+- **Breaking** — `Tag::setAttrByCb()` is removed. Attributes are set once while
+  the tree is built (`->class(...)`, `setAttrs()`; a `null` value skips the
+  attribute) and dynamic values bind through slots, so a callback that rewrites
+  or removes an attribute has no place in the build-once workflow.
 
 ### Fixed
 

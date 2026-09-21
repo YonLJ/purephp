@@ -160,31 +160,6 @@ class TagTest extends TestCase
         $this->assertSame('container', $tag->getAttr('className'));
     }
 
-    public function testSetAttrByCbReceivesNullForMissingAttribute(): void
-    {
-        $seen = 'unset';
-        $tag = div('x');
-
-        $tag->setAttrByCb('title', static function (mixed $value) use (&$seen): string {
-            $seen = $value ?? 'null';
-
-            return 'Created';
-        });
-
-        $this->assertSame('null', $seen);
-        $this->assertSame('Created', $tag->getAttr('title'));
-    }
-
-    public function testSetAttrByCbNullRemovesAnExistingAttribute(): void
-    {
-        $tag = div('x')->id('main');
-
-        $tag->setAttrByCb('id', static fn (mixed $value): ?string => null);
-
-        $this->assertNull($tag->getAttr('id'));
-        $this->assertSame('<div>x</div>', $tag->render());
-    }
-
     public function testToJsonKeepsStructuralKeysSeparateFromAttributes(): void
     {
         $json = div('x')->tagName('attr-value')->toJSON();
@@ -218,11 +193,6 @@ class TagTest extends TestCase
 
         $this->assertSame('<div class="x"></div>', $tag->render());
         $this->assertSame('x', $tag->getAttr('className'));
-
-        $this->assertSame(
-            '<div class="y"></div>',
-            div()->class('x')->setAttrByCb('className', static fn (mixed $value): string => 'y')->render()
-        );
     }
 
     public function testUnderscoredAttributeKeysRoundTripLikeMethodCalls(): void
@@ -231,7 +201,7 @@ class TagTest extends TestCase
 
         $this->assertSame('123', $tag->getAttr('data_id'));
         $this->assertSame('123', $tag->getAttr('data-id'));
-        $this->assertSame('<div data-id="9"></div>', $tag->setAttrByCb('data_id', static fn (mixed $value): string => '9')->render());
+        $this->assertSame('<div data-id="123"></div>', $tag->render());
     }
 
     public function testNonStringableAttributeValueIsRejected(): void

@@ -90,24 +90,6 @@ $element = div('Content')->setAttrs([
 
 值必须是标量、`Stringable`、`Slot` 或 `null`；数组会抛出 `InvalidArgumentException`（数组请使用 `class()`/`style()`）。键名会像链式 setter 一样归一化：`className` → `class`，`data_id` → `data-id`。
 
-### `setAttrByCb(string $key, callable $callback): self`
-
-通过回调函数修改属性值。如果回调返回 null，则删除该属性。
-
-```php
-<?php
-
-use function Pure\HTML\div;
-
-$element = div('Content')->class('btn primary');
-
-// 追加一个新的类名
-$element->setAttrByCb('class', fn($val) => $val . ' active');
-
-// 删除属性
-$element->setAttrByCb('class', fn($val) => null);
-```
-
 ## 获取方法
 
 ### `getTagName(): string`
