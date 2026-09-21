@@ -92,7 +92,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -102,11 +107,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 ```
 
 模板内部：嵌套形状用 `Slot::child()`，列表用 `Slot::each()`，可选/条件标记用
@@ -205,7 +205,13 @@ $pureBody = static function (array $v): string {
 
 ```php
 // components/Icon.cmp.php：类型化 prop 契约在 prepare() 钩子里，背后是预编译模板
-register('Icon', __FILE__,
+
+function Icon(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Icon(...),
     factory: static fn () =>
         svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class')),
     prepare: static function (string $href, string $class = 'bi'): array {
@@ -213,13 +219,13 @@ register('Icon', __FILE__,
     }
 );
 
-function Icon(mixed ...$children): Call
+// views/features.cmp.php：页面数据由 prepare() 提供
+function Features(mixed ...$children): Call
 {
-    return component('Icon', ...$children);
+    return component(__FUNCTION__, ...$children);
 }
 
-// views/features.cmp.php：页面数据由 prepare() 提供
-register('Features', __FILE__,
+register(Features(...),
     factory: static fn () => html(/* ... */),
     prepare: static fn (): array => [
         'title' => FeaturesService::pageTitle(),

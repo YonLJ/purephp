@@ -8,9 +8,25 @@ use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h1, h4, li, small, ul};
 
 /**
+ * One pricing card, called fluently:
+ *
+ *     Card()
+ *         ->type('Free')
+ *         ->price('0')
+ *         ->features(['10 users included', '2 GB of storage'])
+ *         ->text('Sign up for free')
+ *         ->class('btn btn-lg btn-block btn-outline-primary');
+ */
+#[Component]
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One pricing card template.
  */
-register('Card', __FILE__,
+register(Card(...),
     factory: static fn () => div(
         div(
             h4(Slot::value('type'))->class('my-0 font-weight-normal')
@@ -31,19 +47,3 @@ register('Card', __FILE__,
         ];
     }
 );
-
-/**
- * One pricing card, called fluently:
- *
- *     Card()
- *         ->type('Free')
- *         ->price('0')
- *         ->features(['10 users included', '2 GB of storage'])
- *         ->text('Sign up for free')
- *         ->class('btn btn-lg btn-block btn-outline-primary');
- */
-#[Component]
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}

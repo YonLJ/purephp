@@ -38,17 +38,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\p;
 
-register('CounterValue', __FILE__,
+function CounterValue(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(CounterValue(...),
     factory: static fn () => p('Current count: ', Slot::value('count'))->id('counter'),
     prepare: static function (int $count): array {
         return ['count' => $count];
     }
 );
-
-function CounterValue(mixed ...$children): Call
-{
-    return component('CounterValue', ...$children);
-}
 ```
 ```php
 <?php
@@ -62,7 +62,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div};
 
-register('Counter', __FILE__,
+function Counter(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Counter(...),
     factory: static fn () =>
         div(
             Slot::raw('counter'),
@@ -75,11 +80,6 @@ register('Counter', __FILE__,
         return ['counter' => CounterValue()->count($count)];
     }
 );
-
-function Counter(mixed ...$children): Call
-{
-    return component('Counter', ...$children);
-}
 ```
 ```php
 <?php
@@ -143,17 +143,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\div;
 
-register('SearchResult', __FILE__,
+function SearchResult(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(SearchResult(...),
     factory: static fn () => div(Slot::value('title'))->class('search-result'),
     prepare: static function (string $title): array {
         return ['title' => $title];
     }
 );
-
-function SearchResult(mixed ...$children): Call
-{
-    return component('SearchResult', ...$children);
-}
 ```
 ```php
 <?php
@@ -167,7 +167,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\div;
 
-register('ResultList', __FILE__,
+function ResultList(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(ResultList(...),
     factory: static fn () => div(Slot::raw('results')),
     prepare: static function (array $results): array {
         $items = [];
@@ -179,11 +184,6 @@ register('ResultList', __FILE__,
         return ['results' => $items];
     }
 );
-
-function ResultList(mixed ...$children): Call
-{
-    return component('ResultList', ...$children);
-}
 ```
 ```php
 <?php
@@ -197,7 +197,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, input};
 
-register('SearchBox', __FILE__,
+function SearchBox(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(SearchBox(...),
     factory: static fn () =>
         div(
             input()
@@ -212,11 +217,6 @@ register('SearchBox', __FILE__,
         return ['list' => $list];
     }
 );
-
-function SearchBox(mixed ...$children): Call
-{
-    return component('SearchBox', ...$children);
-}
 ```
 ```php
 <?php

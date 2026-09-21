@@ -8,9 +8,18 @@ use function Pure\HTML\{div, h1, head, html, link, main, meta, title};
 use function Pure\SVG\{path, svg, symbol, title as svgTitle};
 
 /**
+ * The SVG symbol sheet the features page's icons reference: `IconSheet()`.
+ */
+#[Component]
+function IconSheet(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The SVG symbol sheet the features page's icons reference.
  */
-register('IconSheet', __FILE__, static fn () =>
+register(IconSheet(...), static fn () =>
     svg(
         symbol(
             svgTitle('Bootstrap'),
@@ -70,12 +79,3 @@ register('IconSheet', __FILE__, static fn () =>
         )->id('geo-fill')->viewBox('0 0 16 16')
     )->xmlns('http://www.w3.org/2000/svg')->style('display: none;')
 );
-
-/**
- * The SVG symbol sheet the features page's icons reference: `IconSheet()`.
- */
-#[Component]
-function IconSheet(mixed ...$children): Call
-{
-    return component('IconSheet', ...$children);
-}

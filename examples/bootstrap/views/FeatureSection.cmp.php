@@ -11,11 +11,22 @@ require_once __DIR__ . '/../components/FeatureTitle.cmp.php';
 require_once __DIR__ . '/../app/services/FeaturesService.php';
 
 /**
+ * The "features with title" section: it fetches the heading, the main column
+ * and the feature records from the service and renders its own children.
+ * `FeatureSection()`.
+ */
+#[Component]
+function FeatureSection(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The "features with title" section template: the main column and the feature
  * items are rendered by MainFeature() and FeatureTitle() and injected as raw
  * markup.
  */
-register('FeatureSection', __FILE__,
+register(FeatureSection(...),
     factory: static fn () => div(
         h2(Slot::value('title'))->class('pb-2 border-bottom'),
         div(
@@ -38,14 +49,3 @@ register('FeatureSection', __FILE__,
         ];
     }
 );
-
-/**
- * The "features with title" section: it fetches the heading, the main column
- * and the feature records from the service and renders its own children.
- * `FeatureSection()`.
- */
-#[Component]
-function FeatureSection(mixed ...$children): Call
-{
-    return component('FeatureSection', ...$children);
-}

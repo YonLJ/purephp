@@ -9,9 +9,18 @@ use function Pure\HTML\{div, h4, p};
 require_once __DIR__ . '/Icon.cmp.php';
 
 /**
+ * One "features with title" item: `FeatureTitle()->icon('bootstrap')->title(...)->content(...)`.
+ */
+#[Component]
+function FeatureTitle(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One "features with title" item template.
  */
-register('FeatureTitle', __FILE__,
+register(FeatureTitle(...),
     factory: static fn () => div(
         div(
             Slot::raw('icon')
@@ -27,12 +36,3 @@ register('FeatureTitle', __FILE__,
         ];
     }
 );
-
-/**
- * One "features with title" item: `FeatureTitle()->icon('bootstrap')->title(...)->content(...)`.
- */
-#[Component]
-function FeatureTitle(mixed ...$children): Call
-{
-    return component('FeatureTitle', ...$children);
-}

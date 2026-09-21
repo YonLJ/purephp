@@ -10,9 +10,18 @@ use function Pure\HTML\{div, h3, p};
 require_once __DIR__ . '/Icon.cmp.php';
 
 /**
+ * One "icon grid" item: `CellIcon()->icon('speedometer2')->title(...)->content(...)`.
+ */
+#[Component]
+function CellIcon(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One "icon grid" item template.
  */
-register('CellIcon', __FILE__,
+register(CellIcon(...),
     factory: static fn () => div(
         Slot::raw('icon'),
         div(
@@ -28,12 +37,3 @@ register('CellIcon', __FILE__,
         ];
     }
 );
-
-/**
- * One "icon grid" item: `CellIcon()->icon('speedometer2')->title(...)->content(...)`.
- */
-#[Component]
-function CellIcon(mixed ...$children): Call
-{
-    return component('CellIcon', ...$children);
-}

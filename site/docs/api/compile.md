@@ -44,9 +44,10 @@ paths share the same escaping implementation (`Pure\Core\Escaper`, `@internal`).
 
 ## Function Components
 
-A component unit registers a lazy template factory under a name; the call
-function next to it returns a `Call`, and the unit's `prepare()` hook is the
-typed prop contract. A call produces the markup on string conversion:
+A component unit registers a lazy template factory under the name of its call
+function: the call function returns a `Call` and carries the component name
+exactly once (`component(__FUNCTION__, ...)`), and the unit's `prepare()` hook
+is the typed prop contract. A call produces the markup on string conversion:
 
 ```php
 <?php
@@ -57,7 +58,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(h2(Slot::value('title')), p(Slot::value('content')))->class('card'),
     prepare: static function (string $title, string $content): array {
@@ -65,18 +71,13 @@ register('Card', __FILE__,
     }
 );
 
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
-
 echo Card()->title('Title')->content('Content');
 ```
 
 | Function | Behavior |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | Registers a component unit; the factory must be lazy and may return a tag tree or a `Shape`, and `$prepare` is the optional typed props-to-bindings hook of a fluent call |
-| `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes, children bind the reserved `children` slot, and the result is `Markup`, so it nests like a tag; `$name` is a registered name or a template path |
+| `register(Closure|string $name, string\|Closure $file = '', ?Closure $factory = null, bool $override = false, ?Closure $prepare = null): void` | Registers a component unit. Preferred: pass the call function — `register(Card(...), $factory)` — and the name and file derive from it; the classic `register('Card', __FILE__, $factory)` stays supported. The factory must be lazy and may return a tag tree or a `Shape`, and `$prepare` is the optional typed props-to-bindings hook of a fluent call |
+| `component(string $name, mixed ...$children): Call` | Starts a fluent call: props are set like tag attributes, children bind the reserved `children` slot, and the result is `Markup`, so it nests like a tag; `$name` is a registered name or a template path, and a unit's own call function passes `__FUNCTION__` |
 | `Registry::component(string $nameOrPath): Closure(array $data): string` | Returns the binder of a unit or shape file, to hold or pass around yourself |
 
 There is no page flavour: to emit a full document, pass the tag tree or the

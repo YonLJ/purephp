@@ -69,7 +69,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h1, p};
 
-register('Page', __FILE__,
+function Page(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Page(...),
     factory: static fn () =>
         div(
             h1(Slot::value('heading')),
@@ -80,11 +85,6 @@ register('Page', __FILE__,
         return ['heading' => $heading, 'lead' => $lead, 'body' => $body];
     }
 );
-
-function Page(mixed ...$children): Call
-{
-    return component('Page', ...$children);
-}
 ```
 
 Then `index.php`, the entry file, loads the unit and renders it:
@@ -105,7 +105,8 @@ echo renderHTML(Page()
 ```
 
 A unit lives in its own `*.cmp.php` file — `pure compile` discovers those files,
-and the registered name resolves to the file it was registered from. The binder
+and the registered name — derived from the call function — resolves to that
+file. The binder
 loads the template once per process and caches it per name or path;
 the document header is the caller's to prepend. Under standard PHP-FPM, enable
 `Compile::cachePath()` so requests load the compiled renderer instead of
@@ -165,7 +166,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -175,11 +181,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 // Render the component with data
 echo Card()->title('Card Title')->content('This is the card content');

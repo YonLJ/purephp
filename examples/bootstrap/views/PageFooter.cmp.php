@@ -11,10 +11,20 @@ require_once __DIR__ . '/../components/ColLinks.cmp.php';
 require_once __DIR__ . '/../app/services/PricingService.php';
 
 /**
+ * The page footer: it fetches the logo and the link columns from the service
+ * and renders its own children. `PageFooter()`.
+ */
+#[Component]
+function PageFooter(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The page footer template: the logo column and the link columns, rendered by
  * ColLogo() and ColLinks() and injected as raw markup.
  */
-register('PageFooter', __FILE__,
+register(PageFooter(...),
     factory: static fn () => footer(
         div(
             Slot::raw('logo'),
@@ -33,13 +43,3 @@ register('PageFooter', __FILE__,
         ];
     }
 );
-
-/**
- * The page footer: it fetches the logo and the link columns from the service
- * and renders its own children. `PageFooter()`.
- */
-#[Component]
-function PageFooter(mixed ...$children): Call
-{
-    return component('PageFooter', ...$children);
-}

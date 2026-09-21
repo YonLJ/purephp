@@ -9,9 +9,18 @@ use function Pure\HTML\{a, div, h3, p};
 require_once __DIR__ . '/Icon.cmp.php';
 
 /**
+ * One "hanging icons" item: `HangingIcon()->icon('bootstrap')->title(...)->content(...)->link(...)->linkText(...)`.
+ */
+#[Component]
+function HangingIcon(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One "hanging icons" item template.
  */
-register('HangingIcon', __FILE__,
+register(HangingIcon(...),
     factory: static fn () => div(
         div(
             Slot::raw('icon')
@@ -32,12 +41,3 @@ register('HangingIcon', __FILE__,
         ];
     }
 );
-
-/**
- * One "hanging icons" item: `HangingIcon()->icon('bootstrap')->title(...)->content(...)->link(...)->linkText(...)`.
- */
-#[Component]
-function HangingIcon(mixed ...$children): Call
-{
-    return component('HangingIcon', ...$children);
-}

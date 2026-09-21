@@ -10,9 +10,19 @@ use function Pure\HTML\{div, h1, p};
 require_once __DIR__ . '/../app/services/PricingService.php';
 
 /**
+ * The pricing page heading: it fetches the title and the description from the
+ * service. `PricingHeader()`.
+ */
+#[Component]
+function PricingHeader(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The pricing page heading template.
  */
-register('PricingHeader', __FILE__,
+register(PricingHeader(...),
     factory: static fn () => div(
         h1(Slot::value('title'))->class('display-4'),
         p(Slot::value('desc'))->class('lead')
@@ -21,13 +31,3 @@ register('PricingHeader', __FILE__,
         return PricingService::pricing();
     }
 );
-
-/**
- * The pricing page heading: it fetches the title and the description from the
- * service. `PricingHeader()`.
- */
-#[Component]
-function PricingHeader(mixed ...$children): Call
-{
-    return component('PricingHeader', ...$children);
-}

@@ -9,9 +9,19 @@ use function Pure\HTML\{div, h3, img, li, small, ul};
 use function Pure\SVG\{svg, svgUse};
 
 /**
+ * One "custom cards" item: the cover image is the card background, the icon is
+ * the avatar. `CustomCard()->title(...)->icon(...)->location(...)->date(...)->bgImg(...)`.
+ */
+#[Component]
+function CustomCard(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One "custom cards" item template.
  */
-register('CustomCard', __FILE__,
+register(CustomCard(...),
     factory: static fn () => div(
         div(
             div(
@@ -42,13 +52,3 @@ register('CustomCard', __FILE__,
         ];
     }
 );
-
-/**
- * One "custom cards" item: the cover image is the card background, the icon is
- * the avatar. `CustomCard()->title(...)->icon(...)->location(...)->date(...)->bgImg(...)`.
- */
-#[Component]
-function CustomCard(mixed ...$children): Call
-{
-    return component('CustomCard', ...$children);
-}

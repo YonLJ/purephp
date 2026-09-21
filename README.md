@@ -44,7 +44,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -54,11 +59,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 echo Card()->title('Card Title')->content('Card Content');
 ```
@@ -73,17 +73,18 @@ use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
 // a unit with a children slot, its props as plain bindings
-register('Card', __FILE__, static fn () => div(
+
+function Card(mixed ...$children): Pure\Component\Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...), static fn () => div(
     Slot::raw('children'),
     h2(Slot::value('type'))->class('card-title'),
     ul(Slot::each('features', li(Slot::value('value')))),
     button(Slot::value('text'))->class(Slot::value('class'))
 )->class('card'));
-
-function Card(mixed ...$children): Pure\Component\Call
-{
-    return component('Card', ...$children);
-}
 
 echo div(
     Card(h2('Pro'))
@@ -109,7 +110,8 @@ The above code will output:
 <div class="card"><h2>Card Title</h2><p>Card Content</p></div>
 ```
 
-`register()` only stores the factory; a request that finds a fresh artifact
+`register(Card(...))` derives the name and file from the call function and only
+stores the factory; a request that finds a fresh artifact
 never builds the template. Run `vendor/bin/pure compile components` to
 precompile, and `pure compile --list` to see the units found. A call renders the
 fragment; a full document's header is the caller's to prepend

@@ -67,7 +67,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h1, p};
 
-register('Page', __FILE__,
+function Page(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Page(...),
     factory: static fn () =>
         div(
             h1(Slot::value('heading')),
@@ -78,11 +83,6 @@ register('Page', __FILE__,
         return ['heading' => $heading, 'lead' => $lead, 'body' => $body];
     }
 );
-
-function Page(mixed ...$children): Call
-{
-    return component('Page', ...$children);
-}
 ```
 
 再创建 `index.php`，即入口文件，它加载单元并渲染：
@@ -102,8 +102,8 @@ echo renderHTML(Page()
     ->body('This is a simple yet powerful PHP template engine.'));
 ```
 
-单元必须有自己的 `*.cmp.php` 文件——`pure compile` 只发现这类文件，注册名解析到的正是
-注册它的文件。`component()` 通过按名字或路径缓存的绑定器解析单元，模板每进程只加载一次；
+单元必须有自己的 `*.cmp.php` 文件——`pure compile` 只发现这类文件，注册名从调用函数派生、
+解析到的正是该文件。`component()` 通过按名字或路径缓存的绑定器解析单元，模板每进程只加载一次；
 文档声明由调用方
 拼接。标准 PHP-FPM 下请启用 `Compile::cachePath()`，让请求加载已编译的渲染器而不是重新构建；
 或者用 `vendor/bin/pure compile .` 预编译，让绑定器直接加载产物。
@@ -157,7 +157,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -167,11 +172,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 // 用数据渲染组件
 echo Card()->title('Card Title')->content('This is the card content');

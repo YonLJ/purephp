@@ -17,7 +17,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () => div(
         h2(Slot::value('title')),
         p(Slot::value('content'))
@@ -27,15 +32,11 @@ register('Card', __FILE__,
     }
 );
 
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
-
 echo Card()->title('Title')->content('Content');
 ```
 
-- `register()` stores the factory and the file; it builds nothing. A request
+- `register(Card(...))` derives the name and the file from the call function
+  and stores the factory; it builds nothing. A request
   that has a fresh artifact never calls the factory.
 - `prepare()` is the typed prop contract: its parameters are the props, PHP
   enforces their types, and the array it returns is what binds the template.
@@ -66,17 +67,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\span;
 
-register('Badge', __FILE__,
+function Badge(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Badge(...),
     factory: static fn () => span(Slot::value('label'))->class(Slot::value('class')),
     prepare: static function (string $label, string $class = 'badge'): array {
         return ['label' => $label, 'class' => $class];
     }
 );
-
-function Badge(mixed ...$children): Call
-{
-    return component('Badge', ...$children);
-}
 
 Badge()->label('Save')->class('badge');
 ```
@@ -97,7 +98,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () => div(
         Slot::raw('children'),
         h2(Slot::value('type'))->class('card-title'),
@@ -108,11 +114,6 @@ register('Card', __FILE__,
         return ['type' => $type, 'features' => $features, 'text' => $text, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 echo div(
     Card(h2('Pro'))
@@ -150,7 +151,12 @@ and the array it returns is what binds the template:
 ```php
 <?php
 
-register('Section', __FILE__,
+function Section(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Section(...),
     factory: static fn () => Compile::shape(...),
     prepare: static function (string $section, string $class, callable $item): array {
         $data = FeaturesService::section($section);
@@ -182,7 +188,7 @@ the template instead of inferring them:
 
 use Pure\Component\Prop;
 
-register('Card', __FILE__,
+register(Card(...),
     factory: static fn () => Compile::shape(...),
     prepare: static function (
         #[Prop(slot: 'title')] string $text,
@@ -255,14 +261,15 @@ caller passes the children to the call — exactly like a tag:
 <?php
 
 // components/Button.cmp.php
-register('Button', __FILE__, static fn () =>
-    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
-);
 
 function Button(mixed ...$children): Call
 {
-    return component('Button', ...$children);
+    return component(__FUNCTION__, ...$children);
 }
+
+register(Button(...), static fn () =>
+    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
+);
 
 Button(Icon()->href('#plus'))->label('Add');
 ```
@@ -287,7 +294,12 @@ for `renderXML()`:
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__,
+function Features(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Features(...),
     factory: static fn () =>
         html(
             head(title(Slot::value('title'))),
@@ -320,7 +332,9 @@ bindings either way.
 
 `component()` is a convenience over the lower-level helpers:
 
-- `register($name, $file, $factory)` registers a unit under a name.
+- `register(Card(...), $factory)` registers a unit; the name and file derive
+  from the call function (the classic `register('Card', __FILE__, $factory)`
+  stays supported).
 - `Registry::component($nameOrPath)` returns the `Closure(array $data): string`
   binder of a unit or shape file, to hold or pass around yourself.
 

@@ -1497,6 +1497,94 @@ class CheckTest extends TestCase
         $this->assertStringContainsString("no function named 'TplSkip'", $result['stdout']);
     }
 
+    public function testClosureFormRegistrationDerivesNameAndFile(): void
+    {
+        $file = $this->writeFile('closure-form.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            function ClosureBox(mixed ...$children): Call
+            {
+                return component(__FUNCTION__, ...$children);
+            }
+
+            register(ClosureBox(...), static fn (): \Pure\Compile\Shape => Compile::shape(
+                div(Slot::value('title'))
+            ));
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString("component 'ClosureBox'", $result['stdout']);
+        $this->assertStringNotContainsString('no component unit is registered', $result['stdout'] . $result['stderr']);
+        $this->assertStringNotContainsString("no function named 'ClosureBox'", $result['stdout']);
+    }
+
+    public function testClosureFormRejectsAnAnonymousClosure(): void
+    {
+        $file = $this->writeFile('closure-anon.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\register;
+            use function Pure\HTML\div;
+
+            register(
+                static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString('not an anonymous closure', $result['stderr']);
+    }
+
+    public function testClosureFormRejectsTwoFactories(): void
+    {
+        $file = $this->writeFile('closure-twice.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Component\Call;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            function TwoFactoriesBox(mixed ...$children): Call
+            {
+                return component(__FUNCTION__, ...$children);
+            }
+
+            register(TwoFactoriesBox(...),
+                static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
+                static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString('two factories', $result['stderr']);
+    }
+
     private function writeFile(string $name, string $code): string
     {
         $path = $this->dir . '/' . $name;

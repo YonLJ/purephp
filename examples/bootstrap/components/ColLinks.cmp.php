@@ -7,9 +7,19 @@ use function Pure\Component\{component, register};
 use function Pure\HTML\{a, div, h5, li, ul};
 
 /**
+ * One footer link column:
+ * `ColLinks()->title('Company')->links([['text' => 'Team', 'href' => '#']])`.
+ */
+#[Component]
+function ColLinks(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One footer link column template.
  */
-register('ColLinks', __FILE__, static fn () =>
+register(ColLinks(...), static fn () =>
     div(
         h5(Slot::value('title')),
         ul(
@@ -17,13 +27,3 @@ register('ColLinks', __FILE__, static fn () =>
         )->class('list-unstyled text-small')
     )->class('col-6 col-md')
 );
-
-/**
- * One footer link column:
- * `ColLinks()->title('Company')->links([['text' => 'Team', 'href' => '#']])`.
- */
-#[Component]
-function ColLinks(mixed ...$children): Call
-{
-    return component('ColLinks', ...$children);
-}

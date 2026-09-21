@@ -119,7 +119,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -129,11 +134,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 echo Card()->title('Title')->content('Content');
 ```
@@ -231,7 +231,13 @@ the header when a `Renderer` is rendered directly. Components in
 
 ```php
 // components/Icon.cmp.php: typed props, backed by its precompiled template
-register('Icon', __FILE__,
+
+function Icon(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Icon(...),
     factory: static fn () =>
         svg(svgUse()->href(Slot::value('href')))->class(Slot::value('class')),
     prepare: static function (string $href, string $class = 'bi'): array {
@@ -239,13 +245,13 @@ register('Icon', __FILE__,
     }
 );
 
-function Icon(mixed ...$children): Call
+// views/features.cmp.php: the page skeleton, its blocks supplied by prepare()
+function Features(mixed ...$children): Call
 {
-    return component('Icon', ...$children);
+    return component(__FUNCTION__, ...$children);
 }
 
-// views/features.cmp.php: the page skeleton, its blocks supplied by prepare()
-register('Features', __FILE__,
+register(Features(...),
     factory: static fn () => html(/* ... */),
     prepare: #[Binds('title', 'content')] static fn (): array => featuresBindings()
 );

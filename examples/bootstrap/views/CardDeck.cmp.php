@@ -10,10 +10,20 @@ require_once __DIR__ . '/../components/Card.cmp.php';
 require_once __DIR__ . '/../app/services/PricingService.php';
 
 /**
+ * The pricing card deck: it fetches the card records from the service and
+ * renders its own children. `CardDeck()`.
+ */
+#[Component]
+function CardDeck(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The card deck template: the cards are rendered by Card() and injected as raw
  * markup.
  */
-register('CardDeck', __FILE__,
+register(CardDeck(...),
     factory: static fn () => div(Slot::raw('cards'))->class('card-deck mb-3 text-center'),
     prepare: static function (): array {
         return [
@@ -29,13 +39,3 @@ register('CardDeck', __FILE__,
         ];
     }
 );
-
-/**
- * The pricing card deck: it fetches the card records from the service and
- * renders its own children. `CardDeck()`.
- */
-#[Component]
-function CardDeck(mixed ...$children): Call
-{
-    return component('CardDeck', ...$children);
-}

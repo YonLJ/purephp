@@ -41,7 +41,8 @@ echo $shape([
 | `Pure\Core\MissingSlotException` | 必填槽位缺失时抛出，携带完整路径 |
 
 ## 函数组件
-组件单元把惰性模板工厂注册到一个名字下，紧挨着的调用函数发起一次链式调用；单元的类型化
+组件单元把惰性模板工厂注册到调用函数的名字下：调用函数返回 `Call`，用
+`component(__FUNCTION__, ...)` 只写一遍组件名；单元的类型化
 prop 契约放在 `prepare()` 钩子里：
 
 ```php
@@ -53,24 +54,24 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(h2(Slot::value('title')), p(Slot::value('content')))->class('card'),
     prepare: static function (string $title, string $content): array {
         return ['title' => $title, 'content' => $content];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 ```
 
 | 函数 | 行为 |
 | --- | --- |
-| `register(string $name, string $file, Closure $factory, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元；工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的类型化 prop 契约（props→bindings 钩子） |
-| `component(string $name, mixed ...$children): Call` | 开始一次链式调用：props 像标签属性一样设置，返回值是 `Markup`，可像标签一样嵌套 |
+| `register(Closure|string $name, string\|Closure $file = '', ?Closure $factory = null, bool $override = false, ?Closure $prepare = null): void` | 注册组件单元。推荐把调用函数传进来——`register(Card(...), $factory)`——名字与文件从它派生；经典写法 `register('Card', __FILE__, $factory)` 仍然支持。工厂必须惰性，可返回标签树或 `Shape`；`$prepare` 是链式调用可选的类型化 prop 契约（props→bindings 钩子） |
+| `component(string $name, mixed ...$children): Call` | 开始一次链式调用：props 像标签属性一样设置，返回值是 `Markup`，可像标签一样嵌套；`$name` 是已注册的名字或模板路径，单元自己的调用函数传 `__FUNCTION__` |
 
 链式调用按原样产出树，**不带文档头**；整份文档的文档头由调用方处理：
 标签树或组件调用交给 `Pure\Utils\renderHTML()` / `renderXML()`，或者自己拼接

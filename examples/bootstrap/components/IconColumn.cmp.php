@@ -10,9 +10,18 @@ use function Pure\SVG\{svg, svgUse};
 require_once __DIR__ . '/Icon.cmp.php';
 
 /**
+ * One "columns with icons" item: `IconColumn()->icon('collection')->title(...)->content(...)->link(...)->linkText(...)`.
+ */
+#[Component]
+function IconColumn(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * One "columns with icons" item template.
  */
-register('IconColumn', __FILE__,
+register(IconColumn(...),
     factory: static fn () => div(
         div(
             Slot::raw('icon')
@@ -34,12 +43,3 @@ register('IconColumn', __FILE__,
         ];
     }
 );
-
-/**
- * One "columns with icons" item: `IconColumn()->icon('collection')->title(...)->content(...)->link(...)->linkText(...)`.
- */
-#[Component]
-function IconColumn(mixed ...$children): Call
-{
-    return component('IconColumn', ...$children);
-}

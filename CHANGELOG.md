@@ -11,6 +11,15 @@ First public version. No tag has been cut yet.
 
 ### Added
 
+- `register()` accepts the call function itself:
+  `register(Icon(...), factory)` derives the component name and the unit file
+  from that function by reflection (O(1), ~0.2µs), and inside the call
+  function `component(__FUNCTION__, ...)` carries no literal either — the
+  component name then exists exactly once per unit file and cannot drift
+  between `register()` and `component()`. The factory may follow the call
+  function positionally. The classic `register('Icon', __FILE__, ...)` form
+  stays supported; the PHPStan rule also resolves `register(Icon(...))` and
+  `component(__FUNCTION__)`, so both forms are checked statically.
 - `#[Component]` function attribute: marks a unit file's call function
   explicitly instead of relying on the name convention. A nameless mark
   survives renaming the function; `#[Component('X')]` pins the registered

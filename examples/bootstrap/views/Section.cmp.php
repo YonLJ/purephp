@@ -9,25 +9,6 @@ use function Pure\HTML\{div, h2};
 require_once __DIR__ . '/../app/services/FeaturesService.php';
 
 /**
- * One page section template: a heading and a grid of already rendered items.
- */
-register('Section', __FILE__,
-    factory: static fn () => div(
-        h2(Slot::value('title'))->class('pb-2 border-bottom'),
-        div(Slot::raw('contents'))->class(Slot::value('class'))
-    )->class('container px-4 py-5'),
-    prepare: static function (string $section, string $class, callable $item): array {
-        $data = FeaturesService::section($section);
-
-        return [
-            'title' => $data['title'],
-            'contents' => array_map(static fn (array $record): string => (string)$item($record), $data['items']),
-            'class' => $class,
-        ];
-    }
-);
-
-/**
  * One page section: it fetches its own title and item records from the
  * service, renders every record with the component the page passes, and hands
  * the result to the template. The raw slot joins the list.
@@ -42,5 +23,24 @@ register('Section', __FILE__,
 #[Component]
 function Section(mixed ...$children): Call
 {
-    return component('Section', ...$children);
+    return component(__FUNCTION__, ...$children);
 }
+
+/**
+ * One page section template: a heading and a grid of already rendered items.
+ */
+register(Section(...),
+    factory: static fn () => div(
+        h2(Slot::value('title'))->class('pb-2 border-bottom'),
+        div(Slot::raw('contents'))->class(Slot::value('class'))
+    )->class('container px-4 py-5'),
+    prepare: static function (string $section, string $class, callable $item): array {
+        $data = FeaturesService::section($section);
+
+        return [
+            'title' => $data['title'],
+            'contents' => array_map(static fn (array $record): string => (string)$item($record), $data['items']),
+            'class' => $class,
+        ];
+    }
+);

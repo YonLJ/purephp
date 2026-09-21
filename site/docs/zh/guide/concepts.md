@@ -123,7 +123,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () =>
         div(
             h2(Slot::value('title')),
@@ -133,11 +138,6 @@ register('Card', __FILE__,
         return ['title' => $title, 'content' => $content, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 echo Card()->title('Title')->content('Content');
 ```
@@ -163,7 +163,7 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\span;
 
-register('Counter', __FILE__,
+register(Counter(...),
     factory: static fn () => span(Slot::value('count'))->id('counter'),
     prepare: static function (int $count): array {
         return ['count' => $count];

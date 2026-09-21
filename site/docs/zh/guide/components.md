@@ -16,7 +16,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h2, p};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () => div(
         h2(Slot::value('title')),
         p(Slot::value('content'))
@@ -26,15 +31,10 @@ register('Card', __FILE__,
     }
 );
 
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
-
 echo Card()->title('Title')->content('Content');
 ```
 
-- `register()` 只保存工厂与文件，不构建任何东西；产物较新的请求永远不会调用工厂。
+- `register(Card(...))` 从调用函数派生名字与文件、只保存工厂，不构建任何东西；产物较新的请求永远不会调用工厂。
 - `prepare()` 是类型化 prop 契约：它的参数就是 props，PHP 强制它们的类型，返回的数组就是
   绑定模板的数据。
 - `Card()` 返回 `Call`；props 像标签属性一样链式设置，标记在字符串转换时产出。
@@ -59,17 +59,17 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\span;
 
-register('Badge', __FILE__,
+function Badge(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Badge(...),
     factory: static fn () => span(Slot::value('label'))->class(Slot::value('class')),
     prepare: static function (string $label, string $class = 'badge'): array {
         return ['label' => $label, 'class' => $class];
     }
 );
-
-function Badge(mixed ...$children): Call
-{
-    return component('Badge', ...$children);
-}
 
 Badge()->label('Save')->class('badge');
 ```
@@ -90,7 +90,12 @@ use Pure\Core\Slot;
 use function Pure\Component\{component, register};
 use function Pure\HTML\{button, div, h2, li, ul};
 
-register('Card', __FILE__,
+function Card(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Card(...),
     factory: static fn () => div(
         Slot::raw('children'),
         h2(Slot::value('type'))->class('card-title'),
@@ -101,11 +106,6 @@ register('Card', __FILE__,
         return ['type' => $type, 'features' => $features, 'text' => $text, 'class' => $class];
     }
 );
-
-function Card(mixed ...$children): Call
-{
-    return component('Card', ...$children);
-}
 
 echo div(
     Card(h2('Pro'))
@@ -136,7 +136,12 @@ echo div(
 ```php
 <?php
 
-register('Section', __FILE__,
+function Section(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Section(...),
     factory: static fn () => Compile::shape(...),
     prepare: static function (string $section, string $class, callable $item): array {
         $data = FeaturesService::section($section);
@@ -166,7 +171,7 @@ Section()->section('columns')->class('row g-4')->item(IconColumn(...));
 
 use Pure\Component\Prop;
 
-register('Card', __FILE__,
+register(Card(...),
     factory: static fn () => Compile::shape(...),
     prepare: static function (
         #[Prop(slot: 'title')] string $text,
@@ -229,14 +234,15 @@ prepare: #[Binds('title', 'desc')] static function (): array
 <?php
 
 // components/Button.cmp.php
-register('Button', __FILE__, static fn () =>
-    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
-);
 
 function Button(mixed ...$children): Call
 {
-    return component('Button', ...$children);
+    return component(__FUNCTION__, ...$children);
 }
+
+register(Button(...), static fn () =>
+    button(Slot::raw('icon'), Slot::value('label'), Slot::raw('children'))->class('btn')
+);
 
 Button(Icon()->href('#plus'))->label('Add');
 ```
@@ -257,7 +263,12 @@ Button(Icon()->href('#plus'))->label('Add');
 <?php
 
 // views/features.cmp.php
-register('Features', __FILE__,
+function Features(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Features(...),
     factory: static fn () =>
         html(
             head(title(Slot::value('title'))),
@@ -287,7 +298,8 @@ function featuresPage(): string
 
 `component()` 是底层助手的便捷形式：
 
-- `register($name, $file, $factory)` 把单元注册到一个名字下。
+- `register(Card(...), $factory)` 注册一个单元，名字与文件从调用函数派生（经典写法
+  `register('Card', __FILE__, $factory)` 仍然支持）。
 - `Registry::component($nameOrPath)` 返回单元或 shape 文件的
   `Closure(array $data): string` 绑定器，便于自己持有或传递。
 

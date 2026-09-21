@@ -10,10 +10,20 @@ require_once __DIR__ . '/../components/NavLink.cmp.php';
 require_once __DIR__ . '/../app/services/PricingService.php';
 
 /**
+ * The page header: it fetches the company name, the nav links and the sign-up
+ * link from the service and renders its own children. `PageHeader()`.
+ */
+#[Component]
+function PageHeader(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+/**
  * The page header template: the company name, the nav links and the sign-up
  * link. The links are rendered by NavLink() and injected as raw markup.
  */
-register('PageHeader', __FILE__,
+register(PageHeader(...),
     factory: static fn () => div(
         h5(Slot::value('company'))->class('my-0 mr-md-auto font-weight-normal'),
         nav(Slot::raw('navs'))->class('my-2 my-md-0 mr-md-3'),
@@ -29,13 +39,3 @@ register('PageHeader', __FILE__,
         ];
     }
 );
-
-/**
- * The page header: it fetches the company name, the nav links and the sign-up
- * link from the service and renders its own children. `PageHeader()`.
- */
-#[Component]
-function PageHeader(mixed ...$children): Call
-{
-    return component('PageHeader', ...$children);
-}
