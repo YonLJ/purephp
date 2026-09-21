@@ -135,6 +135,8 @@ final class Registry
      * one: the slot names the template reads, for tooling and for the children
      * check of a fluent call.
      *
+     * @internal
+     *
      * @param string $nameOrPath A component name or a unit/shape file path.
      * @return list<string>|null The slot names, or null when unknown.
      */
@@ -166,6 +168,8 @@ final class Registry
     /**
      * The registered component names, in registration order.
      *
+     * @internal
+     *
      * @return list<string>
      */
     public static function names(): array
@@ -195,6 +199,8 @@ final class Registry
 
     /**
      * Drop every registration and cache; for tests.
+     *
+     * @internal
      */
     public static function reset(): void
     {

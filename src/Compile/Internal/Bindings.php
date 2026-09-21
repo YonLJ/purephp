@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Pure\Compile\Internal;
 
-use Pure\Component\Binds;
 use ReflectionFunction;
 
 /**
@@ -57,28 +56,6 @@ final class Bindings
         }
 
         return $variables;
-    }
-
-    /**
-     * The keys a `#[Binds]` attribute declares on a function that returns
-     * bindings, for when its array literal cannot be read.
-     *
-     * @param ReflectionFunction $function The prepare() hook.
-     * @return array<string, true>|null The declared keys, or null without the attribute.
-     */
-    public static function declaredKeys(ReflectionFunction $function): ?array
-    {
-        foreach ($function->getAttributes(Binds::class) as $attribute) {
-            $keys = [];
-
-            foreach ($attribute->newInstance()->keys as $key) {
-                $keys[$key] = true;
-            }
-
-            return $keys;
-        }
-
-        return null;
     }
 
     /**
