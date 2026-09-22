@@ -33,13 +33,11 @@ register(IconColumn(...),
             svg(svgUse()->href('#chevron-right'))->class('bi')->width('1em')->height('1em')
         )->href(Slot::value('link'))->class('icon-link d-inline-flex align-items-center')
     )->class('feature col'),
-    prepare: static function (string $icon, string $title, string $content, string $link, string $linkText): array {
-        return [
-            'icon' => Icon()->href('#' . $icon),
-            'title' => $title,
-            'content' => $content,
-            'link' => $link,
-            'linkText' => $linkText,
-        ];
-    }
+    prepare: static fn (string $icon, string $title, string $content, string $link, string $linkText): array => [
+        'icon' => Icon()->href('#' . $icon),
+        'title' => $title,
+        'content' => $content,
+        'link' => $link,
+        'linkText' => $linkText,
+    ]
 );

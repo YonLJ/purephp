@@ -16,36 +16,33 @@ require_once __DIR__ . '/CardDeck.cmp.php';
 require_once __DIR__ . '/PageFooter.cmp.php';
 require_once __DIR__ . '/../app/services/PricingService.php';
 
-register('Pricing', __FILE__, static function () {
-    /**
-     * The pricing page skeleton: everything but the four component blocks is
-     * static. `pure compile` precompiles it into views/pricing.pure.php.
-     */
-
-    return (
-        html(
-            head(
-                meta()->http_equiv('Content-Type')->content('text/html; charset=UTF-8'),
-                meta()->name('viewport')->content('width=device-width, initial-scale=1, shrink-to-fit=no'),
-                meta()->name('description')->content(''),
-                meta()->name('author')->content(''),
-                link()->rel('icon')->href('https://getbootstrap.com/docs/4.0/assets/img/favicons/favicon.ico'),
-                title('Pricing example for Bootstrap'),
-                link()->rel('canonical')->href('https://getbootstrap.com/docs/4.0/examples/pricing/'),
-                link()->href('https://getbootstrap.com/docs/4.0/dist/css/bootstrap.min.css')->rel('stylesheet'),
-                link()->href('./pricing.css')->rel('stylesheet')
-            ),
-            body(
-                Slot::raw('header'),
-                Slot::raw('pricing'),
-                div(
-                    Slot::raw('deck'),
-                    Slot::raw('footer')
-                )->class('container')
-            )
-        )->lang('en')
-    );
-}, prepare: #[Binds('header', 'pricing', 'deck', 'footer')] static fn (): array => pricingBindings());
+/**
+ * The pricing page skeleton: everything but the four component blocks is
+ * static. `pure compile` precompiles it into views/pricing.pure.php.
+ */
+register('Pricing', __FILE__, static fn () => (
+    html(
+        head(
+            meta()->http_equiv('Content-Type')->content('text/html; charset=UTF-8'),
+            meta()->name('viewport')->content('width=device-width, initial-scale=1, shrink-to-fit=no'),
+            meta()->name('description')->content(''),
+            meta()->name('author')->content(''),
+            link()->rel('icon')->href('https://getbootstrap.com/docs/4.0/assets/img/favicons/favicon.ico'),
+            title('Pricing example for Bootstrap'),
+            link()->rel('canonical')->href('https://getbootstrap.com/docs/4.0/examples/pricing/'),
+            link()->href('https://getbootstrap.com/docs/4.0/dist/css/bootstrap.min.css')->rel('stylesheet'),
+            link()->href('./pricing.css')->rel('stylesheet')
+        ),
+        body(
+            Slot::raw('header'),
+            Slot::raw('pricing'),
+            div(
+                Slot::raw('deck'),
+                Slot::raw('footer')
+            )->class('container')
+        )
+    )->lang('en')
+), prepare: #[Binds('header', 'pricing', 'deck', 'footer')] static fn (): array => pricingBindings());
 
 /**
  * The rendered blocks of the pricing page: every component fetches its own

@@ -25,17 +25,15 @@ function CardDeck(mixed ...$children): Call
  */
 register(CardDeck(...),
     factory: static fn () => div(Slot::raw('cards'))->class('card-deck mb-3 text-center'),
-    prepare: static function (): array {
-        return [
-            'cards' => array_map(
-                static fn (array $card): Call => Card()
-                    ->type($card['type'])
-                    ->price($card['price'])
-                    ->features(array_map(static fn (array $feature): string => $feature['value'], $card['features']))
-                    ->text($card['text'])
-                    ->class($card['class']),
-                PricingService::deck()
-            ),
-        ];
-    }
+    prepare: static fn (): array => [
+        'cards' => array_map(
+            static fn (array $card): Call => Card()
+                ->type($card['type'])
+                ->price($card['price'])
+                ->features(array_map(static fn (array $feature): string => $feature['value'], $card['features']))
+                ->text($card['text'])
+                ->class($card['class']),
+            PricingService::deck()
+        ),
+    ]
 );

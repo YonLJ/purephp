@@ -424,15 +424,17 @@ class CallTest extends TestCase
             static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('text'), div(Slot::raw('icon'))->class(Slot::value('style')->default(null)))
             ),
-            static function (
+            static fn (
                 string $text,
                 #[Trusted]
                 mixed $icon,
                 #[Prop(deprecated: 'use style()')]
                 ?string $style = null,
-            ): array {
-                return ['text' => $text, 'icon' => $icon, 'style' => $style];
-            }
+            ): array => [
+                'text' => $text,
+                'icon' => $icon,
+                'style' => $style,
+            ]
         );
 
         self::register(
@@ -440,16 +442,17 @@ class CallTest extends TestCase
             static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(h2(Slot::value('title')), div(Slot::raw('contents'))->class(Slot::value('class')))
             ),
-            static function (string $section, string $class, callable $item): array {
-                return [
-                    'title' => strtoupper($section),
-                    'contents' => array_map(
-                        static fn (array $record): string => $item($record['value']),
-                        [['value' => 'a'], ['value' => 'b']]
-                    ),
-                    'class' => $class,
-                ];
-            }
+            static fn (string $section, string $class, callable $item): array => [
+                'title' => strtoupper($section),
+                'contents' => array_map(
+                    static fn (array $record): string => $item($record['value']),
+                    [
+                        ['value' => 'a'],
+                        ['value' => 'b'],
+                    ]
+                ),
+                'class' => $class,
+            ]
         );
     }
 

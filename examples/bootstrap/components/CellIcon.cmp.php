@@ -29,11 +29,9 @@ register(CellIcon(...),
             p(Slot::value('content'))
         )
     )->class('col d-flex align-items-start'),
-    prepare: static function (string $icon, string $title, string $content): array {
-        return [
-            'icon' => Icon()->href('#' . $icon)->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
-            'title' => $title,
-            'content' => $content,
-        ];
-    }
+    prepare: static fn (string $icon, string $title, string $content): array => [
+        'icon' => Icon()->href('#' . $icon)->class('bi text-muted flex-shrink-0 me-3')->width('1.75em')->height('1.75em'),
+        'title' => $title,
+        'content' => $content,
+    ]
 );

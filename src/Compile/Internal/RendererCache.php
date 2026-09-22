@@ -108,9 +108,7 @@ final class RendererCache
         }
 
         try {
-            $closure = (static function (string $path): mixed {
-                return require $path;
-            })($file);
+            $closure = (static fn (string $path): mixed => require $path)($file);
         } catch (Throwable) {
             @unlink($file);
 

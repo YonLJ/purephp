@@ -27,7 +27,5 @@ register(PricingHeader(...),
         h1(Slot::value('title'))->class('display-4'),
         p(Slot::value('desc'))->class('lead')
     )->class('pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center'),
-    prepare: #[Binds('title', 'desc')] static function (): array {
-        return PricingService::pricing();
-    }
+    prepare: #[Binds('title', 'desc')] static fn (): array => PricingService::pricing()
 );

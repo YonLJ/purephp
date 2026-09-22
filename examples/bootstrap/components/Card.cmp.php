@@ -37,13 +37,11 @@ register(Card(...),
             button(Slot::value('text'))->type('button')->class(Slot::value('class'))
         )->class('card-body')
     )->class('card mb-4 box-shadow'),
-    prepare: static function (string $type, string $price, #[Prop(item: 'value')] array $features, string $text, string $class): array {
-        return [
-            'type' => $type,
-            'price' => $price,
-            'features' => array_map(static fn (string $feature): array => ['value' => $feature], $features),
-            'text' => $text,
-            'class' => $class,
-        ];
-    }
+    prepare: static fn (string $type, string $price, #[Prop(item: 'value')] array $features, string $text, string $class): array => [
+        'type' => $type,
+        'price' => $price,
+        'features' => array_map(static fn (string $feature): array => ['value' => $feature], $features),
+        'text' => $text,
+        'class' => $class,
+    ]
 );

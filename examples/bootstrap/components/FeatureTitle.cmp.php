@@ -28,11 +28,9 @@ register(FeatureTitle(...),
         h4(Slot::value('title'))->class('fw-semibold mb-0'),
         p(Slot::value('content'))->class('text-muted')
     )->class('col d-flex flex-column gap-2'),
-    prepare: static function (string $icon, string $title, string $content): array {
-        return [
-            'icon' => Icon()->href('#' . $icon),
-            'title' => $title,
-            'content' => $content,
-        ];
-    }
+    prepare: static fn (string $icon, string $title, string $content): array => [
+        'icon' => Icon()->href('#' . $icon),
+        'title' => $title,
+        'content' => $content,
+    ]
 );

@@ -91,9 +91,7 @@ class CompileTest extends TestCase
     {
         $shape = Compile::shape(div(Slot::value('value')->default(null)));
 
-        set_error_handler(static function (int $severity, string $message): bool {
-            throw new ErrorException($message, 0, $severity);
-        });
+        set_error_handler(static fn (int $severity, string $message): bool => throw new ErrorException($message, 0, $severity));
 
         try {
             $this->assertSame('<div></div>', $shape(['value' => null]));

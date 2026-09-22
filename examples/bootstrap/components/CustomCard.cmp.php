@@ -42,13 +42,11 @@ register(CustomCard(...),
             )->class('d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1')
         )->class('card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg')->style(Slot::value('style'))
     )->class('col'),
-    prepare: static function (string $title, string $icon, string $location, string $date, #[Prop(slot: 'style')] string $bgImg): array {
-        return [
-            'title' => $title,
-            'icon' => $icon,
-            'location' => $location,
-            'date' => $date,
-            'style' => "background-image: url('{$bgImg}');",
-        ];
-    }
+    prepare: static fn (string $title, string $icon, string $location, string $date, #[Prop(slot: 'style')] string $bgImg): array => [
+        'title' => $title,
+        'icon' => $icon,
+        'location' => $location,
+        'date' => $date,
+        'style' => "background-image: url('{$bgImg}');",
+    ]
 );
