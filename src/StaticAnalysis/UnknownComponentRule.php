@@ -14,8 +14,8 @@ use Pure\Core\Suggestion;
 
 /**
  * Reports a `component('X')` / `Registry::component('X')` whose literal name
- * no analysed `register()`, `Registry::register()` or `#[Component('X')]`
- * declares: the typo that otherwise only explodes at render time.
+ * no analysed `register(Icon(...))` or `Registry::register()` declares: the
+ * typo that otherwise only explodes at render time.
  *
  * Needs a full-project run (collected data arrives after the last file) and
  * is disabled for single-file runs via isOnlyFilesAnalysis(). In this
@@ -44,7 +44,7 @@ final class UnknownComponentRule implements Rule
         $registered = [];
         $calls = [];
 
-        foreach ([ComponentCallCollector::class, ComponentAttributeCollector::class, RegistryCallCollector::class] as $collector) {
+        foreach ([ComponentCallCollector::class, RegistryCallCollector::class] as $collector) {
             foreach ($node->get($collector) as $entries) {
                 foreach ($entries as $entry) {
                     if ($entry['kind'] === 'registered') {

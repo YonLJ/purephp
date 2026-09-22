@@ -34,13 +34,18 @@ final class Bindings
             return null;
         }
 
-        $bodyStart = 0;
+        // An arrow function has no braces: the body is the expression after
+        // its `=>`, and the parameters before it must not count as reads.
+        $arrow = self::arrowIndex($tokens);
+        $bodyStart = $arrow ?? 0;
 
-        foreach ($tokens as $index => $token) {
-            if ($token === '{') {
-                $bodyStart = $index;
+        if ($arrow === null) {
+            foreach ($tokens as $index => $token) {
+                if ($token === '{') {
+                    $bodyStart = $index;
 
-                break;
+                    break;
+                }
             }
         }
 
@@ -61,7 +66,7 @@ final class Bindings
     /**
      * The string keys of a function whose only return is an array literal: the
      * bindings of a prepare() hook, or null when the keys are branch-dependent
-     * or computed.
+     * or computed. An arrow function's expression is its single return.
      *
      * @param ReflectionFunction $function The prepare() hook.
      * @return array<string, true>|null
@@ -75,30 +80,39 @@ final class Bindings
         }
 
         $count = count($tokens);
+        $arrow = self::arrowIndex($tokens);
         $return = null;
 
-        for ($index = 0; $index < $count; $index++) {
-            $token = $tokens[$index];
-
-            if (!is_array($token) || $token[0] !== T_RETURN) {
-                continue;
+        if ($arrow !== null) {
+            if (self::significant($tokens, $arrow, 1) !== '[') {
+                return null; // a computed expression, not an array literal
             }
 
-            if ($return !== null) {
-                return null; // several returns: the key set is branch-dependent
+            $return = $arrow;
+        } else {
+            for ($index = 0; $index < $count; $index++) {
+                $token = $tokens[$index];
+
+                if (!is_array($token) || $token[0] !== T_RETURN) {
+                    continue;
+                }
+
+                if ($return !== null) {
+                    return null; // several returns: the key set is branch-dependent
+                }
+
+                $return = $index;
             }
 
-            $return = $index;
-        }
+            if ($return === null) {
+                return null;
+            }
 
-        if ($return === null) {
-            return null;
-        }
+            $open = self::significant($tokens, $return, 1);
 
-        $open = self::significant($tokens, $return, 1);
-
-        if ($open !== '[') {
-            return null;
+            if ($open !== '[') {
+                return null;
+            }
         }
 
         $openIndex = $return + 1;
@@ -107,9 +121,26 @@ final class Bindings
             $openIndex++;
         }
 
+        if ($openIndex >= $count) {
+            return null;
+        }
+
+        return self::keysFromBracket($tokens, $openIndex);
+    }
+
+    /**
+     * The keys of one array literal starting at its opening bracket: null when
+     * the literal is a list or a key cannot be read statically.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     * @return array<string, true>|null
+     */
+    private static function keysFromBracket(array $tokens, int $openIndex): ?array
+    {
         $keys = [];
         $depth = 0;
         $expectKey = true;
+        $count = count($tokens);
 
         for ($index = $openIndex + 1; $index < $count; $index++) {
             $token = $tokens[$index];
@@ -165,6 +196,84 @@ final class Bindings
             }
 
             return null; // numeric keys, variables, spreads: unknown
+        }
+
+        return null;
+    }
+
+    /**
+     * The index of an arrow function's `=>`, or null when the closure is a
+     * block function (`function ... { ... }`). The first `fn`/`function`
+     * keyword in the slice is the closure itself; a nested one sits inside
+     * the body, after this position.
+     *
+     * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+     */
+    private static function arrowIndex(array $tokens): ?int
+    {
+        $count = count($tokens);
+        $fn = null;
+
+        for ($index = 0; $index < $count; $index++) {
+            $token = $tokens[$index];
+
+            if (is_array($token) && ($token[0] === T_FN || $token[0] === T_FUNCTION)) {
+                $fn = $index;
+
+                break;
+            }
+        }
+
+        if ($fn === null || !is_array($tokens[$fn]) || $tokens[$fn][0] !== T_FN) {
+            return null;
+        }
+
+        $index = $fn + 1;
+
+        while (
+            isset($tokens[$index])
+            && is_array($tokens[$index])
+            && in_array($tokens[$index][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)
+        ) {
+            $index++;
+        }
+
+        if (($tokens[$index] ?? null) !== '(') {
+            return null;
+        }
+
+        $depth = 0;
+        $closed = false;
+
+        for (; $index < $count; $index++) {
+            if ($tokens[$index] === '(') {
+                $depth++;
+
+                continue;
+            }
+
+            if ($tokens[$index] === ')') {
+                $depth--;
+
+                if ($depth === 0) {
+                    $closed = true;
+
+                    break;
+                }
+            }
+        }
+
+        if (!$closed) {
+            return null;
+        }
+
+        // Past the parameter list the first `=>` is the arrow: a return type
+        // between `)` and `=>` cannot contain one, and anything nested lives
+        // after it.
+        for ($index++; $index < $count; $index++) {
+            if (self::isDoubleArrow($tokens[$index])) {
+                return $index;
+            }
         }
 
         return null;

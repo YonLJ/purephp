@@ -181,10 +181,15 @@ class ComponentTest extends TestCase
             use Pure\\Compile\\Compile;
             use Pure\\Core\\Slot;
 
-            use function Pure\\Component\\register;
+            use function Pure\\Component\\{component, register};
             use function Pure\\HTML\\div;
 
-            register('Card', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(div(Slot::value('title'))));
+            function Card(mixed ...\$children): \\Pure\\Component\\Call
+            {
+                return \\Pure\\Component\\component(__FUNCTION__, ...\$children);
+            }
+
+            register(Card(...), static fn (): \\Pure\\Compile\\Shape => Compile::shape(div(Slot::value('title'))));
             PHP);
 
         require $unit;

@@ -49,7 +49,12 @@ class CheckTest extends TestCase
 
             $item = Compile::shape(li(Slot::value('label')));
 
-            register('CleanBox', __FILE__,
+            function CleanBox(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CleanBox(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), ul(Slot::each('items', $item)))
                 ),
@@ -81,7 +86,12 @@ class CheckTest extends TestCase
 
             $item = Compile::shape(li(Slot::value('label')));
 
-            register('TypeBox', __FILE__,
+            function TypeBox(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(TypeBox(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), ul(Slot::each('items', $item)))
                 ),
@@ -114,7 +124,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('NullBox', __FILE__,
+            function NullBox(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(NullBox(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
@@ -150,13 +165,121 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('UnusedBox', __FILE__,
+            function UnusedBox(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(UnusedBox(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
                 prepare: static function (string $title, string $extra): array {
                     return ['title' => $title];
                 }
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringContainsString(
+            'parameter $extra is neither used by prepare() nor a slot of the template',
+            $result['stdout']
+        );
+    }
+
+    public function testArrowPrepareReturnsOneArrayLiteral(): void
+    {
+        $file = $this->writeFile('arrow-ok.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            function CheckArrowOk(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckArrowOk(...),
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static fn (string $title): array => ['title' => $title],
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(0, $result['code']);
+        $this->assertStringNotContainsString('does not return one array literal', $result['stdout']);
+        $this->assertStringContainsString('0 error(s), 0 warning(s).', $result['stdout']);
+    }
+
+    public function testArrowPrepareKeysAreComparedAgainstTheSlots(): void
+    {
+        $file = $this->writeFile('arrow-miss.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            function CheckArrowMiss(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckArrowMiss(...),
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'), Slot::value('desc'))
+                ),
+                prepare: static fn (string $title): array => ['title' => $title],
+            );
+            PHP);
+
+        $result = $this->runCheck(['pure', 'check', $file]);
+
+        $this->assertSame(1, $result['code']);
+        $this->assertStringContainsString(
+            "required slot 'desc' is not returned by prepare()",
+            $result['stdout']
+        );
+    }
+
+    public function testArrowPrepareUnusedParameterWarns(): void
+    {
+        $file = $this->writeFile('arrow-unused.cmp.php', <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Pure\Compile\Compile;
+            use Pure\Core\Slot;
+
+            use function Pure\Component\{component, register};
+            use function Pure\HTML\div;
+
+            function CheckArrowUnused(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckArrowUnused(...),
+                factory: static fn (): \Pure\Compile\Shape => Compile::shape(
+                    div(Slot::value('title'))
+                ),
+                prepare: static fn (string $title, string $extra): array => ['title' => $title],
             );
             PHP);
 
@@ -177,12 +300,14 @@ class CheckTest extends TestCase
             declare(strict_types=1);
 
             use Pure\Compile\Compile;
+            use Pure\Component\Registry;
             use Pure\Core\Slot;
 
-            use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('PageBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            // The internal primitive registers under a name with no call
+            // function: the public register() always derives one.
+            Registry::register('PageBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
             PHP);
@@ -210,7 +335,7 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('PlainFunctionBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            register(PlainFunctionBox(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
@@ -305,7 +430,7 @@ class CheckTest extends TestCase
             use function Pure\Component\{component, register};
             use function Pure\HTML\div;
 
-            register('NamespacedBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            register(NamespacedBox(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
@@ -338,7 +463,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckFluent', __FILE__,
+            function CheckFluent(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckFluent(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')), div(Slot::raw('contents')))
                 ),
@@ -367,7 +497,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckFluentTypo', __FILE__,
+            function CheckFluentTypo(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckFluentTypo(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')))
                 ),
@@ -403,7 +538,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckFluentComputed', __FILE__,
+            function CheckFluentComputed(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckFluentComputed(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
@@ -435,7 +575,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckDeclared', __FILE__,
+            function CheckDeclared(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclared(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')), div(Slot::raw('contents')))
                 ),
@@ -471,7 +616,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckUndeclared', __FILE__,
+            function CheckUndeclared(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckUndeclared(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')), div(Slot::raw('contents')))
                 ),
@@ -509,7 +659,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckDeclaredLiteral', __FILE__,
+            function CheckDeclaredLiteral(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclaredLiteral(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')))
                 ),
@@ -542,7 +697,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{div, h2};
 
-            register('CheckDeclaredTypo', __FILE__,
+            function CheckDeclaredTypo(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclaredTypo(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(h2(Slot::value('title')))
                 ),
@@ -575,7 +735,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckDeclaredDuplicate', __FILE__,
+            function CheckDeclaredDuplicate(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclaredDuplicate(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
@@ -611,7 +776,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckDeclaredRequired', __FILE__,
+            function CheckDeclaredRequired(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclaredRequired(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), Slot::value('class')->default(''))
                 ),
@@ -651,7 +821,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{li, ul};
 
-            register('CheckDeclaredItem', __FILE__,
+            function CheckDeclaredItem(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeclaredItem(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     ul(Slot::each('features', li(Slot::value('value'))))
                 ),
@@ -683,7 +858,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{li, ul};
 
-            register('CheckItemWrong', __FILE__,
+            function CheckItemWrong(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemWrong(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     ul(Slot::each('features', li(Slot::value('value'))))
                 ),
@@ -705,7 +885,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{li, ul};
 
-            register('CheckItemMulti', __FILE__,
+            function CheckItemMulti(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemMulti(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     ul(Slot::each('features', li(Slot::value('value'), Slot::value('url'))))
                 ),
@@ -727,7 +912,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckItemText', __FILE__,
+            function CheckItemText(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemText(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
@@ -749,7 +939,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{li, ul};
 
-            register('CheckItemStatic', __FILE__,
+            function CheckItemStatic(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemStatic(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     ul(Slot::each('features', li('static')))
                 ),
@@ -794,7 +989,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckDeprecated', __FILE__,
+            function CheckDeprecated(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeprecated(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))->style(Slot::value('style'))
                 ),
@@ -816,7 +1016,12 @@ class CheckTest extends TestCase
 
             use function Pure\Component\register;
 
-            register('CheckDeprecatedPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckDeprecatedPage(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckDeprecatedPage(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 \Pure\HTML\div()
             ));
 
@@ -850,7 +1055,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckTrustedText', __FILE__,
+            function CheckTrustedText(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckTrustedText(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))
                 ),
@@ -873,7 +1083,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckTrustedRaw', __FILE__,
+            function CheckTrustedRaw(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckTrustedRaw(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::raw('icon'))
                 ),
@@ -895,7 +1110,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckTrustedMixed', __FILE__,
+            function CheckTrustedMixed(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckTrustedMixed(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::raw('body'), Slot::value('body'))
                 ),
@@ -917,7 +1137,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckTrustedUnread', __FILE__,
+            function CheckTrustedUnread(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckTrustedUnread(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div()
                 ),
@@ -963,7 +1188,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckBindsCovered', __FILE__,
+            function CheckBindsCovered(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckBindsCovered(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), div(Slot::raw('desc')))
                 ),
@@ -987,7 +1217,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckBindsUncovered', __FILE__,
+            function CheckBindsUncovered(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckBindsUncovered(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), div(Slot::raw('desc')))
                 ),
@@ -1026,7 +1261,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckBindsLiteral', __FILE__,
+            function CheckBindsLiteral(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckBindsLiteral(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'), div(Slot::raw('desc')))
                 ),
@@ -1055,7 +1295,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{a, li, ul};
 
-            register('CheckItems', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckItems(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItems(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 ul(Slot::each('links', li(a(Slot::value('text'))->href(Slot::value('href')))))
             ));
             PHP);
@@ -1072,7 +1317,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\{a, li, ul};
 
-            register('CheckItemsDeclared', __FILE__,
+            function CheckItemsDeclared(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemsDeclared(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     ul(Slot::each('links', li(a(Slot::value('text'))->href(Slot::value('href')))))
                 ),
@@ -1091,7 +1341,12 @@ class CheckTest extends TestCase
 
             use function Pure\Component\register;
 
-            register('CheckItemsPage', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckItemsPage(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckItemsPage(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 \Pure\HTML\div()
             ));
 
@@ -1138,7 +1393,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckTarget', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckTarget(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckTarget(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
             PHP);
@@ -1154,7 +1414,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\section;
 
-            register('CheckPageCalls', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckPageCalls(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckPageCalls(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 section(Slot::raw('body'))
             ));
 
@@ -1201,7 +1466,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('CheckFluentInterpolated', __FILE__,
+            function CheckFluentInterpolated(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckFluentInterpolated(...),
                 factory: static fn (): \Pure\Compile\Shape => Compile::shape(
                     div(Slot::value('title'))->style(Slot::value('style')->default(null))
                 ),
@@ -1235,7 +1505,7 @@ class CheckTest extends TestCase
             use function Pure\Component\{component, register};
             use function Pure\HTML\div;
 
-            register('CheckFluentPlain', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            register(CheckFluentPlain(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
@@ -1265,7 +1535,7 @@ class CheckTest extends TestCase
             use function Pure\Component\{component, register};
             use function Pure\HTML\div;
 
-            register('CheckTargetMethods', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            register(CheckTargetMethods(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
@@ -1286,7 +1556,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\section;
 
-            register('CheckPageMethods', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function CheckPageMethods(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(CheckPageMethods(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 section(Slot::raw('body'))
             ));
 
@@ -1327,111 +1602,6 @@ class CheckTest extends TestCase
         $this->assertStringContainsString('does not exist', $result['stderr']);
     }
 
-    public function testComponentAttributeMustMatchTheRegisteredName(): void
-    {
-        $file = $this->writeFile('attr-mismatch.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Component\Call;
-            use Pure\Component\Component;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{component, register};
-            use function Pure\HTML\div;
-
-            register('AttrMismatch', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            #[Component('WrongName')]
-            function AttrMismatch(mixed ...$children): Call
-            {
-                return component('AttrMismatch', ...$children);
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(1, $result['code']);
-        $this->assertStringContainsString(
-            "#[Component('WrongName')] on AttrMismatch() does not match the registered component 'AttrMismatch'",
-            $result['stdout']
-        );
-    }
-
-    public function testComponentAttributeLetsTheCallFunctionBeRenamed(): void
-    {
-        $file = $this->writeFile('attr-rename.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Component\Call;
-            use Pure\Component\Component;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{component, register};
-            use function Pure\HTML\div;
-
-            register('AttrRename', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            #[Component]
-            function attrRenamedCard(mixed ...$children): Call
-            {
-                return component('AttrRename', ...$children);
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(0, $result['code']);
-        $this->assertStringContainsString('fluent unit: its props are the template slots', $result['stdout']);
-        $this->assertStringNotContainsString("no function named 'AttrRename'", $result['stdout']);
-    }
-
-    public function testComponentAttributeRejectsTwoCallFunctions(): void
-    {
-        $file = $this->writeFile('attr-double.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Component\Call;
-            use Pure\Component\Component;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{component, register};
-            use function Pure\HTML\div;
-
-            register('AttrDouble', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('title'))
-            ));
-
-            #[Component]
-            function AttrDouble(mixed ...$children): Call
-            {
-                return component('AttrDouble', ...$children);
-            }
-
-            #[Component]
-            function attrDoubleHelper(): void
-            {
-            }
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(1, $result['code']);
-        $this->assertStringContainsString('more than one #[Component] function', $result['stdout']);
-    }
-
     public function testTemplateFunctionMustDeclareAShapeReturnType(): void
     {
         $file = $this->writeFile('attr-template.cmp.php', <<<'PHP'
@@ -1446,7 +1616,12 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('TplBox', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
+            function TplBox(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(TplBox(...), static fn (): \Pure\Compile\Shape => Compile::shape(
                 div(Slot::value('title'))
             ));
 
@@ -1480,7 +1655,7 @@ class CheckTest extends TestCase
             use function Pure\Component\register;
             use function Pure\HTML\div;
 
-            register('TplSkip', __FILE__, static fn (): \Pure\Compile\Shape => TplSkip());
+            register(TplSkip(...), static fn (): \Pure\Compile\Shape => TplSkip());
 
             #[Template]
             function TplSkip(): \Pure\Compile\Shape
@@ -1552,37 +1727,6 @@ class CheckTest extends TestCase
 
         $this->assertSame(1, $result['code']);
         $this->assertStringContainsString('not an anonymous closure', $result['stderr']);
-    }
-
-    public function testClosureFormRejectsTwoFactories(): void
-    {
-        $file = $this->writeFile('closure-twice.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Component\Call;
-            use Pure\Core\Slot;
-
-            use function Pure\Component\{component, register};
-            use function Pure\HTML\div;
-
-            function TwoFactoriesBox(mixed ...$children): Call
-            {
-                return component(__FUNCTION__, ...$children);
-            }
-
-            register(TwoFactoriesBox(...),
-                static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
-                static fn (): \Pure\Compile\Shape => Compile::shape(div(Slot::value('title'))),
-            );
-            PHP);
-
-        $result = $this->runCheck(['pure', 'check', $file]);
-
-        $this->assertSame(1, $result['code']);
-        $this->assertStringContainsString('two factories', $result['stderr']);
     }
 
     private function writeFile(string $name, string $code): string

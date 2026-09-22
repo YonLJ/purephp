@@ -890,7 +890,7 @@ class ArtifactTest extends TestCase
 
         $list = $this->runCommand($command, ['pure', 'compile', '--list', $file]);
         $this->assertSame(0, $list['code']);
-        $this->assertStringContainsString("Badge -> {$file} (component)", $list['stdout']);
+        $this->assertStringContainsString("{$this->lastComponent} -> {$file} (component)", $list['stdout']);
 
         file_put_contents($this->dir . '/badge.pure.php', "<?php\n// stale\n");
 
@@ -927,11 +927,21 @@ class ArtifactTest extends TestCase
             use Pure\Compile\Compile;
             use Pure\Core\Slot;
 
-            use function Pure\Component\register;
+            use function Pure\Component\{component, register};
             use function Pure\HTML\span;
 
-            register('One', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
-            register('Two', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
+            function One(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            function Two(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(One(...), static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
+            register(Two(...), static fn (): \Pure\Compile\Shape => Compile::shape(span(Slot::value('label'))));
             PHP);
 
         $many = $this->runCommand($command, ['pure', 'compile', $two]);
@@ -1004,7 +1014,12 @@ class ArtifactTest extends TestCase
                 return $shape ??= Compile::shape(span(Slot::value('label')));
             }
 
-            register('TplBadge', __FILE__, static fn (): \Pure\Compile\Shape => tplBadgeShape());
+            function TplBadge(mixed ...$children): \Pure\Component\Call
+            {
+                return \Pure\Component\component(__FUNCTION__, ...$children);
+            }
+
+            register(TplBadge(...), static fn (): \Pure\Compile\Shape => tplBadgeShape());
             PHP);
 
         $list = $this->runCommand($this->registryCommand(), ['pure', 'compile', '--list', $file]);
@@ -1179,15 +1194,30 @@ class ArtifactTest extends TestCase
     }
 
     /**
-     * Write a `*.cmp.php` file that registers one unit.
+     * The component name written by the last unitFile() call, when it wrote
+     * a registration: the generated name carries a per-call suffix so two
+     * fixtures never declare the same function in one process.
+     */
+    private string $lastComponent = '';
+
+    /**
+     * Write a `*.cmp.php` file that registers one unit in the recommended
+     * form: a call function next to register(Name(...)).
      */
     private function unitFile(string $name, ?string $component): string
     {
         $file = $this->dir . '/' . $name;
         $fn = 'register';
-        $register = $component === null
-            ? ''
-            : "{$fn}('{$component}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::value('label'))));";
+
+        if ($component === null) {
+            $register = '';
+        } else {
+            $component .= 'U' . bin2hex(random_bytes(3));
+            $this->lastComponent = $component;
+            $register = "function {$component}(mixed ...\$children): \\Pure\\Component\\Call\n"
+                . "    {\n        return \\Pure\\Component\\component(__FUNCTION__, ...\$children);\n    }\n\n    "
+                . "{$fn}({$component}(...), static fn (): \\Pure\\Compile\\Shape => Compile::shape(span(Slot::value('label'))));";
+        }
 
         // `{$fn}` (not a literal) keeps the import line safe: a literal
         // `Pure\Component\register` in this heredoc would turn its `\r` into a

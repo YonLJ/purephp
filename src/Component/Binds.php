@@ -14,7 +14,7 @@ use Attribute;
  * builds its bindings in steps — or merges them from a service — leaves the
  * checker nothing to read, so the keys are declared instead:
  *
- *     register('PricingHeader', __FILE__,
+ *     register(PricingHeader(...),
  *         factory: static fn () => Compile::shape(...),
  *         prepare: #[Binds('title', 'desc')] static function (): array {
  *             return PricingService::pricing();

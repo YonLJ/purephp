@@ -20,14 +20,14 @@ use Throwable;
  * A unit is a `*.cmp.php` file that registers a lazy factory and defines the
  * component function next to it:
  *
- *     register('Icon', __FILE__, static fn () => svg(
- *         svgUse()->href(Slot::value('href'))
- *     ));
- *
  *     function Icon(mixed ...$children): Call
  *     {
- *         return component('Icon', ...$children);
+ *         return component(__FUNCTION__, ...$children);
  *     }
+ *
+ *     register(Icon(...), static fn () => svg(
+ *         svgUse()->href(Slot::value('href'))
+ *     ));
  *
  * Registration stores the closure only: no I/O, no tree building. At render
  * time the unit is served by its precompiled artifact when that is at least as

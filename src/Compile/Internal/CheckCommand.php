@@ -8,7 +8,6 @@ use Closure;
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
 use Pure\Compile\Template;
-use Pure\Component\Component;
 use Pure\Component\Prop;
 use Pure\Component\Registry;
 use Pure\Core\Suggestion;
@@ -182,9 +181,7 @@ final class CheckCommand
                         throw new RuntimeException('no component unit is registered here; `pure check` skips the file.');
                     }
 
-                    $attributeFindings = count($units) === 1
-                        ? self::attributeFindings($file, (string) array_key_first($units))
-                        : [];
+                    $attributeFindings = self::attributeFindings($file);
 
                     foreach ($units as $name => $unit) {
                         $checked++;
@@ -405,42 +402,18 @@ final class CheckCommand
     }
 
     /**
-     * The findings of a unit file's `#[Component]` and `#[Template]`
-     * functions: a unit file marks one call function, a named mark must match
-     * the registered component, and a template builder that declares a return
-     * type must return a Shape or a tag. The file must already be loaded,
-     * which the loader guarantees for every unit file.
+     * The findings of a unit file's `#[Template]` functions: a template
+     * builder that declares a return type must return a Shape or a tag. The
+     * file must already be loaded, which the loader guarantees for every unit
+     * file.
      *
      * @param string $file The unit file.
-     * @param string $name The component the file registers (one per file).
      * @return list<Finding>
      */
-    private static function attributeFindings(string $file, string $name): array
+    private static function attributeFindings(string $file): array
     {
-        $components = FunctionFinder::attributed($file, Component::class);
         $templates = FunctionFinder::attributed($file, Template::class);
         $findings = [];
-
-        if (count($components) > 1) {
-            $functions = array_map(
-                static fn (ReflectionFunction $function): string => $function->getName() . '()',
-                $components
-            );
-
-            $findings[] = Finding::error(
-                'more than one #[Component] function (' . implode(', ', $functions) . '); a unit file marks one call function'
-            );
-        } elseif ($components !== []) {
-            foreach ($components[0]->getAttributes(Component::class) as $attribute) {
-                $declared = $attribute->newInstance()->name;
-
-                if ($declared !== null && strcasecmp($declared, $name) !== 0) {
-                    $findings[] = Finding::error(
-                        "#[Component('{$declared}')] on {$components[0]->getName()}() does not match the registered component '{$name}'"
-                    );
-                }
-            }
-        }
 
         foreach ($templates as $template) {
             $return = $template->getReturnType();

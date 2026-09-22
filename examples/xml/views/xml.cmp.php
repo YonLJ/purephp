@@ -3,6 +3,7 @@
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
 use Pure\Compile\Template;
+use Pure\Component\Call;
 
 use Pure\Core\Slot;
 use Pure\Core\XML;
@@ -50,7 +51,12 @@ function XmlPageShape(): Shape
     );
 }
 
-register('Xml', __FILE__, static fn () => XmlPageShape());
+function Xml(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Xml(...), static fn () => XmlPageShape());
 
 /**
  * The xml page: the document comes from views/xml.shape.php (precompiled with

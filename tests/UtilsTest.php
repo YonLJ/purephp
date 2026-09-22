@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/Support/UnitFactory.php';
+require_once __DIR__ . '/Support/ModernUnit.php';
+
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 
@@ -131,24 +134,20 @@ class UtilsTest extends TestCase
     }
 
     /**
-     * Register a unit for this test class. The registry allows one component
-     * per unit file, so every name gets its own anchor file.
+     * Load a unit for this test class in the recommended form. The registry
+     * allows one component per unit file, so every name gets its own file.
      *
      * @param \Closure(): \Pure\Compile\Shape $factory
      */
     private static function registerUnit(string $name, \Closure $factory): void
     {
-        if (in_array($name, Registry::names(), true)) {
-            return;
-        }
-
+        UnitFactory::set($name, $factory);
         $file = sys_get_temp_dir() . '/purephp-utils-' . $name . '.cmp.php';
 
         if (!is_file($file)) {
-            file_put_contents($file, "<?php\n");
             register_shutdown_function(static fn () => @unlink($file));
         }
 
-        Registry::register($name, $file, $factory);
+        ModernUnit::load($file, $name);
     }
 }

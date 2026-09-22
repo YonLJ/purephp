@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/Support/UnitFactory.php';
+require_once __DIR__ . '/Support/ModernUnit.php';
+
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCompiler;
@@ -9,9 +12,6 @@ use Pure\Component\Call;
 
 use function Pure\Component\component;
 
-use Pure\Component\Prop;
-use Pure\Component\Registry;
-use Pure\Component\Trusted;
 use Pure\Core\DevMode;
 use Pure\Core\Markup;
 use Pure\Core\MissingSlotException;
@@ -158,28 +158,28 @@ class CallTest extends TestCase
 
     public function testClassAndStyleJoinLikeTagSetters(): void
     {
-        $this->assertSame('<div class="text-muted">x</div>', FluentPlain('x')->class('text-muted')->render());
-        $this->assertSame('<div class="btn active">x</div>', FluentPlain('x')->class('btn', 'active')->render());
-        $this->assertSame('<div class="btn">x</div>', FluentPlain('x')->class('btn', false)->render());
-        $this->assertSame('<div style="color: red;">x</div>', FluentPlain('x')->style(['color' => 'red'])->render());
-        $this->assertSame('<div>x</div>', FluentPlain('x')->class('')->class(null)->render());
+        $this->assertSame('<div class="text-muted">x</div>', FluentPlain()->text('x')->class('text-muted')->render());
+        $this->assertSame('<div class="btn active">x</div>', FluentPlain()->text('x')->class('btn', 'active')->render());
+        $this->assertSame('<div class="btn">x</div>', FluentPlain()->text('x')->class('btn', false)->render());
+        $this->assertSame('<div style="color: red;">x</div>', FluentPlain()->text('x')->style(['color' => 'red'])->render());
+        $this->assertSame('<div>x</div>', FluentPlain()->text('x')->class('')->class(null)->render());
     }
 
     public function testNullPropLeavesThePropUnset(): void
     {
-        $this->assertSame('<div>x</div>', FluentPlain('x')->class(null)->render());
+        $this->assertSame('<div>x</div>', FluentPlain()->text('x')->class(null)->render());
 
         $this->expectException(MissingSlotException::class);
         $this->expectExceptionMessage("slot 'text' is required but was not provided");
 
-        FluentPlain(null)->render();
+        FluentPlain()->text(null)->render();
     }
 
     public function testPrepareTransformsPropsAndEnforcesItsSignature(): void
     {
         $this->assertSame(
             '<div><h2>COLUMNS</h2><div class="row g-4"><b>a</b><b>b</b></div></div>',
-            FluentSection('columns', 'row g-4', static fn (string $value): string => "<b>{$value}</b>")->render()
+            FluentSection()->section('columns')->class('row g-4')->item(static fn (string $value): string => "<b>{$value}</b>")->render()
         );
 
         try {
@@ -225,7 +225,7 @@ class CallTest extends TestCase
         });
 
         try {
-            $this->assertSame('<div>x</div>', FluentPlain('x')->tex('y')->render());
+            $this->assertSame('<div>x</div>', FluentPlain()->text('x')->tex('y')->render());
         } finally {
             Compile::guard(false);
             restore_error_handler();
@@ -251,8 +251,8 @@ class CallTest extends TestCase
         });
 
         try {
-            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
-            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
+            FluentDeclared()->text('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
+            FluentDeclared()->text('hi')->icon(Raw::of('<svg/>'))->style('x')->render();
         } finally {
             Compile::guard(false);
             restore_error_handler();
@@ -278,7 +278,7 @@ class CallTest extends TestCase
         });
 
         try {
-            FluentDeclared('hi')->icon('<svg/>')->render();
+            FluentDeclared()->text('hi')->icon('<svg/>')->render();
         } finally {
             Compile::guard(false);
             restore_error_handler();
@@ -305,8 +305,8 @@ class CallTest extends TestCase
         });
 
         try {
-            FluentDeclared('hi')->icon(Raw::of('<svg/>'))->render();
-            FluentDeclared('hi')->icon([Raw::of('<a/>'), Raw::of('<b/>')])->render();
+            FluentDeclared()->text('hi')->icon(Raw::of('<svg/>'))->render();
+            FluentDeclared()->text('hi')->icon([Raw::of('<a/>'), Raw::of('<b/>')])->render();
         } finally {
             Compile::guard(false);
             restore_error_handler();
@@ -329,7 +329,7 @@ class CallTest extends TestCase
         });
 
         try {
-            FluentDeclared('hi')->icon('<svg/>')->render();
+            FluentDeclared()->text('hi')->icon('<svg/>')->render();
         } finally {
             restore_error_handler();
         }
@@ -339,23 +339,20 @@ class CallTest extends TestCase
 
     public function testCallRendersThroughTheArtifactWhenFresh(): void
     {
-        $file = self::anchor('FluentArtifact.cmp.php', <<<'PHP'
-            <?php
-
-            declare(strict_types=1);
-
-            use Pure\Compile\Compile;
-            use Pure\Core\Slot;
-
-            use function Pure\HTML\{div, h2};
+        $file = self::dir() . '/FluentArtifact.cmp.php';
+        $calls = 0;
+        UnitFactory::set('FluentArtifact', static function () use (&$calls): \Pure\Compile\Shape {
+            $calls++;
 
             return Compile::shape(div(h2(Slot::value('title'))));
-            PHP);
+        });
 
-        ArtifactCompiler::writeAll($file, true);
+        ArtifactCompiler::writeUnit($file, Compile::shape(div(h2(Slot::value('title')))));
+        clearstatcache();
         Compile::flush();
 
-        $this->assertSame('<div><h2>Artifact</h2></div>', FluentArtifact('Artifact')->render());
+        $this->assertSame('<div><h2>Artifact</h2></div>', FluentArtifact()->title('Artifact')->render());
+        $this->assertSame(0, $calls, 'a fresh artifact must serve the unit without the factory');
     }
 
     public function testUnitFilePatternWithAOneLineCallFunction(): void
@@ -375,14 +372,10 @@ class CallTest extends TestCase
             use function Pure\\Component\\{component, register};
             use function Pure\\HTML\\div;
 
-            register('{$name}', __FILE__, static fn (): \\Pure\\Compile\\Shape => Compile::shape(
+            function {$name}(mixed ...\$children): Call { return component(__FUNCTION__, ...\$children); }
+            register({$name}(...), static fn (): \\Pure\\Compile\\Shape => Compile::shape(
                 div(Slot::value('text'))
             ));
-
-            function {$name}(string \$text): Call
-            {
-                return component('{$name}')->text(\$text);
-            }
             PHP);
 
         require $file;
@@ -391,16 +384,17 @@ class CallTest extends TestCase
             $this->fail("the unit file must define {$name}()");
         }
 
-        $this->assertSame('<div>one line</div>', $name('one line')->render());
+        $this->assertSame('<div>one line</div>', $name()->text('one line')->render());
     }
 
     /**
-     * Register the units of this test class, idempotently: another test class
-     * may reset the registry between two passes over this one.
+     * Load the units of this test class, idempotently: another test class may
+     * reset the registry between two passes over this one, so a missing name
+     * makes ModernUnit include() the file again and re-run its register().
      */
     private static function fixtures(): void
     {
-        self::register('FluentCard', static fn (): \Pure\Compile\Shape => Compile::shape(
+        UnitFactory::set('FluentCard', static fn (): \Pure\Compile\Shape => Compile::shape(
             div(
                 Slot::raw('children'),
                 h2(Slot::value('type'))->class('card-title'),
@@ -408,40 +402,41 @@ class CallTest extends TestCase
                 ul(Slot::each('features', li(Slot::value('value'))))->class('list')
             )->class('card')
         ));
+        ModernUnit::load(self::dir() . '/FluentCard.cmp.php', 'FluentCard');
 
-        self::register('FluentPlain', static fn (): \Pure\Compile\Shape => Compile::shape(
+        UnitFactory::set('FluentPlain', static fn (): \Pure\Compile\Shape => Compile::shape(
             div(Slot::value('text'))
                 ->class(Slot::value('class')->default(null))
                 ->style(Slot::value('style')->default(null))
         ));
+        ModernUnit::load(self::dir() . '/FluentPlain.cmp.php', 'FluentPlain');
 
-        self::register('FluentArtifact', static fn (): \Pure\Compile\Shape => Compile::shape(
+        UnitFactory::set('FluentArtifact', static fn (): \Pure\Compile\Shape => Compile::shape(
             div(h2(Slot::value('title')))
         ));
+        ModernUnit::load(self::dir() . '/FluentArtifact.cmp.php', 'FluentArtifact');
 
-        self::register(
-            'FluentDeclared',
-            static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(Slot::value('text'), div(Slot::raw('icon'))->class(Slot::value('style')->default(null)))
-            ),
+        UnitFactory::set('FluentDeclared', static fn (): \Pure\Compile\Shape => Compile::shape(
+            div(Slot::value('text'), div(Slot::raw('icon'))->class(Slot::value('style')->default(null)))
+        ));
+        ModernUnit::load(self::dir() . '/FluentDeclared.cmp.php', 'FluentDeclared', <<<'PREPARE'
             static fn (
                 string $text,
-                #[Trusted]
+                #[\Pure\Component\Trusted]
                 mixed $icon,
-                #[Prop(deprecated: 'use style()')]
+                #[\Pure\Component\Prop(deprecated: 'use style()')]
                 ?string $style = null,
             ): array => [
                 'text' => $text,
                 'icon' => $icon,
                 'style' => $style,
             ]
-        );
+            PREPARE);
 
-        self::register(
-            'FluentSection',
-            static fn (): \Pure\Compile\Shape => Compile::shape(
-                div(h2(Slot::value('title')), div(Slot::raw('contents'))->class(Slot::value('class')))
-            ),
+        UnitFactory::set('FluentSection', static fn (): \Pure\Compile\Shape => Compile::shape(
+            div(h2(Slot::value('title')), div(Slot::raw('contents'))->class(Slot::value('class')))
+        ));
+        ModernUnit::load(self::dir() . '/FluentSection.cmp.php', 'FluentSection', <<<'PREPARE'
             static fn (string $section, string $class, callable $item): array => [
                 'title' => strtoupper($section),
                 'contents' => array_map(
@@ -453,44 +448,7 @@ class CallTest extends TestCase
                 ),
                 'class' => $class,
             ]
-        );
-    }
-
-    /**
-     * @param Closure(): \Pure\Compile\Shape $factory
-     */
-    private static function register(string $name, Closure $factory, ?Closure $prepare = null): void
-    {
-        $file = self::anchor($name . '.cmp.php');
-
-        if (in_array($name, Registry::names(), true)) {
-            return;
-        }
-
-        Registry::register($name, $file, $factory, prepare: $prepare);
-    }
-
-    /**
-     * A real `*.cmp.php` path for a unit registered from this test class, so
-     * artifact resolution works; the file itself stays empty.
-     */
-    private static function anchor(string $name, ?string $code = null): string
-    {
-        $path = self::dir() . '/' . $name;
-
-        if ($code === null) {
-            if (!is_file($path)) {
-                file_put_contents($path, "<?php\n");
-            }
-
-            return $path;
-        }
-
-        if (!is_file($path) || file_get_contents($path) !== $code) {
-            file_put_contents($path, $code);
-        }
-
-        return $path;
+            PREPARE);
     }
 
     private static function dir(): string
@@ -520,33 +478,4 @@ class CallTest extends TestCase
     {
         return self::$suffix !== '' ? self::$suffix : self::$suffix = bin2hex(random_bytes(4));
     }
-}
-
-/**
- * The call functions a unit file defines next to register(), declared here
- * because the units of this test class are registered from the test itself.
- */
-function FluentCard(mixed ...$children): Call
-{
-    return component('FluentCard', ...$children);
-}
-
-function FluentPlain(?string $text): Call
-{
-    return component('FluentPlain')->text($text);
-}
-
-function FluentArtifact(string $title): Call
-{
-    return component('FluentArtifact')->title($title);
-}
-
-function FluentSection(string $section, string $class, callable $item): Call
-{
-    return component('FluentSection')->section($section)->class($class)->item($item);
-}
-
-function FluentDeclared(string $text): Call
-{
-    return component('FluentDeclared')->text($text);
 }

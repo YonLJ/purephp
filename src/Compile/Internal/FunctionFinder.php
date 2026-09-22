@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Pure\Compile\Internal;
 
 use Pure\Compile\Template;
-use Pure\Component\Component;
 use ReflectionFunction;
 
 /**
@@ -15,10 +14,9 @@ use ReflectionFunction;
  * The convention is that a unit's component function carries the component
  * name, and a unit may also define helpers (a bindings function, a shape
  * builder) next to it. Matching on the short name plus the defining file keeps
- * a same-named function from another unit out of the way; a `#[Component]`
- * mark makes the choice explicit so the call function may be renamed, and a
- * `#[Template]` mark keeps a builder that shares the component's name out of
- * the call-function slot.
+ * a same-named function from another unit out of the way, and a `#[Template]`
+ * mark keeps a builder that shares the component's name out of the
+ * call-function slot.
  *
  * @internal
  */
@@ -36,25 +34,25 @@ final class FunctionFinder
     }
 
     /**
-     * The component call function of a unit file: a function marked
-     * `#[Component]` (no name, or naming this component), else a function
-     * whose short name matches the component name and that is not marked
-     * `#[Template]`.
+     * The component call function of a unit file: a function whose short name
+     * matches the component name and that is not marked `#[Template]`.
      */
     public static function of(string $shortName, string $file): ?ReflectionFunction
     {
-        foreach (self::attributed($file, Component::class) as $function) {
-            foreach ($function->getAttributes(Component::class) as $attribute) {
-                $declared = $attribute->newInstance()->name;
+        // A namespaced call function registers under its fully qualified name
+        // (register() derives the name from ReflectionFunction), so compare the
+        // short name on both sides.
+        $position = strrpos($shortName, '\\');
 
-                if ($declared === null || strcasecmp($declared, $shortName) === 0) {
-                    return $function;
-                }
-            }
+        if ($position !== false) {
+            $shortName = substr($shortName, $position + 1);
         }
 
         $path = realpath($file) ?: $file;
 
+        // Only the short name is compared on both sides: two same-named
+        // functions from different namespaces in one file are
+        // indistinguishable here, which the short-name convention accepts.
         foreach (self::functionsByFile()[$path] ?? [] as $reflection) {
             $name = $reflection->getName();
             $position = strrpos($name, '\\');

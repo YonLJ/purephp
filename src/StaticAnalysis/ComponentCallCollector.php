@@ -18,11 +18,11 @@ use PHPStan\Collectors\Collector;
  * `component()` helper functions: `kind` is `registered` for a definition
  * and `call` for a reference.
  *
- * A definition is a name literal (`register('X', ...)`) or the call function
- * itself (`register(Icon(...), ...)` — the first-class callable's name is the
- * registered name). A reference is a name literal (`component('X')`), a unit
- * path (skipped), or `component(__FUNCTION__)`, whose name is the enclosing
- * function's name as PHPStan sees it.
+ * A definition is the call function itself (`register(Icon(...), ...)` — the
+ * first-class callable's name is the registered name). A reference is a name
+ * literal (`component('X')`), a unit path (skipped), or
+ * `component(__FUNCTION__)`, whose name is the enclosing function's name as
+ * PHPStan sees it.
  *
  * @api
  * @implements Collector<FuncCall, array{kind: 'registered'|'call', name: string, file: string, line: int}>
@@ -49,10 +49,6 @@ final class ComponentCallCollector implements Collector
             }
 
             $value = $first->value;
-
-            if ($value instanceof String_) {
-                return ['kind' => 'registered', 'name' => $value->value, 'file' => $scope->getFile(), 'line' => $node->getLine()];
-            }
 
             // register(Icon(...)) — a first-class callable of the call
             // function; its name is what register() reflects at runtime.

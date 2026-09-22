@@ -8,11 +8,6 @@ declare(strict_types=1);
  *
  *   php bench/registry.php
  *   php -d opcache.enable_cli=1 bench/registry.php
- *
- * A single-file bundle was prototyped and rejected on this data: with opcache a
- * per-unit artifact require is about a microsecond, while one flat bundle
- * compiled slower cold (one 55 KB file versus 22 small templates) and tied
- * warm. Artifacts plus opcache are the production path.
  */
 
 require __DIR__ . '/../vendor/autoload.php';

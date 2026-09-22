@@ -25,38 +25,19 @@ final class UnknownComponentRuleTest extends TestCase
 
                 use Pure\Compile\Compile;
                 use Pure\Component\Call;
-                use Pure\Component\Component;
                 use Pure\Core\Slot;
 
                 use function Pure\Component\{component, register};
                 use function Pure\HTML\span;
 
-                register('KnownBadge', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                    span(Slot::value('label'))
-                ));
-
-                #[Component]
                 function KnownBadge(mixed ...$children): Call
                 {
-                    return component('KnownBadge', ...$children);
+                    return component(__FUNCTION__, ...$children);
                 }
-                PHP);
 
-            file_put_contents($dir . '/src/attr-only.php', <<<'PHP'
-                <?php
-
-                declare(strict_types=1);
-
-                use Pure\Component\Call;
-                use Pure\Component\Component;
-
-                use function Pure\Component\component;
-
-                #[Component('AttrKnown')]
-                function attrKnownCard(mixed ...$children): Call
-                {
-                    return component('AttrKnown', ...$children);
-                }
+                register(KnownBadge(...), static fn (): \Pure\Compile\Shape => Compile::shape(
+                    span(Slot::value('label'))
+                ));
                 PHP);
 
             file_put_contents($dir . '/src/static.php', <<<'PHP'
@@ -97,28 +78,6 @@ final class UnknownComponentRuleTest extends TestCase
                 ));
                 PHP);
 
-            file_put_contents($dir . '/src/legacy-mismatch.php', <<<'PHP'
-                <?php
-
-                declare(strict_types=1);
-
-                use Pure\Compile\Compile;
-                use Pure\Component\Call;
-                use Pure\Core\Slot;
-
-                use function Pure\Component\{component, register};
-                use function Pure\HTML\span;
-
-                function LegacyWrong(mixed ...$children): Call
-                {
-                    return component(__FUNCTION__, ...$children);
-                }
-
-                register('LegacyRight', __FILE__, static fn (): \Pure\Compile\Shape => Compile::shape(
-                    span(Slot::value('label'))
-                ));
-                PHP);
-
             file_put_contents($dir . '/src/calls.php', <<<'PHP'
                 <?php
 
@@ -130,8 +89,6 @@ final class UnknownComponentRuleTest extends TestCase
 
                 component('KnownBadge');
                 component('KnownBadg');
-                component('AttrKnown');
-                component('AttrKnwn');
                 component('FcBox');
                 Registry::component('StaticBadge');
                 Registry::component('StaticBadg');
@@ -142,10 +99,6 @@ final class UnknownComponentRuleTest extends TestCase
                 services:
                     -
                         class: Pure\StaticAnalysis\ComponentCallCollector
-                        tags:
-                            - phpstan.collector
-                    -
-                        class: Pure\StaticAnalysis\ComponentAttributeCollector
                         tags:
                             - phpstan.collector
                     -
@@ -190,7 +143,7 @@ final class UnknownComponentRuleTest extends TestCase
 
             $this->assertSame(1, $code, 'the typo must fail the run');
 
-            foreach (['KnownBadg', 'AttrKnwn', 'StaticBadg', 'LegacyWrong'] as $typo) {
+            foreach (['KnownBadg', 'StaticBadg'] as $typo) {
                 $matched = array_filter(
                     $messages,
                     static fn (string $message): bool => str_contains($message, "'{$typo}' is not registered")
@@ -199,7 +152,7 @@ final class UnknownComponentRuleTest extends TestCase
                 $this->assertNotSame([], array_values($matched), "the typo '{$typo}' must be reported: " . implode(' | ', $messages));
             }
 
-            foreach (['KnownBadge', 'AttrKnown', 'StaticBadge', 'FcBox', 'LegacyRight'] as $known) {
+            foreach (['KnownBadge', 'StaticBadge', 'FcBox'] as $known) {
                 foreach ($messages as $message) {
                     $this->assertStringNotContainsString("'{$known}' is not registered", $message);
                 }

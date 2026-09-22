@@ -11,25 +11,19 @@ First public version. No tag has been cut yet.
 
 ### Added
 
-- `register()` accepts the call function itself:
+- `register()` takes the call function itself as its only form:
   `register(Icon(...), factory)` derives the component name and the unit file
   from that function by reflection (O(1), ~0.2µs), and inside the call
   function `component(__FUNCTION__, ...)` carries no literal either — the
   component name then exists exactly once per unit file and cannot drift
   between `register()` and `component()`. The factory may follow the call
-  function positionally. The classic `register('Icon', __FILE__, ...)` form
-  stays supported; the PHPStan rule also resolves `register(Icon(...))` and
-  `component(__FUNCTION__)`, so both forms are checked statically.
-- `#[Component]` function attribute: marks a unit file's call function
-  explicitly instead of relying on the name convention. A nameless mark
-  survives renaming the function; `#[Component('X')]` pins the registered
-  name and `pure check` reports a mismatch, a second mark in one file, and
-  a `#[Template]` builder whose declared return type is not a Shape or a
-  tag. `pure compile --list` prints marked builders as `(template)`.
+  function positionally. The PHPStan rule resolves `register(Icon(...))` and
+  `component(__FUNCTION__)`, so the unit is checked statically without any
+  name literal.
 - `Pure\StaticAnalysis\UnknownComponentRule`: a PHPStan rule (plus its
   collectors, enabled in phpstan.neon) that reports a literal
   `component('X')` / `Registry::component('X')` whose name no analysed
-  `register()`, `Registry::register()` or `#[Component('X')]` declares —
+  `register(Icon(...))` or `Registry::register()` declares —
   the typo that otherwise only fails at render time, with a
   did-you-mean hint.
 - `pure --version` (also `pure version` / `pure -v`) prints the installed
@@ -42,8 +36,9 @@ First public version. No tag has been cut yet.
   generation), and duplicate registrations throw unless `override: true` is
   passed. The examples ship as units now.
 - `pure compile` discovers `*.cmp.php` units next to `*.shape.php` templates
-  and gained `--list` (`name -> file (component)`), so one command
-  compiles a unit file through its registered factory.
+  and gained `--list` (`name -> file (component)`; a `#[Template]` builder is
+  listed as `(template)`), so one command compiles a unit file through its
+  registered factory.
 - `ArtifactCompiler::buildUnit()` / `writeUnit()` compile a unit file
   (`*.shape.php` or `*.cmp.php`) whose shape is already known, so a `*.cmp.php`
   unit gets the same `*.pure.php` artifact and `*.plain.php` view as a shape
@@ -154,6 +149,8 @@ First public version. No tag has been cut yet.
   `did you mean`, and children on a template without a `children` slot throw.
   A call function may type its props itself and return a `Call`
   (`function Badge(string $label): Call`), so the call site is checked by PHP.
+  The recommended form keeps the prop contract in `prepare()`; the docs use
+  it throughout.
 - `Pure\Core\Markup`: trusted markup emitted verbatim in child position.
   `Raw` implements it, and so does `Call`, so `div(Card(...))` nests like a tag
   and renders lazily with the tree; every other child is still frozen to text
@@ -226,6 +223,17 @@ First public version. No tag has been cut yet.
 
 ### Changed
 
+- **Breaking** — `register()` is narrowed to
+  `register(Closure $call, ?Closure $factory = null, bool $override = false,
+  ?Closure $prepare = null)`: the first argument must be the call function as
+  `Icon(...)`, and the component name and unit file derive from it. The classic
+  `register('Icon', __FILE__, ...)` form therefore fails with a native PHP
+  `TypeError` — not a library `InvalidArgumentException` — because the first
+  parameter is typed `Closure`. The parameters were renamed accordingly
+  (`$name` → `$call`, `$file` removed), so named arguments `name:` and
+  `file:` also fail; `factory:`, `prepare:` and `override:` are unchanged.
+  Migration — pass the call function: `register(Icon(...), $factory)`, with
+  the factory optionally in `prepare:` / named `factory:` position.
 - `Slot::value($name)` replaces `Slot::text()` and `Slot::attr()`: the slot name
   is the data key and its position decides the semantics (child position
   escapes to text; attribute position follows `Tag::setAttr()` with bool/null
@@ -417,6 +425,15 @@ First public version. No tag has been cut yet.
 
 ### Removed
 
+- **Breaking** — The `Pure\Component\Component` function attribute and its
+  PHPStan collector `Pure\StaticAnalysis\ComponentAttributeCollector`. Code
+  referencing either class fails with a class-not-found error, and a custom
+  `phpstan.neon` that still registers the collector fails at startup. The call
+  function is found by its short name matching the registered name (a
+  `#[Template]` builder of the same name is skipped), so `pure check` no
+  longer reports a pin-name mismatch (`#[Component('X')]`) or a second mark in
+  one unit file; `#[Template]`, `#[Prop]`, `#[Trusted]` and `#[Binds]` are
+  unaffected.
 - **Breaking** — The classic component form (a typed function returning the
   rendered `string` through `Pure\Component\render()`) is removed, together with
   the function itself. A unit is called fluently: its call function returns

@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Component\Prop;
 use Pure\Core\Slot;
 
@@ -17,7 +16,6 @@ use function Pure\HTML\{button, div, h1, h4, li, small, ul};
  *         ->text('Sign up for free')
  *         ->class('btn btn-lg btn-block btn-outline-primary');
  */
-#[Component]
 function Card(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

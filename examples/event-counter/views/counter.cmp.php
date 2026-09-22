@@ -3,6 +3,7 @@
 use Pure\Compile\Compile;
 use Pure\Compile\Shape;
 use Pure\Compile\Template;
+use Pure\Component\Call;
 
 use Pure\Core\Slot;
 
@@ -35,7 +36,12 @@ function CounterPageShape(): Shape
     );
 }
 
-register('Counter', __FILE__, static fn () => CounterPageShape());
+function Counter(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Counter(...), static fn () => CounterPageShape());
 
 /**
  * The counter page: the document skeleton comes from views/counter.shape.php

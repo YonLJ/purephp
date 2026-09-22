@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -12,7 +11,6 @@ require_once __DIR__ . '/Icon.cmp.php';
 /**
  * One "icon grid" item: `CellIcon()->icon('speedometer2')->title(...)->content(...)`.
  */
-#[Component]
 function CellIcon(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

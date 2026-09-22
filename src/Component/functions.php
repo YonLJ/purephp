@@ -13,9 +13,10 @@ use ReflectionFunction;
  *
  * The factory must be lazy: it is stored as-is and only called when no fresh
  * artifact serves the unit. A unit file registers one component and defines
- * its call function next to it. The preferred form passes the call function
- * itself, so the component name exists exactly once in the file — as the
- * function name — and neither the name nor the file can drift apart:
+ * its call function next to it. The first argument is the call function, so
+ * the component name exists exactly once in the file — as the function name —
+ * and neither the name nor the file can drift apart; the unit file is the file
+ * the call function lives in:
  *
  *     function Icon(mixed ...$children): Call
  *     {
@@ -25,13 +26,6 @@ use ReflectionFunction;
  *     register(Icon(...), static fn () => svg(
  *         svgUse()->href(Slot::value('href'))
  *     ));
- *
- * The classic form stays supported: `register('Icon', __FILE__, ...)`, with
- * `component('Icon', ...)` inside the call function; `pure check` and the
- * PHPStan rule keep both forms honest. Because the file derives from the call
- * function, the factory may be passed second:
- *
- *     register(Icon(...), static fn () => svg(...));
  *
  * A unit may also register a `prepare` closure: the typed props-to-bindings
  * hook of its fluent call. The closure's parameters are the prop contract, so
@@ -43,41 +37,29 @@ use ReflectionFunction;
  *             return ['title' => ..., 'contents' => ..., 'class' => $class];
  *         });
  *
- * @param Closure|string $name The call function as `Icon(...)`, or the component name used by component().
- * @param string|Closure $file The unit file (normally `__FILE__`), or — with a call function as $name — the factory itself.
+ * @param Closure $call The call function as `Icon(...)`, not an anonymous closure.
  * @param Closure(): mixed|null $factory Builds the template lazily; may return a tag tree or a Shape.
  * @param bool $override Replace an existing registration of the name or file.
  * @param ?Closure $prepare Optional props-to-bindings hook for fluent calls.
  * @return void
  */
-function register(Closure|string $name, string|Closure $file = '', ?Closure $factory = null, bool $override = false, ?Closure $prepare = null): void
+function register(Closure $call, ?Closure $factory = null, bool $override = false, ?Closure $prepare = null): void
 {
-    if ($file instanceof Closure) {
-        if ($factory !== null) {
-            throw new InvalidArgumentException('register() received two factories; pass exactly one factory closure.');
-        }
+    $reflection = new ReflectionFunction($call);
 
-        $factory = $file;
-        $file = '';
+    if (str_starts_with($reflection->getName(), '{closure')) {
+        throw new InvalidArgumentException('register() takes the call function as Icon(...); pass the named function, not an anonymous closure.');
     }
 
-    if ($name instanceof Closure) {
-        $reflection = new ReflectionFunction($name);
-
-        if (str_starts_with($reflection->getName(), '{closure')) {
-            throw new InvalidArgumentException('register() takes the call function as Icon(...); pass the named function, not an anonymous closure.');
-        }
-
-        $name = $reflection->getName();
-        $file = $file !== '' ? $file : (string) ($reflection->getFileName() ?: '');
-    }
+    $name = $reflection->getName();
+    $file = (string) ($reflection->getFileName() ?: '');
 
     if ($factory === null) {
         throw new InvalidArgumentException("register() needs a factory closure for component '{$name}'.");
     }
 
     if ($file === '') {
-        throw new InvalidArgumentException("register() needs the unit file (normally __FILE__), unless the first argument is the call function as '{$name}(...)'.");
+        throw new InvalidArgumentException("register() cannot determine the unit file of component '{$name}'; the call function must be declared in a real file.");
     }
 
     Registry::register($name, $file, $factory, $override, $prepare);

@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
 use Pure\Component\Call;
-use Pure\Component\Component;
 
 use function Pure\Component\{component, register};
 use function Pure\HTML\{div, h1, head, html, link, main, meta, title};
@@ -10,7 +9,6 @@ use function Pure\SVG\{path, svg, symbol, title as svgTitle};
 /**
  * The SVG symbol sheet the features page's icons reference: `IconSheet()`.
  */
-#[Component]
 function IconSheet(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -9,7 +8,6 @@ use function Pure\HTML\a;
 /**
  * One navigation link with its own class list: `NavLink()->text('Home')->href('/')`.
  */
-#[Component]
 function NavLink(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

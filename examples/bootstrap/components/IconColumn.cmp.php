@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -12,7 +11,6 @@ require_once __DIR__ . '/Icon.cmp.php';
 /**
  * One "columns with icons" item: `IconColumn()->icon('collection')->title(...)->content(...)->link(...)->linkText(...)`.
  */
-#[Component]
 function IconColumn(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

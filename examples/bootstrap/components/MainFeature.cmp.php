@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -10,7 +9,6 @@ use function Pure\HTML\{a, div, h3, p};
  * The "features with title" main column:
  * `MainFeature()->title(...)->content(...)->link(...)->linkText(...)`.
  */
-#[Component]
 function MainFeature(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

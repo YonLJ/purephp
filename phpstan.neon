@@ -4,10 +4,6 @@ services:
         tags:
             - phpstan.collector
     -
-        class: Pure\StaticAnalysis\ComponentAttributeCollector
-        tags:
-            - phpstan.collector
-    -
         class: Pure\StaticAnalysis\RegistryCallCollector
         tags:
             - phpstan.collector
@@ -26,6 +22,10 @@ parameters:
     scanDirectories:
         - examples
         - bench
+    # The CallTest units are generated under the system temp directory at test
+    # time; their call functions are discovered from this stub instead.
+    scanFiles:
+        - tests/Support/CallFixtures.scan.php
     excludePaths:
         - vendor
     ignoreErrors:

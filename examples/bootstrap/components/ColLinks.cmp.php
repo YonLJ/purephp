@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -10,7 +9,6 @@ use function Pure\HTML\{a, div, h5, li, ul};
  * One footer link column:
  * `ColLinks()->title('Company')->links([['text' => 'Team', 'href' => '#']])`.
  */
-#[Component]
 function ColLinks(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);

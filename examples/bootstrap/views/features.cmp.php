@@ -23,7 +23,16 @@ require_once __DIR__ . '/../components/Divider.cmp.php';
 require_once __DIR__ . '/FeatureSection.cmp.php';
 require_once __DIR__ . '/../app/services/FeaturesService.php';
 
-register('Features', __FILE__, static function () {
+/**
+ * The features page call function: props flow through the unit's prepare()
+ * hook, so a call is just component('Features') at the page functions below.
+ */
+function Features(mixed ...$children): Call
+{
+    return component(__FUNCTION__, ...$children);
+}
+
+register(Features(...), static function () {
     /**
      * The features page skeleton: the head and the SVG symbol sheet are static,
      * the body is composed from raw slots populated by featuresBindings().

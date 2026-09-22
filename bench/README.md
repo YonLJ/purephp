@@ -6,7 +6,7 @@ them before/after changes to the compiler or the render path.
 ## Commands
 
 ```bash
-# 600-element page: classic build+render vs compiled shape vs static literal
+# 600-element page: build+render vs compiled shape vs static literal
 php bench/compare.php [--rows=200] [--iters=3000]
 
 # on-disk renderer cache: cold (generate) then warm (load) in two processes
@@ -17,7 +17,7 @@ php bench/cache.php
 php bench/artifact.php --write
 php bench/artifact.php [iterations]
 
-# features page of examples/bootstrap: classic baseline (bench/fixtures) vs the
+# features page of examples/bootstrap: tag-tree baseline (bench/fixtures) vs the
 # page function, the precompiled features.pure.php artifact and the plain view
 php examples/bootstrap/bench.php [iterations]
 
@@ -79,12 +79,12 @@ function-component example:
 
 | Path | no opcache |
 | --- | --- |
-| classic build + `Tag::render()` | 339.3 µs |
+| build tree + `Tag::render()` | 339.3 µs |
 | page function (components + artifact) | 104 µs |
 | plain view + bindings | 20 µs |
-| page vs classic | 2.8–3.3× |
+| page vs tag tree | 2.8–3.3× |
 
-The rows recorded for the previous shape-based example (188–204 µs classic,
+The rows recorded for the previous shape-based example (188–204 µs for the tag tree,
 25–33 µs compiled, 6.2–8.3×) no longer apply: the body is composed by component
 functions now, so the page no longer renders as one compiled shape.
 
@@ -134,12 +134,7 @@ an earlier recording of this table predates it. A multi-line guard that
 concatenates the installed version into its message measured ~5 µs per artifact
 instead, which is why the generated line is short and its message is static.
 
-A single-file bundle was prototyped to replace the per-unit requires and
-rejected on this data: with opcache a per-unit require is about half a
-microsecond, while one flat bundle (55 KB of `$out .=` code plus function
-stubs) compiled slower cold than the 22 readable templates together (899 µs
-vs 470 µs) and tied warm. Artifacts plus opcache are the production path, so
-the library ships no bundle. Reading each artifact's header instead of requiring
+Reading each artifact's header instead of requiring
 it measured ~4 µs per file, and hashing every unit ~7 µs, against ~0.5 µs to
 load the artifact with opcache: validating content costs more than compiling it.
 

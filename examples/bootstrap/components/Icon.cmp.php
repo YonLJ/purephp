@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 use Pure\Component\Call;
-use Pure\Component\Component;
 use Pure\Core\Slot;
 
 use function Pure\Component\{component, register};
@@ -10,7 +9,6 @@ use function Pure\SVG\{svg, svgUse};
  * An icon that references the SVG symbol sheet:
  * `Icon()->href('#home')` renders `<svg class="bi" ...><use href="#home" /></svg>`.
  */
-#[Component]
 function Icon(mixed ...$children): Call
 {
     return component(__FUNCTION__, ...$children);
