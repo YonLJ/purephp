@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Generator;
 use PHPUnit\Framework\TestCase;
 use Pure\Compile\Compile;
 use Pure\Compile\Internal\ArtifactCommand;

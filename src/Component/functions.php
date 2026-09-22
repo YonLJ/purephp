@@ -64,7 +64,7 @@ function register(Closure|string $name, string|Closure $file = '', ?Closure $fac
     if ($name instanceof Closure) {
         $reflection = new ReflectionFunction($name);
 
-        if ($reflection->getName() === '{closure}') {
+        if (str_starts_with($reflection->getName(), '{closure')) {
             throw new InvalidArgumentException('register() takes the call function as Icon(...); pass the named function, not an anonymous closure.');
         }
 

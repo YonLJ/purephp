@@ -83,7 +83,7 @@ final class ComponentCallCollector implements Collector
         if ($value instanceof MagicConst\Function_) {
             $function = $scope->getFunction();
 
-            if ($function === null || str_contains($function->getName(), '{closure}')) {
+            if ($function === null || str_contains($function->getName(), '{closure')) {
                 return null;
             }
 
